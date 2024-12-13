@@ -1,3 +1,20 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.existing-job-grid{
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 2vh;
+}
+
+.existing-job-card{
+  border: 2px solid #4F46E5;
+  border-radius: 5px;
+  padding: 5%;
+}
+
+.existing-job-description{
+  margin-top: 2vh;
+  
+}
