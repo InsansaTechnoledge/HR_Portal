@@ -1,27 +1,44 @@
-import React from 'react'
-import {BrowserRouter as Router,Routes,Route, Form} from 'react-router-dom'
-import Login from './Components/Login/Login'
-import JobPostForm from './Components/Form/JobPostForm';
-import Home from './Page/Home';
-// import JobForm from './Components/Form/Form1';
-// import JobPostForm from './Components/Form/JobPostForm';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Login from "./Components/Login/Login";
+import JobPostForm from "./Components/Form/JobPostForm";
+import Home from "./Page/Home";
+import DocumentManagement from "./Page/DocumentManagement";
+import Sidebar from "./Components/Login/Sidebar";
+import TalentManagement from "./Page/TalentManagement";
+import JobApplication from "./Page/JobApplication";
+import AuthenticationManagement from "./Page/AuthenticationManagement";
+
+function AppLayout() {
+    return (
+        <div className="flex h-screen">
+            {/* Sidebar */}
+            <Sidebar />
+            <div className="flex-1 p-4 overflow-auto">
+                <Routes>
+                    <Route path="/" element={<Login />} />
+                    <Route path="/post-job" element={<JobPostForm />} />
+                    <Route path="/home" element={<Home />} />
+                    <Route path="/docs" element={<DocumentManagement />} />
+                    <Route path="/talent" element={<TalentManagement />} />
+                    <Route path="/application" element={<JobApplication />} />
+                    <Route path="/auth" element={<AuthenticationManagement />} />
+
+
+
+
+                </Routes>
+            </div>
+        </div>
+    );
+}
 
 function PageLinks() {
-  return (
-    <>
+    return (
         <Router>
-            <Routes>
-                <Route path='/' element={<Login/>} />
-                <Route path='/post-job' element={<JobPostForm/>} />
-                <Route path='/home' element={<Home />} />
-                {/* <Route path='/form' element={<JobForm/>} /> */}
-                {/* <Route path='/post-job' element={<JobPostForm/>} /> */}
-            </Routes>
+            <AppLayout />
         </Router>
-        
-    </>
-
-    )
+    );
 }
 
 export default PageLinks;
