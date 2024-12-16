@@ -3,8 +3,7 @@ import {BrowserRouter as Router,Routes,Route, Form} from 'react-router-dom'
 import Login from './Components/Login/Login'
 import JobPostForm from './Components/Form/JobPostForm';
 import Home from './Page/Home';
-// import JobForm from './Components/Form/Form1';
-// import JobPostForm from './Components/Form/JobPostForm';
+import CandidateRegistration from './Page/CandidateRegistration';
 
 function PageLinks() {
   return (
@@ -14,8 +13,8 @@ function PageLinks() {
                 <Route path='/' element={<Login/>} />
                 <Route path='/post-job' element={<JobPostForm/>} />
                 <Route path='/home' element={<Home />} />
-                {/* <Route path='/form' element={<JobForm/>} /> */}
-                {/* <Route path='/post-job' element={<JobPostForm/>} /> */}
+                <Route path='/home' element={<Home />} />
+                <Route path='/register-candidate' element={<CandidateRegistration/>}/>
             </Routes>
         </Router>
         
