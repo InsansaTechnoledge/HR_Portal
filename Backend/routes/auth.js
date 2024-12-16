@@ -5,27 +5,42 @@ import crypto from 'crypto';
 
 const router = express.Router();
 
+router.post('/login', async (req, res, next) => {
+  const { userEmail, password } = req.body;
 
-// Route to log in with userId and password
-router.post(
-  "/login",  (req, res, next) => {
-        console.log("Login route hit");
-        console.log(req.body);
-        next();
-      },
-      passport.authenticate('local', {    
-        successRedirect: process.env.CLIENT_BASE_URL, // Redirect on successful login
-        failureRedirect: `${process.env.CLIENT_BASE_URL}/login`, // Redirect on failed login
-        failureFlash: true, // Show error message if login fails
-        session: true, // Maintain session after login
-      })
-  
-);
+  try {
+    let user = await User.findOne({ userEmail });
 
-// Signup route to create a new user with random userId
+    if (!user) {
+      return res.redirect('/signup'); 
+    }
+
+    // User found, authenticate with passport
+    passport.authenticate('local', {
+      failureRedirect: '/',
+      failureFlash: true,
+      session: true,
+    })(req, res, next);
+
+  } catch (error) {
+    console.error('Error during login process:', error);
+    res.status(500).json({ error: 'Failed to process login' });
+  }
+}, (req, res) => {
+  // Successful login
+  res.status(200).json({ message: 'Login successful', user: req.user });
+});
+
+// Signup route (used if user does not exist)
 router.post('/signup', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, userEmail, password } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ userEmail });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
 
     // Generate a random userId using crypto
     const userId = crypto.randomBytes(16).toString('hex'); // 16-byte random ID    
@@ -33,14 +48,15 @@ router.post('/signup', async (req, res) => {
     // Create new user
     const newUser = new User({
       userId,
-      username,
+      username: username || userEmail.split('@')[0], // Use email prefix as username if not provided
+      userEmail,
       password,
     });
-    console.log(newUser);
 
     await newUser.save();
     res.status(201).json({ message: 'User created successfully', userId });
   } catch (error) {
+    console.error('Error during signup process:', error);
     res.status(500).json({ error: 'Failed to create user' });
   }
 });
