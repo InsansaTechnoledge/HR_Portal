@@ -67,9 +67,9 @@ const DocumentManagement = () => {
             <div className="bg-white shadow-md rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">
                     <h1 className="text-xl font-bold text-gray-700">Document Management</h1>
-                    <div className="flex items-center space-x-4">
+                    <div className="flex sm:flex-col md:flex-row items-center space-x-4">
                         <select
-                            className="border rounded-lg p-2"
+                            className="border rounded-lg p-2 flex"
                             value={selectedEmployee}
                             onChange={(e) => setSelectedEmployee(e.target.value)}
                         >
@@ -80,6 +80,7 @@ const DocumentManagement = () => {
                                 </option>
                             ))}
                         </select>
+                        <div>
                         <input
                             type="file"
                             id="fileUpload"
@@ -88,7 +89,10 @@ const DocumentManagement = () => {
                         />
                         <label htmlFor="fileUpload" className="cursor-pointer">
                             <button
-                                className={`flex items-center px-4 py-2 ${selectedEmployee
+                                className={`
+                                    sm:mt-3
+                                    md:mt-0
+                                    flex items-center px-4 py-2 ${selectedEmployee
                                         ? "bg-indigo-600 text-white"
                                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                                     } rounded-lg hover:bg-indigo-700`}
@@ -97,6 +101,7 @@ const DocumentManagement = () => {
                                 <Upload className="mr-2 h-4 w-4" /> Upload Document
                             </button>
                         </label>
+                        </div>
                     </div>
                 </div>
 

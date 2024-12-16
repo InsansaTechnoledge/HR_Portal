@@ -1,10 +1,10 @@
-import expressApp from './config/express';
-import connectDB from './config/database';
+import expressApp from './config/express.js';
+import connectDB from './config/database.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const startApp = async () => {
+const App = async () => {
     try {
         await connectDB();
         return expressApp;
@@ -14,4 +14,4 @@ const startApp = async () => {
     }
 };
 
-export default startApp;
+export default App;

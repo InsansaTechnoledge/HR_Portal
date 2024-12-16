@@ -1,8 +1,9 @@
-const express = require('express');
-const passport = require('passport');
-const { User } = require("../models/User");
+import express from 'express';
+import passport from 'passport';
+import User from "../models/User.js";
+import crypto from 'crypto';
+
 const router = express.Router();
-const crypto = require('crypto');
 
 
 // Route to log in with userId and password
@@ -44,4 +45,4 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

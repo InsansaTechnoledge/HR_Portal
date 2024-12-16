@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import axios from 'axios';
+import API_BASE_URL from "../../config";
 
 function JobPostForm() {
   const [jobs, setJobs] = useState([
@@ -68,20 +70,19 @@ function JobPostForm() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
     // Process skills into an array
     const processedSkills = formData.skills
-      ? formData.skills.split(',').map(skill => skill.trim())
-      : [];
-
+    ? formData.skills.split(',').map(skill => skill.trim())
+    : [];
+    
     if (editingJob) {
       // Update existing job
       setJobs(prevJobs =>
         prevJobs.map(job =>
           job.id === editingJob.id
-            ? {
+          ? {
               ...job,
               title: formData.title,
               location: formData.location,
@@ -90,8 +91,8 @@ function JobPostForm() {
               salary: formData.salary
             }
             : job
-        )
-      );
+          )
+        );
       setEditingJob(null);
     } else {
       // Add new job
@@ -103,6 +104,28 @@ function JobPostForm() {
         skills: processedSkills,
         salary: formData.salary || "Not specified"
       };
+      
+      try{
+
+
+      const response = await axios.post(API_BASE_URL+"/job/post", newJob,{
+        headers: {
+          'content-type': 'application/json'
+        }
+      });
+      console.log("SSS",response)
+      if(response.status==200){
+        alert('job Posted')
+        console.log(response.data.job);
+      }
+      else{
+        console.log(response.data.message);
+      }
+      }
+      catch(err){
+        console.log(err)
+      }
+
       setJobs(prevJobs => [...prevJobs, newJob]);
     }
 

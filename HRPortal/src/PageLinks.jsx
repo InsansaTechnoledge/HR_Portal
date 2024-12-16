@@ -26,9 +26,9 @@ function AppLayout() {
     const token = localStorage.getItem('token');
 
     // Redirect to login if not logged in
-    if (!token && location.pathname !== '/') {
-        return <Navigate to="/" replace />;
-    }
+    // if (!token && location.pathname !== '/') {
+    //     return <Navigate to="/" replace />;
+    // }
 
     // Show Sidebar for larger screens and BottomBar for smaller screens
     const isMobile = useMediaQuery({ query: '(max-width: 768px)' });
@@ -44,9 +44,9 @@ function AppLayout() {
                     <Route
                         path="/post-job"
                         element={
-                            <ProtectedRoute>
+                            // <ProtectedRoute>
                                 <JobPostForm />
-                            </ProtectedRoute>
+                            // </ProtectedRoute>
                         }
                     />
                     <Route
