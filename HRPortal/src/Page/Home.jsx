@@ -93,13 +93,9 @@ const items = [
 // Home Page Component with Sidebar
 export function Home() {
     return (
-        <div className="flex h-screen overflow-hidden">
-            {/* Sidebar */}
-            <Sidebar />
-            {/* Main Content */}
-            <div className="flex-1 overflow-y-auto">
-                <FeatureGrid />
-            </div>
+
+        <div className="flex-1 overflow-y-auto">
+            <FeatureGrid />
         </div>
     );
 }
