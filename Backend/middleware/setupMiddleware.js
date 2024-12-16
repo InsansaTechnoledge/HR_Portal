@@ -1,15 +1,14 @@
-const express = require("express");
-const session = require("express-session");
-const MongoStore = require("connect-mongo");
-const cookieParser = require("cookie-parser");
-const passport = require("passport");
-const helmet = require("helmet");
-const cors = require("cors");
-const flash = require("connect-flash");
+import express from 'express';
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
+import cookieParser from 'cookie-parser';
+import passport from 'passport';
+import helmet from 'helmet';
+import cors from 'cors';
+import flash from 'connect-flash';
 
-module.exports = (app) => {
-  app.set("trust proxy", 1);
-  const cors = require('cors');
+const configureApp = (app) => {
+  app.set('trust proxy', 1);
 
   app.use(
     cors({
@@ -57,3 +56,5 @@ module.exports = (app) => {
   app.use(flash());
 
 };
+
+export default configureApp;

@@ -1,15 +1,17 @@
-const expressApp=require("./config/express");
-const connectDB=require("./config/database");
-require("dotenv").config();
+import expressApp from './config/express.js';
+import connectDB from './config/database.js';
+import dotenv from 'dotenv';
 
-const startApp=async()=>{
-    try{
+dotenv.config();
+
+const App = async () => {
+    try {
         await connectDB();
         return expressApp;
-    }
-    catch(err){
-        console.error("Error while starting the app. Error:",err);
+    } catch (err) {
+        console.error('Error while starting the app. Error:', err);
         process.exit(1);
     }
 };
-module.exports = startApp;
+
+export default App;
