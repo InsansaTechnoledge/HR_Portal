@@ -25,10 +25,7 @@ function AppLayout() {
                     <Route path="/application" element={<JobApplication />} />
                     <Route path="/auth" element={<AuthenticationManagement />} />
                     <Route path='/register-candidate' element={<CandidateRegistration/>}/>
-
-
-
-
+                    
                 </Routes>
             </div>
         </div>

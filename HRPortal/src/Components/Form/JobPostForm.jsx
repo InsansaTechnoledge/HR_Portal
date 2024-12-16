@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import axios from 'axios';
+import API_BASE_URL from "../../config";
 
 function JobPostForm() {
   const [jobs, setJobs] = useState([
@@ -68,7 +70,7 @@ function JobPostForm() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Process skills into an array
@@ -103,6 +105,18 @@ function JobPostForm() {
         skills: processedSkills,
         salary: formData.salary || "Not specified"
       };
+
+      const response = await axios.post(API_BASE_URL+"/job/post", newJob,{
+        headers: {
+          'content-type': 'application/json'
+        }
+      });
+
+      if(response.status==200){
+        alert('job Posted')
+        console.log(response.data.job);
+      }
+
       setJobs(prevJobs => [...prevJobs, newJob]);
     }
 
