@@ -88,14 +88,12 @@ const Login = () => {
             const response = await axios.post('http://localhost:3000/api/auth/login', {
                 userEmail,
                 password,
-            }, { withCredentials: true }); // Enable cookies for session management
+            }, { withCredentials: true });
     
             // Handle successful login
             alert('Login successful!');
             console.log(response.data); // Debugging
-    
-            // Redirect to home/dashboard (adjust this URL based on your routing)
-            window.location.href = '/home'; // Or use React Router if it's a SPA: history.push('/') or navigate('/')
+            window.location.href = '/home'; 
             
         } catch (error) {
             // Handle errors
