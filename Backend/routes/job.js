@@ -5,7 +5,7 @@ import Job from '../models/Job.js';
 const router = express.Router();
 
 router.post("/post", postJob);
-router.get('/list', getJobs);
+router.get("/list", getJobs);
 router.delete("/delete/:id", deleteJob);
 
 

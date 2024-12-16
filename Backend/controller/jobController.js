@@ -38,8 +38,8 @@ export const getJobs = async (req, res) => {
 
 export const deleteJob = async (req, res) => {
   try {
-    const { id } = req.params;
-    await Job.findByIdAndDelete(id);
+    const {id} = req.params;
+    await Job.findOneAndDelete({'jobId': id});
     res.status(200).json({ message: "Job deleted successfully!" });
   } catch (err) {
     console.error(err);
