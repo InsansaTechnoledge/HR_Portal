@@ -4,7 +4,6 @@ import mongooseSequence from 'mongoose-sequence';
 const JobSchema = new mongoose.Schema({
   jobId: {
     type: Number,
-    required: true,
     unique: true,
   },
   jobTitle: {
