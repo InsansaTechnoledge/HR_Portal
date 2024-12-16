@@ -4,55 +4,27 @@ import axios from 'axios';
 import API_BASE_URL from "../../config";
 
 function JobPostForm() {
-  
-  const [jobs, setJobs] = useState([
-    {
-      id: 1,
-      title: "Software Engineer",
-      location: "New York, USA",
-      description:
-        "Develop and maintain web applications using modern frameworks. Collaborate with cross-functional teams to deliver high-quality software.",
-      skills: ["React", "Node.js", "TypeScript", "Docker"],
-      salary: "$120,000 - $150,000"
-    },
-    {
-      id: 2,
-      title: "HR Manager",
-      location: "London, UK",
-      description:
-        "Manage recruitment processes, employee relations, and organizational development initiatives.",
-      skills: ["Recruitment", "Employee Relations", "Training"],
-      salary: "$90,000 - $110,000"
-    },
-    {
-      id: 3,
-      title: "Marketing Specialist",
-      location: "Toronto, Canada",
-      description:
-        "Plan and execute marketing campaigns to promote brand awareness and drive sales growth.",
-      skills: ["Digital Marketing", "SEO", "Content Strategy"],
-      salary: "$80,000 - $100,000"
-    },
-    {
-      id: 4,
-      title: "Data Scientist",
-      location: "Berlin, Germany",
-      description:
-        "Analyze complex datasets to uncover insights and develop predictive models.",
-      skills: ["Python", "Machine Learning", "Statistics"],
-      salary: "$130,000 - $160,000"
-    },
-    {
-      id: 5,
-      title: "Product Manager",
-      location: "Remote",
-      description:
-        "Lead product development teams, define product vision, and ensure timely delivery of high-quality solutions.",
-      skills: ["Product Strategy", "UX Design", "Agile Methodology"],
-      salary: "$110,000 - $140,000"
-    }
-  ]);
+  const [jobs, setJobs] = useState([])
 
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/job/list`);
+
+        if (response.status === 200 && response.data.jobs) {
+          setJobs(response.data.jobs);
+        }
+      } catch (error) {
+        console.error("Error fetching jobs:", error);
+      }
+    };
+
+    fetchJobs();
+  
+  }, [])
+  
+
+  
   const [currentIndex, setCurrentIndex] = useState(0);
   const [formData, setFormData] = useState({
     title: '',
@@ -95,10 +67,22 @@ function JobPostForm() {
           )
         );
       setEditingJob(null);
+      
+      const updateJob = {
+        jobTitle: formData.title,
+        jobLocation: formData.location,
+        jobDescription: formData.description,
+        skills: formData.skills,
+        salaryRange: formData.salary || "Not specified"
+      }
+
+    
+      console.log(updateJob)
+
     } else {
       // Add new job
       const newJob = {
-        jobId: Date.now(),
+      
         jobTitle: formData.title,
         jobLocation: formData.location,
         jobDescription: formData.description,
@@ -114,10 +98,8 @@ function JobPostForm() {
           'content-type': 'application/json'
         }
       });
-      console.log("SSS",response)
       if(response.status==200){
         alert('job Posted')
-        console.log(response.data.job);
       }
       else{
         console.log(response.data.message);
@@ -151,8 +133,11 @@ function JobPostForm() {
     });
   };
 
-  const handleDelete = (jobId) => {
-    setJobs(prevJobs => prevJobs.filter(job => job.id !== jobId));
+  const handleDelete = async (jobId) => {
+    setJobs(jobs.filter(job => job.jobId !== jobId));
+
+    const response = await axios.delete(`${API_BASE_URL}/api/job/delete/${jobId}`);
+    alert(response.data.message);
 
     // Reset index if needed
     if (currentIndex >= jobs.length - 1) {
@@ -347,7 +332,7 @@ function JobPostForm() {
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(jobs[currentIndex].id)}
+                        onClick={() => handleDelete(jobs[currentIndex].jobId)}
                         className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
                       >
                         Delete
