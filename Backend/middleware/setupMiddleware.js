@@ -1,20 +1,17 @@
-const express = require("express");
-const session = require("express-session");
-const MongoStore = require("connect-mongo");
-const cookieParser = require("cookie-parser");
-const passport = require("passport");
-const helmet = require("helmet");
-const cors = require("cors");
-const flash = require("connect-flash");
+import express from 'express';
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
+import cookieParser from 'cookie-parser';
+import passport from 'passport';
+import helmet from 'helmet';
+import cors from 'cors';
+import flash from 'connect-flash';
 
-module.exports = (app) => {
-  app.set("trust proxy", 1);
+const configureApp = (app) => {
+  app.set('trust proxy', 1);
 
   app.use(
-    cors({
-      origin: process.env.CLIENT_BASE_URL,
-      credentials: true,
-    })
+    cors()
   );
 
   app.use(express.json());
@@ -22,17 +19,17 @@ module.exports = (app) => {
   app.use(cookieParser());
   app.use(helmet());
 
-  //session configirations
+  // Session configurations
   app.use(
     session({
       secret: process.env.SESSION_SECRET,
       resave: false,
       saveUninitialized: false,
       cookie: {
-        secure: process.env.NODE_ENV !== "development",
-        sameSite: process.env.NODE_ENV === "development" ? "lax" : "none",
-        domain: process.env.NODE_ENV === "development" ? "localhost" : "auto",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        secure: process.env.NODE_ENV !== 'development',
+        sameSite: process.env.NODE_ENV === 'development' ? 'lax' : 'none',
+        domain: process.env.NODE_ENV === 'development' ? 'localhost' : 'auto',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       },
       store: MongoStore.create({
         mongoUrl: process.env.MONGO_URI,
@@ -44,3 +41,5 @@ module.exports = (app) => {
   app.use(passport.session());
   app.use(flash());
 };
+
+export default configureApp;

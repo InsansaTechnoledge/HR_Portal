@@ -1,16 +1,16 @@
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
-const { User } = require('../models/User'); // Make sure you import your User model
+import passport from 'passport';
+import { Strategy as LocalStrategy } from 'passport-local';
+import { User } from '../models/User.js'; // Ensure the User model is correctly imported
 
 passport.use(
   new LocalStrategy(
     {
-      usernameField: 'userId', // We are using userId for login
+      usernameField: 'userId', // Using userId for login
       passwordField: 'password',
     },
     async (userId, password, done) => {
       try {
-        // Find user by userId (which was randomly generated)
+        // Find user by userId
         const user = await User.findOne({ userId });
         if (!user) {
           return done(null, false, { message: 'Invalid credentials' });
@@ -46,3 +46,4 @@ passport.deserializeUser(async (userId, done) => {
   }
 });
 
+export default passport;
