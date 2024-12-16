@@ -20,11 +20,11 @@ function JobPostForm() {
     };
 
     fetchJobs();
-  
-  }, [])
-  
 
-  
+  }, [])
+
+
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [formData, setFormData] = useState({
     title: '',
@@ -47,15 +47,15 @@ function JobPostForm() {
     e.preventDefault();
     // Process skills into an array
     const processedSkills = formData.skills
-    ? formData.skills.split(',').map(skill => skill.trim())
-    : [];
-    
+      ? formData.skills.split(',').map(skill => skill.trim())
+      : [];
+
     if (editingJob) {
       // Update existing job
       setJobs(prevJobs =>
         prevJobs.map(job =>
           job.jobId === editingJob.jobId
-          ? {
+            ? {
               ...job,
               title: formData.title,
               location: formData.location,
@@ -64,10 +64,10 @@ function JobPostForm() {
               salary: formData.salary
             }
             : job
-          )
-        );
+        )
+      );
       setEditingJob(null);
-      
+
       const updateJob = {
 
         jobTitle: formData.title,
@@ -78,7 +78,7 @@ function JobPostForm() {
       }
 
       const response = await axios.put(`${API_BASE_URL}/api/job/update/${editingJob.jobId}`)
-      if(response.status === 200){
+      if (response.status === 200) {
         alert(response.data.message);
       }
 
@@ -87,30 +87,30 @@ function JobPostForm() {
     } else {
       // Add new job
       const newJob = {
-      
+
         jobTitle: formData.title,
         jobLocation: formData.location,
         jobDescription: formData.description,
         skills: processedSkills,
         salaryRange: formData.salary || "Not specified"
       };
-      
-      try{
+
+      try {
 
 
-      const response = await axios.post(`${API_BASE_URL}/api/job/post`, newJob,{
-        headers: {
-          'content-type': 'application/json'
+        const response = await axios.post(`${API_BASE_URL}/api/job/post`, newJob, {
+          headers: {
+            'content-type': 'application/json'
+          }
+        });
+        if (response.status == 200) {
+          alert('job Posted')
         }
-      });
-      if(response.status==200){
-        alert('job Posted')
+        else {
+          console.log(response.data.message);
+        }
       }
-      else{
-        console.log(response.data.message);
-      }
-      }
-      catch(err){
+      catch (err) {
         console.log(err)
       }
 
@@ -423,8 +423,8 @@ function JobPostForm() {
                 key={index}
                 onClick={() => setCurrentIndex(index)}
                 className={`h-3 w-3 rounded-full transition-all ${index === currentIndex
-                    ? 'bg-indigo-600 w-6'
-                    : 'bg-gray-300 hover:bg-gray-400'
+                  ? 'bg-indigo-600 w-6'
+                  : 'bg-gray-300 hover:bg-gray-400'
                   }`}
               />
             ))}

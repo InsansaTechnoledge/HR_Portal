@@ -5,24 +5,25 @@ import User from '../models/User.js'; // Ensure the User model is correctly impo
 passport.use(
   new LocalStrategy(
     {
-      usernameField: 'userId', // Using userId for login
+      usernameField: 'userEmail',
       passwordField: 'password',
     },
-    async (userId, password, done) => {
+    async (userEmail, password, done) => {
       try {
-        // Find user by userId
-        const user = await User.findOne({ userId });
+        
+        const user = await User.findOne({ userEmail });
         if (!user) {
           return done(null, false, { message: 'Invalid credentials' });
         }
 
-        // Compare password
+       
         const isMatch = await user.comparePassword(password);
         if (!isMatch) {
           return done(null, false, { message: 'Invalid credentials' });
         }
-
-        // Successfully authenticated
+        console.log("user authentiocated");
+        
+     
         return done(null, user);
       } catch (error) {
         return done(error);
@@ -31,15 +32,15 @@ passport.use(
   )
 );
 
-// Serialize user into session (by user ID)
+
 passport.serializeUser((user, done) => {
-  done(null, user.userId); // Using userId for session
+  done(null, user.userEmail); 
 });
 
-// Deserialize user from session
-passport.deserializeUser(async (userId, done) => {
+
+passport.deserializeUser(async (userEmail, done) => {
   try {
-    const user = await User.findOne({ userId });
+    const user = await User.findOne({ userEmail });
     done(null, user);
   } catch (error) {
     done(error);

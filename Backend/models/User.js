@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-// User Schema
 const UserSchema = new mongoose.Schema({
   userId: {
     type: String,
@@ -11,6 +10,11 @@ const UserSchema = new mongoose.Schema({
   username: {
     type: String,
     required: true,
+  },
+  userEmail: {
+    type: String,
+    required: true,
+    unique: true,
   },
   password: {
     type: String,
