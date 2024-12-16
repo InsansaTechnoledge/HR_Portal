@@ -1,50 +1,50 @@
 import mongoose from "mongoose";
-import mongooseSequence from "mongoose-sequence"
+import mongooseSequence from "mongoose-sequence";
+
+const AutoIncrement = mongooseSequence(mongoose);
 
 const candidateSchema = new mongoose.Schema({
-    candidateId:{
+    candidateId: {
         type: Number,
+        unique: true, 
+    },
+    name: {
+        type: String,
         required: true,
-        unique: true
     },
-    name:{
+    technology: {
         type: String,
-        required: true
+        required: true,
     },
-    technology:{
+    client: {
         type: String,
-        required: true
+        required: true,
     },
-    client:{
+    email: {
         type: String,
-        required: true
+        required: true,
     },
-    email:{
+    contact_no: {
         type: String,
-        required: true
+        required: true,
     },
-    contact_no:{
+    linkedIn: {
         type: String,
-        required: true
+        required: true,
     },
-    linkedIn:{
+    source: {
         type: String,
-        required: true
+        required: true,
     },
-    source:{
-        type: String,
-        required: true
-    },
-    resume:{
+    resume: {
         type: Buffer,
-        required: true
-    }
-
-    
+        required: true,
+    },
 });
 
-candidateSchema.plugin(mongooseSequence(mongoose), { inc_field: 'candidateId' });
+// Add the mongoose-sequence plugin for auto-incrementing candidateId
+candidateSchema.plugin(AutoIncrement, { inc_field: "candidateId" });
 
-const Candidate = mongoose.model('Candidate', candidateSchema);
+const Candidate = mongoose.model("Candidate", candidateSchema);
 
-export default Candidate
+export default Candidate;
