@@ -27,43 +27,44 @@ const CandidateRegistrationForm = () => {
     event.preventDefault();
     };
 
-    const onSubmitHandler = () => {
-        const name = document.getElementById("name").value
-        const technology = document.getElementById("technology").value
-        const client = document.getElementById("client").value
-        const email = document.getElementById("email").value
-        const contactno = document.getElementById("contact-no").value
-        const source = document.getElementById("source").value
-        const linkedin = document.getElementById("linkedin").value
-        const resume = document.getElementById("resume").files[0]
+    const onSubmitHandler = async () => {
+        const name = document.getElementById("name").value;
+        const technology = document.getElementById("technology").value;
+        const client = document.getElementById("client").value;
+        const email = document.getElementById("email").value;
+        const contactno = document.getElementById("contact-no").value;
+        const source = document.getElementById("source").value;
+        const linkedin = document.getElementById("linkedin").value;
+        const resume = document.getElementById("resume").files[0];
 
+        if (!resume) {
+            alert("Please upload a resume.");
+            return;
+        }
 
-        const reader = new FileReader()
-        reader.readAsArrayBuffer(resume);
-        
-        reader.onload = async () => {
-            const binData = reader.result
-            const newCandidate = {
-                "name": name,
-                "technology": technology,
-                "client": client,
-                "email": email,
-                "contact_no": contactno,
-                "source": source,
-                "linkedIn": linkedin,
-                "resume": binData
-            }
-            
-            const response = await axios.post(API_BASE_URL+"/api/candidate/add",newCandidate,{
-                'content-type': 'application/json'
+        // Create a FormData object
+        const formData = new FormData();
+        formData.append("name", name);
+        formData.append("technology", technology);
+        formData.append("client", client);
+        formData.append("email", email);
+        formData.append("contact_no", contactno);
+        formData.append("source", source);
+        formData.append("linkedIn", linkedin);
+        formData.append("resume", resume); // Attach the file
+
+        try {
+            const response = await axios.post(API_BASE_URL + "/api/candidate/add", formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
             });
-
-            const data = response.json();
-            console.log(data.message);
-            
-        };
-
-    }
+            alert(response.data.message);
+        } catch (error) {
+            console.error("Error while registering candidate:", error.response?.data || error.message);
+            alert("Error while registering candidate. Please try again.");
+        }
+    };
 
     return (
         <div>

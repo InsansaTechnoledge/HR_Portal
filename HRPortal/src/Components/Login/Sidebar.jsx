@@ -108,11 +108,20 @@ const Sidebar = () => {
                                 </ul>
                             )}
                         </li>
+
+
+                        
                         <SidebarItem
                             icon={<IconUser />}
                             label="Talent Management"
                             isOpen={isOpen}
                             to="/register-candidate"
+                        />
+                        <SidebarItem
+                            icon={<IconUser />}
+                            label="Candidate Rooster"
+                            isOpen={isOpen}
+                            to="/candidate-detail"
                         />
                         <SidebarItem
                             icon={<IconSettings />}
