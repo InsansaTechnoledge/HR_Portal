@@ -12,24 +12,35 @@ router.post('/login', async (req, res, next) => {
     let user = await User.findOne({ userEmail });
 
     if (!user) {
-      return res.redirect('/signup'); 
+      return res.status(400).json({ message: 'User not found, please sign up first.' });
     }
 
-    // User found, authenticate with passport
-    passport.authenticate('local', {
-      failureRedirect: '/',
-      failureFlash: true,
-      session: true,
-    })(req, res, next);
+    // User exists, authenticate with passport
+    passport.authenticate('local', async (err, user, info) => {
+      if (err) {
+        return next(err); // Handle any errors that occur during authentication
+      }
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid credentials' }); // Handle failed login
+      }
+
+      // If authentication is successful, log the user in and create a session
+      req.login(user, (err) => {
+        if (err) {
+          return next(err); // Handle any errors that occur during session creation
+        }
+
+        // Send the success response after login
+        return res.status(200).json({ message: 'Login successful', user: req.user });
+      });
+    })(req, res, next);  // Call passport.authenticate
 
   } catch (error) {
     console.error('Error during login process:', error);
     res.status(500).json({ error: 'Failed to process login' });
   }
-}, (req, res) => {
-  // Successful login
-  res.status(200).json({ message: 'Login successful', user: req.user });
 });
+
 
 // Signup route (used if user does not exist)
 router.post('/signup', async (req, res) => {
@@ -60,5 +71,31 @@ router.post('/signup', async (req, res) => {
     res.status(500).json({ error: 'Failed to create user' });
   }
 });
+
+// authRoutes.js (or wherever you handle authentication)
+router.get('/check-session', (req, res) => {
+  if (req.isAuthenticated()) {
+    // User is authenticated, send back user info
+    console.log("hello", req.user);
+    
+    return res.status(200).json({ message: 'Session valid', user: req.user });
+  }
+  // If the user is not authenticated, return an error
+  res.status(401).json({ message: 'No valid session found' });
+});
+
+router.get('/logout', (req, res) => {
+  req.logout((err) => {
+      if (err) {
+          return res.status(500).json({ message: 'Error logging out' });
+      }
+      req.session.destroy(() => {
+          res.clearCookie('connect.sid');  // Clear session cookie
+          res.status(200).json({ message: 'Logged out successfully' });
+      });
+  });
+});
+
+
 
 export default router;
