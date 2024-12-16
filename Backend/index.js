@@ -1,9 +1,9 @@
-import startApp from './app';
+import App from './App.js'
 const PORT = process.env.PORT || 3000;
 
 const initializeApp = async () => {
     try {
-        const app = await startApp();
+        const app = await App();
         if (app) {
             app.get('/', (req, res) => {
                 res.send('Portal is running perfectly!!');

@@ -116,6 +116,9 @@ function JobPostForm() {
         alert('job Posted')
         console.log(response.data.job);
       }
+      else{
+        console.log(response.data.message);
+      }
 
       setJobs(prevJobs => [...prevJobs, newJob]);
     }

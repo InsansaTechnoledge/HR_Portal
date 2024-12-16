@@ -1,6 +1,9 @@
-import express from '..config/express';
-import jobController from '../controller/jobController'
+import express from 'express';
+import {postJob} from '../controller/jobController.js'
+import Job from '../models/Job.js';
 
-const router = express.router();
+const router = express.Router();
 
-app.post("/post", jobController.postJob);
+router.post("/post", postJob);
+
+export default Job;

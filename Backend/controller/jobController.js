@@ -1,6 +1,6 @@
-import Job from "../models/Job"
+import Job from "../models/Job.js"
 
-exports.postJob = async (req,res) => {
+export const postJob = async (req,res) => {
 
     try{
 
@@ -18,3 +18,4 @@ exports.postJob = async (req,res) => {
           });
     }
 }
+
