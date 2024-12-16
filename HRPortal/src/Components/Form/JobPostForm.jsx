@@ -54,7 +54,7 @@ function JobPostForm() {
       // Update existing job
       setJobs(prevJobs =>
         prevJobs.map(job =>
-          job.id === editingJob.id
+          job.jobId === editingJob.jobId
           ? {
               ...job,
               title: formData.title,
@@ -69,6 +69,7 @@ function JobPostForm() {
       setEditingJob(null);
       
       const updateJob = {
+
         jobTitle: formData.title,
         jobLocation: formData.location,
         jobDescription: formData.description,
@@ -76,7 +77,11 @@ function JobPostForm() {
         salaryRange: formData.salary || "Not specified"
       }
 
-    
+      const response = await axios.put(`${API_BASE_URL}/api/job/update/${editingJob.jobId}`)
+      if(response.status === 200){
+        alert(response.data.message);
+      }
+
       console.log(updateJob)
 
     } else {

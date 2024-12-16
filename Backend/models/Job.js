@@ -25,7 +25,6 @@ const JobSchema = new mongoose.Schema({
   },
   salaryRange: {
     type: String,
-    required: true
   }
 });
 
