@@ -4,6 +4,7 @@ import axios from 'axios';
 import API_BASE_URL from "../../config";
 
 function JobPostForm() {
+  
   const [jobs, setJobs] = useState([
     {
       id: 1,
@@ -108,7 +109,7 @@ function JobPostForm() {
       try{
 
 
-      const response = await axios.post(API_BASE_URL+"/job/post", newJob,{
+      const response = await axios.post(`${API_BASE_URL}/api/job/post`, newJob,{
         headers: {
           'content-type': 'application/json'
         }
