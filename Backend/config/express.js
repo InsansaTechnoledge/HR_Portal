@@ -1,18 +1,21 @@
-require("dotenv").config();
-require("../config/passport");
-const express = require("express");
-const errorHandler = require("../middleware/errorHandler");
-const setupMiddleware = require("../middleware/setupMiddleware");
-const routes = require("../routes/routes")
+import dotenv from 'dotenv';
+import '../config/passport.js';
+import express from 'express';
+import errorHandler from '../middleware/errorHandler.js';
+import setupMiddleware from '../middleware/setupMiddleware.js';
+import routes from '../routes/routes.js';
+
+dotenv.config();
+
 const app = express();
 
-//setup middleware
+// Setup middleware
 setupMiddleware(app);
 
-//routes
+// Routes
 routes(app);
 
-//error handling Middleware
+// Error handling middleware
 app.use(errorHandler);
 
-module.exports = app;
+export default app;

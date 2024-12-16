@@ -1,6 +1,9 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
+
+    const navigate = useNavigate();
 
     const handleLogin = () => {
         alert("login");
@@ -12,7 +15,7 @@ const Login = () => {
                 <div className="sm:mx-auto sm:w-full sm:max-w-sm">
                     
                     <h1 className="mt-10 text-center text-4xl/6 font-bold tracking-tight text-gray-900">
-                        Sign in to your account
+                        Login to your HR Portal
                     </h1>
                 </div>
 
@@ -56,10 +59,11 @@ const Login = () => {
 
                         <div>
                             <button
+                                onClick={() => navigate('/home')}
                                 type="button"
                                 className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
                             >
-                                Sign in
+                                Enter
                             </button>
                         </div>
                     </form>

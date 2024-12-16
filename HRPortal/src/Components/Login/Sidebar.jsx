@@ -99,6 +99,12 @@ const Sidebar = () => {
                                         isOpen={isOpen}
                                         to="/application"
                                     />
+                                    <SidebarItem
+                                        icon={<IconGridDots />}
+                                        label="Leave Tracker"
+                                        isOpen={isOpen}
+                                        to="/leave-tracker"
+                                    />
                                 </ul>
                             )}
                         </li>
@@ -106,7 +112,7 @@ const Sidebar = () => {
                             icon={<IconUser />}
                             label="Talent Management"
                             isOpen={isOpen}
-                            to="/talent"
+                            to="/register-candidate"
                         />
                         <SidebarItem
                             icon={<IconSettings />}

@@ -2,6 +2,7 @@
   "dependencies": {
     "@tabler/icons-react": "^3.24.0",
     "lucide-react": "^0.468.0",
+    "react-responsive": "^10.0.0",
     "swiper": "^11.1.15"
   }
 }
