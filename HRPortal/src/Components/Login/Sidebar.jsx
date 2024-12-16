@@ -13,6 +13,7 @@ import { NavLink } from "react-router-dom";
 const Sidebar = () => {
     const [isOpen, setIsOpen] = useState(true);
     const [isAppsOpen, setIsAppsOpen] = useState(false); // State for Apps dropdown
+    const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false); // State for User Management dropdown
 
     const toggleSidebar = () => {
         setIsOpen(!isOpen);
@@ -22,17 +23,19 @@ const Sidebar = () => {
         setIsAppsOpen(!isAppsOpen);
     };
 
+    const toggleUserDropdown = () => {
+        setIsUserDropdownOpen(!isUserDropdownOpen);
+    };
+
     return (
         <div className="flex h-screen">
             {/* Sidebar */}
             <div
-                className={`bg-gray-800 text-white ${isOpen ? "w-64" : "w-16"
-                    } duration-300 flex flex-col`}
+                className={`bg-gray-800 text-white ${isOpen ? "w-64" : "w-16"} duration-300 flex flex-col`}
             >
                 <div className="flex items-center justify-between px-4 py-4 border-b border-gray-700">
                     <h1
-                        className={`text-lg font-bold ${isOpen ? "block" : "hidden"
-                            } duration-300`}
+                        className={`text-lg font-bold ${isOpen ? "block" : "hidden"} duration-300`}
                     >
                         Insansa
                     </h1>
@@ -55,16 +58,14 @@ const Sidebar = () => {
                             {/* Dropdown Menu for Apps */}
                             <button
                                 onClick={toggleAppsDropdown}
-                                className={`flex items-center justify-between w-full px-4 py-3 rounded-md ${isAppsOpen ? "bg-gray-700" : "hover:bg-gray-700"
-                                    }`}
+                                className={`flex items-center justify-between w-full px-4 py-3 rounded-md ${isAppsOpen ? "bg-gray-700" : "hover:bg-gray-700"}`}
                             >
                                 <div className="flex items-center space-x-3">
                                     <span className="text-xl">
                                         <IconGridDots />
                                     </span>
                                     <span
-                                        className={`${isOpen ? "block" : "hidden"
-                                            } duration-300`}
+                                        className={`${isOpen ? "block" : "hidden"} duration-300`}
                                     >
                                         Apps
                                     </span>
@@ -77,10 +78,7 @@ const Sidebar = () => {
                             </button>
                             {/* Dropdown Items */}
                             {isAppsOpen && (
-                                <ul
-                                    className={`${isOpen ? "ml-8" : "ml-4"
-                                        } mt-2 space-y-2`}
-                                >
+                                <ul className={`${isOpen ? "ml-8" : "ml-4"} mt-2 space-y-2`}>
                                     <SidebarItem
                                         icon={<IconGridDots />}
                                         label="Employee Docs Management"
@@ -109,20 +107,47 @@ const Sidebar = () => {
                             )}
                         </li>
 
+                        <li>
+                            {/* Dropdown for User Management */}
+                            <button
+                                onClick={toggleUserDropdown}
+                                className={`flex items-center justify-between w-full px-4 py-3 rounded-md ${isUserDropdownOpen ? "bg-gray-700" : "hover:bg-gray-700"}`}
+                            >
+                                <div className="flex items-center space-x-3">
+                                    <span className="text-xl">
+                                        <IconUser />
+                                    </span>
+                                    <span
+                                        className={`${isOpen ? "block" : "hidden"} duration-300`}
+                                    >
+                                        Talent Management
+                                    </span>
+                                </div>
+                                {isOpen && (
+                                    <span>
+                                        {isUserDropdownOpen ? <IconChevronUp /> : <IconChevronDown />}
+                                    </span>
+                                )}
+                            </button>
+                            {/* Dropdown Items */}
+                            {isUserDropdownOpen && (
+                                <ul className={`${isOpen ? "ml-8" : "ml-4"} mt-2 space-y-2`}>
+                                    <SidebarItem
+                                        icon={<IconUser />}
+                                        label="Register Candidate"
+                                        isOpen={isOpen}
+                                        to="/register-candidate"
+                                    />
+                                    <SidebarItem
+                                        icon={<IconUser />}
+                                        label="Candidate Roster"
+                                        isOpen={isOpen}
+                                        to="/candidate-detail"
+                                    />
+                                </ul>
+                            )}
+                        </li>
 
-                        
-                        <SidebarItem
-                            icon={<IconUser />}
-                            label="Talent Management"
-                            isOpen={isOpen}
-                            to="/register-candidate"
-                        />
-                        <SidebarItem
-                            icon={<IconUser />}
-                            label="Candidate Rooster"
-                            isOpen={isOpen}
-                            to="/candidate-detail"
-                        />
                         <SidebarItem
                             icon={<IconSettings />}
                             label="Authentication Management"
@@ -148,8 +173,7 @@ const SidebarItem = ({ icon, label, isOpen, to }) => {
             <NavLink
                 to={to}
                 className={({ isActive }) =>
-                    `flex items-center space-x-3 px-4 py-3 rounded-md ${isActive ? "bg-indigo-600 text-white" : "hover:bg-gray-700"
-                    }`
+                    `flex items-center space-x-3 px-4 py-3 rounded-md ${isActive ? "bg-indigo-600 text-white" : "hover:bg-gray-700"}`
                 }
             >
                 <span className="text-xl">{icon}</span>
