@@ -23,6 +23,7 @@ const CandidatesList = () => {
             try {
                 const response = await axios.get(`${API_BASE_URL}/api/candidate/candidates`);
                 setCandidates(response.data);
+                console.log(response.data)
             } catch (err) {
                 console.error('Error fetching candidates:', err.message);
                 setError('Failed to fetch candidates.');
@@ -71,28 +72,37 @@ const CandidatesList = () => {
         }
 
         // Handle Resume Field
-        if (field === 'resume' && value?.data) {
+        if (field === 'resume'){
+            console.log("rendering resume for", value)
+            if(value?.data) {
+                console.log(value?.data)
             try {
-                return (
-                    <div className="flex items-center">
-                        <Icon className="w-5 h-5 mr-2 text-blue-400" />
-                        <a
-                            href={`data:application/pdf;base64,${btoa(
-                                String.fromCharCode(...new Uint8Array(value.data))
-                            )}`}
-                            download={`${value.name}_Resume.pdf`}
-                            className="text-blue-600 hover:underline"
-                        >
-                            Download Resume
-                        </a>
-                    </div>
-                );
+                // Create a Blob from binary data
+            const blob = new Blob([new Uint8Array(value.data)], {
+                type: 'application/pdf', // Use 'application/pdf' or 'application/msword' as appropriate
+            });
+
+            // Generate a blob URL
+            const href = URL.createObjectURL(blob);
+
+            return (
+                <div className="flex items-center">
+                    <Icon className="w-5 h-5 mr-2 text-blue-400" />
+                    <a
+                        href={href}
+                        download={`${value.name || "resume"}_Resume.pdf`}
+                        className="text-blue-600 hover:underline"
+                    >
+                        Download Resume
+                    </a>
+                </div>
+            );
             } catch (err) {
                 console.error('Error rendering resume:', err);
                 return null;
             }
         }
-
+    }
         // Default Rendering for Other Fields
         if (typeof value === 'string' || typeof value === 'number') {
             return (
@@ -126,9 +136,9 @@ const CandidatesList = () => {
                                 <div className="p-6">
                                     <h2 className="text-xl font-bold text-gray-800 mb-4">{candidate.name}</h2>
                                     <div className="space-y-3 text-gray-600">
-                                        {Object.keys(candidate).map((field) =>
+                                        {candidates ? Object.keys(candidate).map((field) =>
                                             candidate[field] ? renderField(field, candidate[field]) : null
-                                        )}
+                                        ) : null}
                                     </div>
                                 </div>
                             </div>

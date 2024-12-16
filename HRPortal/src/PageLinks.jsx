@@ -85,9 +85,9 @@ function AppLayout() {
                     <Route
                         path="/candidate-detail"
                         element={
-                            <ProtectedRoute>
+                            // <ProtectedRoute>
                                 <CandidateDetails />
-                            </ProtectedRoute>
+                            // </ProtectedRoute>
                         }
                     />
                     <Route
