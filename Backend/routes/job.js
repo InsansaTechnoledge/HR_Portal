@@ -6,4 +6,4 @@ const router = express.Router();
 
 router.post("/post", postJob);
 
-export default Job;
+export default router;

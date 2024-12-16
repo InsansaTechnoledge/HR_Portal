@@ -1,8 +1,9 @@
 import mongoose from 'mongoose';
+import mongooseSequence from 'mongoose-sequence';
 
 const JobSchema = new mongoose.Schema({
   jobId: {
-    type: String,
+    type: Number,
     required: true,
     unique: true,
   },
@@ -27,6 +28,8 @@ const JobSchema = new mongoose.Schema({
     required: true
   }
 });
+
+JobSchema.plugin(mongooseSequence(mongoose), { inc_field: 'jobId' });
 
 const Job = mongoose.model('Job', JobSchema);
 export default Job;

@@ -4,7 +4,7 @@ export const postJob = async (req,res) => {
 
     try{
 
-        const job = req.body.Job;
+        const job = req.body.newJob;
         
         const savedJob = await Job.create(job)
         
