@@ -108,7 +108,7 @@ function JobPostForm() {
       try{
 
 
-      const response = await axios.post(API_BASE_URL+"/job/post", newJob,{
+      const response = await axios.post(API_BASE_URL+"/api/job/post", newJob,{
         headers: {
           'content-type': 'application/json'
         }

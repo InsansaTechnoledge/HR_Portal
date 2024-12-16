@@ -44,9 +44,9 @@ function AppLayout() {
                     <Route
                         path="/post-job"
                         element={
-                            // <ProtectedRoute>
+                            <ProtectedRoute>
                                 <JobPostForm />
-                            // </ProtectedRoute>
+                            </ProtectedRoute>
                         }
                     />
                     <Route
@@ -100,9 +100,9 @@ function AppLayout() {
                     <Route
                         path="/register-candidate"
                         element={
-                            <ProtectedRoute>
+                            // <ProtectedRoute>
                                 <CandidateRegistration />
-                            </ProtectedRoute>
+                            // </ProtectedRoute>
                         }
                     />
                 </Routes>

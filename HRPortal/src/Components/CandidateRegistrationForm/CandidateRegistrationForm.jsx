@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import API_BASE_URL from '../../config';
+import axios from 'axios';
 
 const CandidateRegistrationForm = () => {
 
@@ -33,20 +35,34 @@ const CandidateRegistrationForm = () => {
         const contactno = document.getElementById("contact-no").value
         const source = document.getElementById("source").value
         const linkedin = document.getElementById("linkedin").value
-        const resume = document.getElementById("resume").target.files[0]
+        const resume = document.getElementById("resume").files[0]
 
-        const newCandidate = {
-            "name": name,
-            "technology": technology,
-            "client": client,
-            "email": email,
-            "contactno": contactno,
-            "source": source,
-            "linkedin": linkedin,
-            // "resume": resume.name
-        }
-        alert(newCandidate)
-        console.log(newCandidate)
+
+        const reader = new FileReader()
+        reader.readAsArrayBuffer(resume);
+        
+        reader.onload = async () => {
+            const binData = reader.result
+            const newCandidate = {
+                "name": name,
+                "technology": technology,
+                "client": client,
+                "email": email,
+                "contact_no": contactno,
+                "source": source,
+                "linkedIn": linkedin,
+                "resume": binData
+            }
+            
+            const response = await axios.post(API_BASE_URL+"/api/candidate/add",newCandidate,{
+                'content-type': 'application/json'
+            });
+
+            const data = response.json();
+            console.log(data.message);
+            
+        };
+
     }
 
     return (
