@@ -97,12 +97,12 @@ function JobPostForm() {
     } else {
       // Add new job
       const newJob = {
-        id: Date.now(),
-        title: formData.title,
-        location: formData.location,
-        description: formData.description,
+        jobId: Date.now(),
+        jobTitle: formData.title,
+        jobLocation: formData.location,
+        jobDescription: formData.description,
         skills: processedSkills,
-        salary: formData.salary || "Not specified"
+        salaryRange: formData.salary || "Not specified"
       };
       
       try{
