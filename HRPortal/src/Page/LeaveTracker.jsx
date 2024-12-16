@@ -1,214 +1,233 @@
 import React, { useState } from 'react';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
 
-// Sample initial employee data
 const initialEmployees = [
     {
         id: 1,
         name: 'John Doe',
         department: 'Engineering',
-        totalLeaves: 20,
-        takenLeaves: 5,
-        remainingLeaves: 15,
         leaveHistory: [
-            {
-                type: 'Vacation',
-                startDate: '2024-03-15',
-                endDate: '2024-03-20',
-                status: 'Approved'
-            },
-            {
-                type: 'Sick Leave',
-                startDate: '2024-02-10',
-                endDate: '2024-02-11',
-                status: 'Approved'
-            }
+            { type: 'Vacation', startDate: '2024-03-15', endDate: '2024-03-20' },
+            { type: 'Sick Leave', startDate: '2024-02-10', endDate: '2024-02-11' },
+            { type: 'Personal', startDate: '2024-04-05', endDate: '2024-04-07' }
         ]
     },
     {
         id: 2,
         name: 'Jane Smith',
         department: 'Marketing',
-        totalLeaves: 18,
-        takenLeaves: 8,
-        remainingLeaves: 10,
         leaveHistory: [
-            {
-                type: 'Personal',
-                startDate: '2024-01-05',
-                endDate: '2024-01-07',
-                status: 'Approved'
-            }
+            { type: 'Personal', startDate: '2024-01-05', endDate: '2024-01-07' }
         ]
     }
 ];
 
+const leaveTypes = ['Vacation', 'Sick Leave', 'Personal', 'Maternity', 'Unpaid Leave'];
+
 const LeaveTracker = () => {
     const [employees, setEmployees] = useState(initialEmployees);
-    const [newLeaveRequest, setNewLeaveRequest] = useState({
-        employeeId: '',
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState(initialEmployees[0]?.id || 1);
+    const [selectedMonth, setSelectedMonth] = useState(null);
+    const [showAddLeaveForm, setShowAddLeaveForm] = useState(false);
+    const [newLeave, setNewLeave] = useState({
         type: '',
         startDate: '',
         endDate: '',
-        reason: ''
     });
 
-    const handleLeaveRequestChange = (e) => {
-        const { name, value } = e.target;
-        setNewLeaveRequest(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmitLeaveRequest = () => {
-        if (!newLeaveRequest.employeeId || !newLeaveRequest.type ||
-            !newLeaveRequest.startDate || !newLeaveRequest.endDate) {
-            alert('Please fill in all required fields');
-            return;
-        }
-
-        const selectedEmployee = employees.find(
-            emp => emp.id === parseInt(newLeaveRequest.employeeId)
-        );
-
-        if (!selectedEmployee) {
-            alert('Invalid employee selected');
-            return;
-        }
-
-        const startDate = new Date(newLeaveRequest.startDate);
-        const endDate = new Date(newLeaveRequest.endDate);
-        const leaveDuration = (endDate - startDate) / (1000 * 60 * 60 * 24) + 1;
-
-        if (leaveDuration > selectedEmployee.remainingLeaves) {
-            alert('Not enough leaves available');
-            return;
-        }
-
-        const leaveRequest = {
-            type: newLeaveRequest.type,
-            startDate: newLeaveRequest.startDate,
-            endDate: newLeaveRequest.endDate,
-            status: 'Pending'
-        };
-
-        const updatedEmployees = employees.map(emp => {
-            if (emp.id === selectedEmployee.id) {
+    const handleAddLeave = () => {
+        const updatedEmployees = employees.map((emp) => {
+            if (emp.id === selectedEmployeeId) {
                 return {
                     ...emp,
-                    takenLeaves: emp.takenLeaves + leaveDuration,
-                    remainingLeaves: emp.remainingLeaves - leaveDuration,
-                    leaveHistory: [...emp.leaveHistory, leaveRequest]
+                    leaveHistory: [...emp.leaveHistory, { ...newLeave }],
                 };
             }
             return emp;
         });
-
         setEmployees(updatedEmployees);
+        setShowAddLeaveForm(false);
+        setNewLeave({ type: '', startDate: '', endDate: '' });
+    };
 
-        setNewLeaveRequest({
-            employeeId: '',
-            type: '',
-            startDate: '',
-            endDate: '',
-            reason: ''
+    const getLeaveDatesForMonth = () => {
+        const selectedEmployee = employees.find((emp) => emp.id === selectedEmployeeId);
+        if (!selectedEmployee || !selectedMonth) return [];
+
+        const [year, month] = selectedMonth.split('-');
+        const leaveDates = selectedEmployee.leaveHistory.flatMap((leave) => {
+            const start = new Date(leave.startDate);
+            const end = new Date(leave.endDate);
+            const dates = [];
+
+            for (let d = start; d <= end; d.setDate(d.getDate() + 1)) {
+                if (d.getFullYear() === parseInt(year) && d.getMonth() + 1 === parseInt(month)) {
+                    dates.push({
+                        date: new Date(d),
+                        type: leave.type,
+                    });
+                }
+            }
+            return dates;
         });
+
+        return leaveDates;
+    };
+
+    const isHighlighted = (date) => {
+        const leaveDates = getLeaveDatesForMonth();
+        return leaveDates.some((leaveDate) => leaveDate.date.toDateString() === date.toDateString());
+    };
+
+    const getLeaveTypeForDate = (date) => {
+        const leaveDates = getLeaveDatesForMonth();
+        const leave = leaveDates.find((leaveDate) => leaveDate.date.toDateString() === date.toDateString());
+        return leave ? leave.type : null;
     };
 
     return (
-        <div style={{ padding: '20px' }}>
-            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                {/* Leave Request Form */}
-                <div style={{ flex: 1, border: '1px solid #ddd', padding: '15px', borderRadius: '5px' }}>
-                    <h2>Submit Leave Request</h2>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label>
-                            Employee:
-                            <select
-                                name="employeeId"
-                                value={newLeaveRequest.employeeId}
-                                onChange={handleLeaveRequestChange}
-                            >
-                                <option value="">Select Employee</option>
-                                {employees.map(emp => (
-                                    <option key={emp.id} value={emp.id}>
-                                        {emp.name} - {emp.department}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                    </div>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label>
-                            Leave Type:
-                            <select
-                                name="type"
-                                value={newLeaveRequest.type}
-                                onChange={handleLeaveRequestChange}
-                            >
-                                <option value="">Select Type</option>
-                                <option value="Vacation">Vacation</option>
-                                <option value="Sick Leave">Sick Leave</option>
-                                <option value="Personal">Personal</option>
-                            </select>
-                        </label>
-                    </div>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label>
-                            Start Date:
-                            <input
-                                type="date"
-                                name="startDate"
-                                value={newLeaveRequest.startDate}
-                                onChange={handleLeaveRequestChange}
-                            />
-                        </label>
-                    </div>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label>
-                            End Date:
-                            <input
-                                type="date"
-                                name="endDate"
-                                value={newLeaveRequest.endDate}
-                                onChange={handleLeaveRequestChange}
-                            />
-                        </label>
-                    </div>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label>
-                            Reason (Optional):
-                            <input
-                                type="text"
-                                name="reason"
-                                value={newLeaveRequest.reason}
-                                onChange={handleLeaveRequestChange}
-                                placeholder="Enter reason"
-                            />
-                        </label>
-                    </div>
-                    <button onClick={handleSubmitLeaveRequest} style={{ padding: '10px', background: '#007BFF', color: '#fff', border: 'none', borderRadius: '5px' }}>
-                        Submit
-                    </button>
+        <div className="container mx-auto px-4 py-6">
+            <div className="bg-white shadow-md rounded-lg p-6">
+                <h2 className="text-2xl font-semibold mb-4 text-gray-800">Employee Leave Calendar</h2>
+
+                {/* Employee Selector */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Select Employee
+                        <select
+                            value={selectedEmployeeId}
+                            onChange={(e) => {
+                                setSelectedEmployeeId(parseInt(e.target.value));
+                                setSelectedMonth(null); // Reset the month selection
+                            }}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                        >
+                            {employees.map((emp) => (
+                                <option key={emp.id} value={emp.id}>
+                                    {emp.name} - {emp.department}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
                 </div>
 
-                {/* Employee Leave Summary */}
-                <div style={{ flex: 1, border: '1px solid #ddd', padding: '15px', borderRadius: '5px' }}>
-                    <h2>Employee Leave Summary</h2>
-                    {employees.map(employee => (
-                        <div key={employee.id} style={{ marginBottom: '20px', borderBottom: '1px solid #ddd', paddingBottom: '10px' }}>
-                            <h3>{employee.name} ({employee.department})</h3>
-                            <p>Total Leaves: {employee.totalLeaves}</p>
-                            <p>Taken Leaves: {employee.takenLeaves}</p>
-                            <p>Remaining Leaves: {employee.remainingLeaves}</p>
-                            <h4>Leave History:</h4>
-                            <ul>
-                                {employee.leaveHistory.map((leave, index) => (
-                                    <li key={index}>
-                                        {leave.type}: {leave.startDate} to {leave.endDate} ({leave.status})
-                                    </li>
-                                ))}
-                            </ul>
+                {/* Add Leave Button */}
+                <button
+                    onClick={() => setShowAddLeaveForm((prev) => !prev)}
+                    className="mb-4 px-4 py-2 bg-blue-500 text-white rounded shadow hover:bg-blue-600 transition duration-200"
+                >
+                    {showAddLeaveForm ? 'Cancel' : 'Add Leave'}
+                </button>
+
+                {/* Add Leave Form */}
+                {showAddLeaveForm && (
+                    <div className="mb-4 p-4 bg-gray-100 rounded-md shadow">
+                        <h3 className="text-lg font-medium text-gray-700 mb-2">Add Leave</h3>
+                        <div className="grid grid-cols-1 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">
+                                    Leave Type
+                                    <select
+                                        value={newLeave.type}
+                                        onChange={(e) => setNewLeave({ ...newLeave, type: e.target.value })}
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                    >
+                                        <option value="" disabled>Select Leave Type</option>
+                                        {leaveTypes.map((type, index) => (
+                                            <option key={index} value={type}>
+                                                {type}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">
+                                    Start Date
+                                    <input
+                                        type="date"
+                                        value={newLeave.startDate}
+                                        onChange={(e) => setNewLeave({ ...newLeave, startDate: e.target.value })}
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                    />
+                                </label>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">
+                                    End Date
+                                    <input
+                                        type="date"
+                                        value={newLeave.endDate}
+                                        onChange={(e) => setNewLeave({ ...newLeave, endDate: e.target.value })}
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                    />
+                                </label>
+                            </div>
+                            <button
+                                onClick={handleAddLeave}
+                                className="px-4 py-2 bg-green-500 text-white rounded shadow hover:bg-green-600 transition duration-200"
+                            >
+                                Save Leave
+                            </button>
                         </div>
-                    ))}
-                </div>
+                    </div>
+                )}
+
+                {/* Display Months with Leaves */}
+                {!selectedMonth && (
+                    <div>
+                        <h3 className="text-lg font-medium text-gray-700 mb-2">Months with Leaves</h3>
+                        <div className="grid grid-cols-4 gap-2">
+                            {Array.from(
+                                new Set(
+                                    employees
+                                        .find((emp) => emp.id === selectedEmployeeId)
+                                        ?.leaveHistory.map((leave) => {
+                                            const startDate = new Date(leave.startDate);
+                                            return `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+                                        }) || []
+                                )
+                            ).map((month, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => setSelectedMonth(month)}
+                                    className="p-2 bg-indigo-100 text-indigo-700 rounded shadow hover:bg-indigo-200 transition duration-200"
+                                >
+                                    {new Date(`${month}-01`).toLocaleString('default', { month: 'long', year: 'numeric' })}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Display Calendar for Selected Month */}
+                {selectedMonth && (
+                    <div>
+                        <h3 className="text-lg font-medium text-gray-700 mb-2">
+                            {new Date(`${selectedMonth}-01`).toLocaleString('default', { month: 'long', year: 'numeric' })}
+                        </h3>
+                        <button
+                            onClick={() => setSelectedMonth(null)}
+                            className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition duration-200"
+                        >
+                            Back to Months
+                        </button>
+                        <Calendar
+                            value={new Date(selectedMonth)}
+                            tileClassName={({ date }) =>
+                                isHighlighted(date) ? 'bg-red-200 rounded-full' : ''
+                            }
+                            tileContent={({ date }) => {
+                                const leaveType = getLeaveTypeForDate(date);
+                                return leaveType ? (
+                                    <span className="text-xs text-red-600">{leaveType}</span>
+                                ) : null;
+                            }}
+                            className="rounded-md"
+                        />
+                    </div>
+                )}
             </div>
         </div>
     );

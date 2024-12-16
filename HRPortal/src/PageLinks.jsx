@@ -20,6 +20,7 @@ import TalentManagement from './Page/TalentManagement';
 import JobApplication from './Page/JobApplication';
 import AuthenticationManagement from './Page/AuthenticationManagement';
 import LeaveTracker from './Page/LeaveTracker';
+import CandidateDetails from './Components/CandidateRegistrationForm/CandidateDetail';
 
 function AppLayout() {
     const location = useLocation();
@@ -82,6 +83,14 @@ function AppLayout() {
                         }
                     />
                     <Route
+                        path="/candidate-detail"
+                        element={
+                            <ProtectedRoute>
+                                <CandidateDetails />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
                         path="/application"
                         element={
                             <ProtectedRoute>
@@ -100,9 +109,9 @@ function AppLayout() {
                     <Route
                         path="/register-candidate"
                         element={
-                            <ProtectedRoute>
+                            // <ProtectedRoute>
                                 <CandidateRegistration />
-                            </ProtectedRoute>
+                            // </ProtectedRoute>
                         }
                     />
                 </Routes>

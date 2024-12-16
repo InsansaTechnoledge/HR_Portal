@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import API_BASE_URL from '../../config';
+import axios from 'axios';
 
 const CandidateRegistrationForm = () => {
 
@@ -25,29 +27,44 @@ const CandidateRegistrationForm = () => {
     event.preventDefault();
     };
 
-    const onSubmitHandler = () => {
-        const name = document.getElementById("name").value
-        const technology = document.getElementById("technology").value
-        const client = document.getElementById("client").value
-        const email = document.getElementById("email").value
-        const contactno = document.getElementById("contact-no").value
-        const source = document.getElementById("source").value
-        const linkedin = document.getElementById("linkedin").value
-        const resume = document.getElementById("resume").target.files[0]
+    const onSubmitHandler = async () => {
+        const name = document.getElementById("name").value;
+        const technology = document.getElementById("technology").value;
+        const client = document.getElementById("client").value;
+        const email = document.getElementById("email").value;
+        const contactno = document.getElementById("contact-no").value;
+        const source = document.getElementById("source").value;
+        const linkedin = document.getElementById("linkedin").value;
+        const resume = document.getElementById("resume").files[0];
 
-        const newCandidate = {
-            "name": name,
-            "technology": technology,
-            "client": client,
-            "email": email,
-            "contactno": contactno,
-            "source": source,
-            "linkedin": linkedin,
-            // "resume": resume.name
+        if (!resume) {
+            alert("Please upload a resume.");
+            return;
         }
-        alert(newCandidate)
-        console.log(newCandidate)
-    }
+
+        // Create a FormData object
+        const formData = new FormData();
+        formData.append("name", name);
+        formData.append("technology", technology);
+        formData.append("client", client);
+        formData.append("email", email);
+        formData.append("contact_no", contactno);
+        formData.append("source", source);
+        formData.append("linkedIn", linkedin);
+        formData.append("resume", resume); // Attach the file
+
+        try {
+            const response = await axios.post(API_BASE_URL + "/api/candidate/add", formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+            alert(response.data.message);
+        } catch (error) {
+            console.error("Error while registering candidate:", error.response?.data || error.message);
+            alert("Error while registering candidate. Please try again.");
+        }
+    };
 
     return (
         <div>
