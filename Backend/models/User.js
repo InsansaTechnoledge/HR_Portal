@@ -1,13 +1,13 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import mongooseSequence from 'mongoose-sequence';
 
 const UserSchema = new mongoose.Schema({
   userId: {
-    type: String,
-    required: true,
+    type: Number,
     unique: true,
   },
-  username: {
+  userName: {
     type: String,
     required: true,
   },
@@ -38,6 +38,8 @@ UserSchema.pre('save', async function (next) {
 UserSchema.methods.comparePassword = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
+
+UserSchema.plugin(mongooseSequence(mongoose), { inc_field: 'userId' });
 
 const User = mongoose.model('User', UserSchema);
 
