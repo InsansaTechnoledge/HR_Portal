@@ -152,6 +152,7 @@ const DocumentManagement = () => {
     return (
         
         <div className="p-6 bg-gray-50 min-h-screen">
+            {/* Error Message */}
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
                     <span className="block sm:inline">{error}</span>
@@ -164,6 +165,14 @@ const DocumentManagement = () => {
                 </div>
             )}
 
+            {/* No Documents Message at the Top */}
+            {filteredDocuments.length === 0 && (
+                <div className="bg-gradient-to-r from-red-400 to-red-600 text-white px-4 py-3 mb-6 rounded-lg text-center">
+                    <span className="block text-lg font-semibold">No documents found</span>
+                </div>
+            )}
+
+            {/* Loading Indicator */}
             {loading && (
                 <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
                     <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
@@ -171,6 +180,7 @@ const DocumentManagement = () => {
             )}
 
             <div className="bg-white shadow-md rounded-lg p-6">
+                {/* Header */}
                 <div className="flex items-center justify-between mb-4">
                     <h1 className="text-xl font-bold text-gray-700">Document Management</h1>
                     <button
@@ -189,6 +199,7 @@ const DocumentManagement = () => {
                     </button>
                 </div>
 
+                {/* Upload Form */}
                 {showUploadForm && (
                     <form onSubmit={handleSubmit} className="mb-6 p-4 bg-gray-100 rounded-lg">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -249,6 +260,7 @@ const DocumentManagement = () => {
                     </form>
                 )}
 
+                {/* Table and Search */}
                 <div className="overflow-x-auto">
                     <div className="mb-4 flex items-center">
                         <div className="relative w-full">
@@ -257,7 +269,7 @@ const DocumentManagement = () => {
                                 placeholder="Search documents..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full p-3 pl-10 border rounded-lg "
+                                className="w-full p-3 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
                             />
                             <div className="absolute left-3 top-3">
                                 <Search className="h-5 w-5 text-gray-400" />
@@ -265,6 +277,7 @@ const DocumentManagement = () => {
                         </div>
                     </div>
 
+                    {/* Table */}
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b">
@@ -287,9 +300,9 @@ const DocumentManagement = () => {
                                     <td className="p-2">{doc.uploadedBy}</td>
                                     <td className="p-2">{doc.employee}</td>
                                     <td className="p-2 text-right flex space-x-2 justify-end">
-                                        <button 
-                                        disabled
-                                        onClick={() => { viewDocument(doc) }}
+                                        <button
+                                            disabled
+                                            onClick={() => { viewDocument(doc) }}
                                             className="cursor-not-allowed flex items-center px-3 py-1 bg-gray-100 rounded-lg hover:bg-gray-200">
                                             <Eye className="mr-1 h-4 w-4" /> View
                                         </button>
@@ -306,12 +319,10 @@ const DocumentManagement = () => {
                             ))}
                         </tbody>
                     </table>
-                    {documents.length === 0 && (
-                        <div className="text-center py-6 text-gray-500">No documents found</div>
-                    )}
                 </div>
             </div>
         </div>
+
     );
 };
 
