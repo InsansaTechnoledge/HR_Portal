@@ -1,4 +1,6 @@
 import User from "../models/User.js";
+import bcrypt from "bcrypt";
+
 
 //signup route
 export const signup=async(req,res) => {
@@ -52,3 +54,51 @@ export const deleteUser = async (req,res) => {
         
     }
 }
+
+
+// Edit login info route
+export const editLoginInfo = async (req, res) => {
+  const { userEmail, currentPassword, newPassword, newEmail } = req.body;
+
+  if (!userEmail || !currentPassword) {
+    return res.status(400).json({ message: "Current email and password are required." });
+  }
+
+  try {
+    // Fetch user by current email
+    const user = await User.findOne({ userEmail });
+    if (!user) {
+      return res.status(404).json({ message: "User not found. Invalid email." });
+    }
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid current password." });
+    }
+
+    // Update email (if newEmail is provided)
+    if (newEmail) {
+      const emailExists = await User.findOne({ userEmail: newEmail });
+      if (emailExists) {
+        return res.status(400).json({ message: "Email already in use. Please use another email." });
+      }
+      user.userEmail = newEmail;
+    }
+
+    // Update password (if newPassword is provided)
+    if (newPassword) {
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+      user.password = hashedPassword;
+    }
+
+    // Save updated user info
+    await user.save();
+
+    res.status(200).json({ message: "Login information updated successfully.", user: { userEmail: user.userEmail } });
+  } catch (error) {
+    console.error("Error updating login info:", error);
+    res.status(500).json({ message: "Failed to update login information. Please try again." });
+  }
+};
