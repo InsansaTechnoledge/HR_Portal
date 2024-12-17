@@ -1,15 +1,41 @@
-import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 
 const ProtectedRoute = ({ children }) => {
-    const token = localStorage.getItem('token');
+    const [isAuthenticated, setIsAuthenticated] = useState(null);
+    const location = useLocation(); // Get the current location
 
-    if (!token) {
-        // If there is no token, redirect to the login page
-        return <Navigate to="/" />;
+    useEffect(() => {
+        const checkSession = async () => {
+            try {
+                const response = await axios.get(`http://localhost:3000/api/auth/checkSession`, { withCredentials: true });
+
+                if (response.status === 200) {
+                    setIsAuthenticated(true);
+                    localStorage.setItem('user', JSON.stringify(response.data.user));
+                } else {
+                    setIsAuthenticated(false);
+                    localStorage.removeItem('user');
+                }
+            } catch (error) {
+                setIsAuthenticated(false);
+                localStorage.removeItem('user');
+            }
+        };
+
+        checkSession();
+    }, []);
+
+    if (isAuthenticated === null) {
+        return <div>Loading...</div>;
     }
 
-    // If there is a token, allow access to the protected component
+    // Redirect to login if not authenticated, preserving the intended location
+    if (!isAuthenticated) {
+        return <Navigate to="/" state={{ from: location }} replace />;
+    }
+
     return children;
 };
 
