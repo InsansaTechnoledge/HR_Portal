@@ -1,59 +1,42 @@
-// import React from 'react';
-// import { Navigate } from 'react-router-dom';
-
-// const ProtectedRoute = ({ children }) => {
-//     const token = localStorage.getItem('token');
-
-//     if (!token) {
-//         // If there is no token, redirect to the login page
-//         return <Navigate to="/" />;
-//     }
-
-//     // If there is a token, allow access to the protected component
-//     return children;
-// };
-
-// export default ProtectedRoute;
-
-import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 
 const ProtectedRoute = ({ children }) => {
-    const [authenticated, setAuthenticated] = useState(null);
+    const [isAuthenticated, setIsAuthenticated] = useState(null);
+    const location = useLocation(); // Get the current location
 
     useEffect(() => {
         const checkSession = async () => {
             try {
-                console.log("in check session");
-                
-                // Make a request to check if the user is authenticated
-                const response = await axios.get('http://localhost:3000/api/auth/check-session', { withCredentials: true });
+                const response = await axios.get(`http://localhost:3000/api/auth/checkSession`, { withCredentials: true });
+
                 if (response.status === 200) {
-                    setAuthenticated(true); 
-                    setUser(response.data.user); // User is authenticated
+                    setIsAuthenticated(true);
+                    localStorage.setItem('user', JSON.stringify(response.data.user));
+                } else {
+                    setIsAuthenticated(false);
+                    localStorage.removeItem('user');
                 }
             } catch (error) {
-                setAuthenticated(false);  // User is not authenticated
+                setIsAuthenticated(false);
+                localStorage.removeItem('user');
             }
         };
 
         checkSession();
     }, []);
 
-    // While checking authentication, show a loading indicator or nothing
-    if (authenticated === null) {
+    if (isAuthenticated === null) {
         return <div>Loading...</div>;
     }
 
-    if (!authenticated) {
-        // If not authenticated, redirect to login page
-        return <Navigate to="/" />;
+    // Redirect to login if not authenticated, preserving the intended location
+    if (!isAuthenticated) {
+        return <Navigate to="/" state={{ from: location }} replace />;
     }
 
-    // If authenticated, render the children components (protected content)
     return children;
 };
 
 export default ProtectedRoute;
-
