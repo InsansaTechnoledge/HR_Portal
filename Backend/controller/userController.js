@@ -1,4 +1,4 @@
-import User from "../models/User";
+import User from "../models/User.js";
 
 //signup route
 export const signup=async(req,res) => {
@@ -31,17 +31,25 @@ export const signup=async(req,res) => {
 }
 
 export const getUser = async (req,res) => {
-    
+    try{
+        const users = await User.find();
+        res.status(200).send(users);
+    }
+    catch(err){
+        console.log(err)
+        res.status(500).json({message: err})
+    }
 }
 
 export const deleteUser = async (req,res) => {
     try{
         const {id} = req.params;
-        const deletedUser = User.findOneAndDelete({userId: id});
+        console.log(id)
+        const deletedUser = await User.findOneAndDelete({"userId": id});
 
         res.status(200).json({message: "User deleted successfully!"});
     }
     catch(err){
-
+        
     }
 }

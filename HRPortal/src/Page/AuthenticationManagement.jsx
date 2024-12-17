@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Trash2, Edit } from 'lucide-react';
 import API_BASE_URL from '../config';
 import axios from 'axios';
@@ -27,6 +27,18 @@ const AuthenticationManagement = () => {
             role: 'user',
         },
     ]);
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            const response = await axios.get(`${API_BASE_URL}/api/user/`);
+
+            if(response.status===200){
+                setUsers(response.data);
+            }
+        }
+
+        fetchUsers();
+    },[])
 
     // Handle input changes for new user form
     const handleInputChange = (e) => {
@@ -60,12 +72,7 @@ const AuthenticationManagement = () => {
           }  
         });
 
-        // if(response.status===200){
-            alert(response.data.message)
-        // }
-        // else/{
-            
-        // }
+        alert(response.data.message)
         
         
 
@@ -82,7 +89,8 @@ const AuthenticationManagement = () => {
     const handleDeleteUser = async (id) => {
         setUsers((prev) => prev.filter((user) => user.userId !== id));
 
-        const response = await axios(`${API_BASE_URL}/api/user/delete/${id}`)
+        console.log(id)
+        const response = await axios.delete(`${API_BASE_URL}/api/user/delete/${id}`)
         if(response.status===200){
             alert(response.data.message);
         }
