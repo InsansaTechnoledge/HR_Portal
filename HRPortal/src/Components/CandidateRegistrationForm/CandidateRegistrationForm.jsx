@@ -42,7 +42,6 @@ const CandidateRegistrationForm = () => {
             return;
         }
 
-        // Create a FormData object
         const formData = new FormData();
         formData.append("name", name);
         formData.append("technology", technology);

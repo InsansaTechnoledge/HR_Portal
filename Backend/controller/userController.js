@@ -2,12 +2,11 @@ import User from "../models/User.js";
 import bcrypt from "bcrypt";
 
 
-//signup route
-export const signup=async(req,res) => {
+//create user
+export const createUser=async(req,res) => {
     try {
       const { userName, userEmail, password, role } = req.body;
   
-      // Check if user already exists
       const existingUser = await User.findOne({ userEmail });
       if (existingUser) {
         return res.status(200).json({ message: 'User already exists' });
@@ -15,9 +14,8 @@ export const signup=async(req,res) => {
       else{
   
         
-        // Create new user
         const newUser = new User({
-        userName: userName || userEmail.split('@')[0], // Use email prefix as username if not provided
+        userName: userName,
         userEmail,
         password,
         role
@@ -32,6 +30,7 @@ export const signup=async(req,res) => {
     }
 }
 
+//get user
 export const getUser = async (req,res) => {
     try{
         const users = await User.find();
@@ -43,6 +42,7 @@ export const getUser = async (req,res) => {
     }
 }
 
+//delete user
 export const deleteUser = async (req,res) => {
     try{
         const {id} = req.params;

@@ -4,7 +4,7 @@ import axios from 'axios';
 
 const ProtectedRoute = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(null);
-    const location = useLocation(); // Get the current location
+    const location = useLocation(); 
 
     useEffect(() => {
         const checkSession = async () => {
@@ -31,7 +31,6 @@ const ProtectedRoute = ({ children }) => {
         return <div>Loading...</div>;
     }
 
-    // Redirect to login if not authenticated, preserving the intended location
     if (!isAuthenticated) {
         return <Navigate to="/" state={{ from: location }} replace />;
     }

@@ -4,7 +4,7 @@ import { deleteUser, getUser, signup, editLoginInfo } from '../controller/userCo
 const router = express.Router();
 
 router.get('/', getUser)
-router.post('/signup', signup)
+router.post('/createUser', createUser)
 router.delete('/delete/:id',deleteUser)
 router.put("/edit-login-info", editLoginInfo);
 

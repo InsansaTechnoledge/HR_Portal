@@ -1,5 +1,6 @@
 import Job from "../models/Job.js"
 
+//post job  
 export const postJob = async (req,res) => {
 
     try{
@@ -19,9 +20,10 @@ export const postJob = async (req,res) => {
     }
 }
 
+//get jobs
 export const getJobs = async (req, res) => {
   try {
-    const jobs = await Job.find(); // Fetch all jobs from the database
+    const jobs = await Job.find();
     res.status(200).json({
       message: "Jobs fetched successfully!",
       jobs,
@@ -35,7 +37,7 @@ export const getJobs = async (req, res) => {
   }
 };
 
-
+//delete job
 export const deleteJob = async (req, res) => {
   try {
     const {id} = req.params;
@@ -47,6 +49,7 @@ export const deleteJob = async (req, res) => {
   }
 };
 
+//update job
 export const updateJob = async (req,res) => {
     try{
         const {id} = req.params;
