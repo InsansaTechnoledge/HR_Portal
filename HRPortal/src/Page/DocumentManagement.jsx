@@ -2,8 +2,12 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Upload, File, Trash2, Eye, Download, Plus, X } from "lucide-react";
 import API_BASE_URL from "../config";
+import { Search } from "lucide-react";
+
 
 const DocumentManagement = () => {
+
+    
     const [documents, setDocuments] = useState([]);
     const [showUploadForm, setShowUploadForm] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -104,7 +108,19 @@ const DocumentManagement = () => {
         }
     };
 
+    // Add this state for search functionality
+    const [searchTerm, setSearchTerm] = useState("");
+
+    // Filtered documents based on search input
+    const filteredDocuments = documents.filter((doc) =>
+        doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.uploadedBy.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.employee.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
+        
         <div className="p-6 bg-gray-50 min-h-screen">
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
@@ -204,6 +220,21 @@ const DocumentManagement = () => {
                 )}
 
                 <div className="overflow-x-auto">
+                    <div className="mb-4 flex items-center">
+                        <div className="relative w-full">
+                            <input
+                                type="text"
+                                placeholder="Search documents..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full p-3 pl-10 border rounded-lg "
+                            />
+                            <div className="absolute left-3 top-3">
+                                <Search className="h-5 w-5 text-gray-400" />
+                            </div>
+                        </div>
+                    </div>
+
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b">
@@ -216,7 +247,7 @@ const DocumentManagement = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {documents.map((doc) => (
+                            {filteredDocuments.map((doc) => (
                                 <tr key={doc._id} className="border-b">
                                     <td className="p-2 flex items-center">
                                         <File className="mr-2 text-blue-500" /> {doc.name}
