@@ -27,6 +27,27 @@ const Sidebar = () => {
         setIsUserDropdownOpen(!isUserDropdownOpen);
     };
 
+    const handleLogout = async () => {
+        try{
+        const response = await axios.post(`${API_BASE_URL}/api/auth/logout`, null,{
+            withCredentials: true,
+        });
+        if(response.status === 200){
+            Navigate('/');
+        }
+        else{
+            console.error("logout failed:",response.data.message ||response.statusText);
+            alert("Logout failed. Please try again");
+        }
+
+    }
+    catch (error){
+        console.error("Logout error:", error);
+        alert("An error occurred during logout."); 
+    }
+}
+
+
     return (
         <div className="flex h-screen">
             {/* Sidebar */}
@@ -155,6 +176,7 @@ const Sidebar = () => {
                             to="/auth"
                         />
                         <SidebarItem
+                            onClick={handleLogout}
                             icon={<IconLogout />}
                             label="Logout"
                             isOpen={isOpen}
