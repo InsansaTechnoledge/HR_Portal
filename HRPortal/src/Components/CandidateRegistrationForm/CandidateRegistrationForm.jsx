@@ -8,7 +8,7 @@ const CandidateRegistrationForm = () => {
 
     const [fileName, setFileName] = useState("");
 
-    const fileChangeHandler = (event) => {
+    const fileChangeHandler = (event) => { 
         const file = event.target.files[0];
         if (file) {
             setFileName(file.name)

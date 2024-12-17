@@ -356,7 +356,7 @@ const DocumentManagement = () => {
                 </div>
             </div>
                     {
-                        documents ? 
+                        documents.length===0 ? 
                     <div className="mt-4 flex justify-center items-center">
                         <img
                         className="rounded-full md:w-4/12 w-8/12" 
