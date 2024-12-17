@@ -41,7 +41,7 @@ const configureApp = (app) => {
       saveUninitialized: false,
       cookie: {
         secure: process.env.NODE_ENV === 'production', // Secure cookies only in production (HTTPS)
-        sameSite: 'None',  // Allow cookies to be sent cross-origin
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',  // Allow cookies to be sent cross-origin
         httpOnly: true,    // Make sure cookies are not accessible via JavaScript
         maxAge: 7 * 24 * 60 * 60 * 1000,  // Set cookie expiration to 1 week
       },

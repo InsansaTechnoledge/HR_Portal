@@ -34,13 +34,13 @@ passport.use(
 
 
 passport.serializeUser((user, done) => {
-  done(null, user.userEmail); 
+  done(null, user.userId); 
 });
 
 
-passport.deserializeUser(async (userEmail, done) => {
+passport.deserializeUser(async (userId, done) => {
   try {
-    const user = await User.findOne({ userEmail });
+    const user = await User.findOne({ userId });
     done(null, user);
   } catch (error) {
     done(error);
