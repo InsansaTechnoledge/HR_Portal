@@ -23,16 +23,16 @@ import { useNavigate } from "react-router-dom";
 const FeatureGrid = () => (
 
     <div className="max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="w-full bg-gradient-to-r from-indigo-500 via-blue-500 to-purple-500 py-16 text-white">
-            <div className="max-w-4xl mx-auto text-center">
-                <h2 className="text-4xl font-extrabold tracking-tight">
-                    Insansa's HR Portal
-                </h2>
-                <p className="mt-4 text-lg md:text-xl text-gray-200">
-                    Explore Inside Requirements and Manage Workforce Effectively
-                </p>
-            </div>
+    <div className="w-full bg-gradient-to-r from-green-400 via-green-500 to-green-600 py-16 text-white">
+        <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-4xl font-extrabold tracking-tight">
+                Insansa's HR Portal
+            </h2>
+            <p className="mt-4 text-lg md:text-xl text-gray-200">
+                Explore Inside Requirements and Manage Workforce Effectively
+            </p>
         </div>
+    </div>
 
         <h1 className="mt-10 font-extrabold text-3xl">APPLICATIONS</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
@@ -160,11 +160,18 @@ const authenticationItems = [
     {
         title: "Authentication Management",
         description: "Discover the beauty of thoughtful and functional design.",
-        header: <Skeleton img={auth}/>,
-        icon: <IconSignature className="h-6 w-6 text-indigo-500" />,
+        header: (
+            <img
+                src={auth}
+                className="h-64 w-full object-cover rounded-t-lg"
+                alt="auth"
+            />
+        ),
+        icon: <IconSignature className="h-5 w-5 text-indigo-500" />,
         nav: "/auth",
     }
-]
+];
+
 
 // Home Page Component with Sidebar
 export function Home() {
