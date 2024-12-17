@@ -85,7 +85,7 @@ const AuthenticationManagement = () => {
                                 value={newUser.username}
                                 onChange={handleInputChange}
                                 placeholder="Enter username"
-                                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                className="mt-1 block w-full focus:outline-none focus:shadow-md border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                             />
                         </div>
                         <div>
@@ -99,7 +99,21 @@ const AuthenticationManagement = () => {
                                 value={newUser.email}
                                 onChange={handleInputChange}
                                 placeholder="Enter email"
-                                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                className="mt-1 block w-full focus:outline-none focus:shadow-md border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                                Password
+                            </label>
+                            <input
+                                id="password"
+                                name="password"
+                                type="password"
+                                value={newUser.password}
+                                onChange={handleInputChange}
+                                placeholder="Enter password"
+                                className="mt-1 block w-full focus:outline-none focus:shadow-md border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                             />
                         </div>
                         <div>
@@ -111,7 +125,7 @@ const AuthenticationManagement = () => {
                                 name="role"
                                 value={newUser.role}
                                 onChange={handleInputChange}
-                                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                className="mt-1 block w-full focus:outline-none focus:shadow-md border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                             >
                                 <option value="user">User</option>
                                 <option value="admin">Admin</option>
