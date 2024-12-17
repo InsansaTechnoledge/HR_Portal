@@ -101,9 +101,9 @@ function AppLayout() {
                     <Route
                         path="/auth"
                         element={
-                            <ProtectedRoute>
+                            // <ProtectedRoute>
                                 <AuthenticationManagement />
-                            </ProtectedRoute>
+                            // </ProtectedRoute>
                         }
                     />
                     <Route
