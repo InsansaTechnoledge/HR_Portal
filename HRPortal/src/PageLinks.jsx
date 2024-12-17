@@ -53,65 +53,65 @@ function AppLayout() {
                     <Route
                         path="/home"
                         element={
-                            // <ProtectedRoute>
+                            <ProtectedRoute>
                                 <Home />
-                            // </ProtectedRoute>
+                            </ProtectedRoute>
                         }
                     />
                     <Route
                         path="/docs"
                         element={
-                            // <ProtectedRoute>
+                            <ProtectedRoute>
                                 <DocumentManagement />
-                            // </ProtectedRoute>
+                            </ProtectedRoute>
                         }
                     />
                     <Route
                         path="/leave-tracker"
                         element={
-                            // <ProtectedRoute>
+                            <ProtectedRoute>
                                 <LeaveTracker />
-                            // </ProtectedRoute>
+                            </ProtectedRoute>
                         }
                     />
                     <Route
                         path="/talent"
                         element={
-                            // <ProtectedRoute>
+                            <ProtectedRoute>
                                 <TalentManagement />
-                            // </ProtectedRoute>
+                            </ProtectedRoute>
                         }
                     />
                     <Route
                         path="/candidate-detail"
                         element={
-                            // <ProtectedRoute>
+                            <ProtectedRoute>
                                 <CandidateDetails />
-                            // </ProtectedRoute>
+                             </ProtectedRoute>
                         }
                     />
                     <Route
                         path="/application"
                         element={
-                            // <ProtectedRoute>
+                            <ProtectedRoute>
                                 <JobApplication />
-                            // </ProtectedRoute>
+                            </ProtectedRoute>
                         }
                     />
                     <Route
                         path="/auth"
                         element={
-                            // <ProtectedRoute>
+                            <ProtectedRoute>
                                 <AuthenticationManagement />
-                            // </ProtectedRoute>
+                            </ProtectedRoute>
                         }
                     />
                     <Route
                         path="/register-candidate"
                         element={
-                            // <ProtectedRoute>
+                            <ProtectedRoute>
                                 <CandidateRegistration />
-                            // </ProtectedRoute>
+                            </ProtectedRoute>
                         }
                     />
                 </Routes>

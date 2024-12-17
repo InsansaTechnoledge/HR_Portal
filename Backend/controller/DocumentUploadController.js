@@ -54,7 +54,6 @@ export const getAllDocuments = async (req, res) => {
   }
 };
 
-import Document from "../models/DocumentUpload.js";
 
 // View a document
 export const viewDocument = async (req, res) => {
