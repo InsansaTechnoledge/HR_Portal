@@ -3,7 +3,7 @@ import axios from "axios";
 import { Upload, File, Trash2, Eye, Download, Plus, X } from "lucide-react";
 import API_BASE_URL from "../config";
 import { Search } from "lucide-react";
-
+import no_doc_img from "/images/no-document.avif"; 
 
 const DocumentManagement = () => {
 
@@ -179,9 +179,10 @@ const DocumentManagement = () => {
 
             {/* No Documents Message at the Top */}
             {filteredDocuments.length === 0 && (
-                <div className="bg-gradient-to-r from-red-400 to-red-600 text-white px-4 py-3 mb-6 rounded-lg text-center">
-                    <span className="block text-lg font-semibold">No documents found</span>
-                </div>
+                <div className="bg-gradient-to-r from-red-400 to-red-600 text-white px-6 py-4 mb-8 rounded-lg shadow-lg text-center">
+                <span className="block text-xl font-bold tracking-wide">No documents found</span>
+            </div>
+            
             )}
 
             {/* Loading Indicator */}
@@ -356,6 +357,11 @@ const DocumentManagement = () => {
                     </table>
                 </div>
             </div>
+                    <div className="mt-4 flex justify-center items-center">
+                        <img
+                        className="rounded-full w-4/12" 
+                        src={no_doc_img}></img>
+                    </div>
         </div>
 
     );
