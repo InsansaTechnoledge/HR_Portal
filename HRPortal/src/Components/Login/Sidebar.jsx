@@ -39,6 +39,8 @@ const Sidebar = () => {
             console.error("logout failed:",response.data.message ||response.statusText);
             alert("Logout failed. Please try again");
         }
+        localStorage.clear();
+        localStorage.setItem("user2", "!@#")
 
     }
     catch (error){
@@ -175,6 +177,7 @@ const Sidebar = () => {
                 {/* Logout Button at Bottom */}
                 <div className="mt-auto">
                     <ul>
+                        <button onClick={handleLogout}>Logout</button>
                         <SidebarItem
                             onClick={handleLogout}
                             icon={<IconLogout />}
