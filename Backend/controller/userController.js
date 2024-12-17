@@ -44,8 +44,7 @@ export const getUser = async (req,res) => {
 export const deleteUser = async (req,res) => {
     try{
         const {id} = req.params;
-        console.log(id)
-        const deletedUser = User.findOneAndDelete({"userId": id});
+        const deletedUser = await User.findOneAndDelete({"userId": id});
 
         res.status(200).json({message: "User deleted successfully!"});
     }

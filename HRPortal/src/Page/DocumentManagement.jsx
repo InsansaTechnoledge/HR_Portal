@@ -7,11 +7,12 @@ import { Search } from "lucide-react";
 
 const DocumentManagement = () => {
 
-    
+
     const [documents, setDocuments] = useState([]);
     const [showUploadForm, setShowUploadForm] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [fileName, setFileName] = useState("No file choosen")
 
     // Upload form state
     const [formData, setFormData] = useState({
@@ -22,7 +23,18 @@ const DocumentManagement = () => {
         document: null
     });
 
-    // Fetch documents on component mount
+    const handleDrop = (event) => {
+        event.preventDefault();
+        const file = event.dataTransfer.files[0];
+        if (file) {
+          setFileName(file.name);
+        }
+    };
+
+    const handleDragOver = (event) => {
+    event.preventDefault();
+    };
+
     useEffect(() => {
         fetchDocuments();
     }, []);
@@ -120,37 +132,37 @@ const DocumentManagement = () => {
     );
     const viewDocument = async (doc) => {
         try {
-          // Fetch the document data as a buffer array from the API
-          const response = await fetch(`${API_BASE_URL}/api/documents/view/${doc._id}`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/pdf', // Specify the expected document type
+            // Fetch the document data as a buffer array from the API
+            const response = await fetch(`${API_BASE_URL}/api/documents/view/${doc._id}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/pdf', // Specify the expected document type
+                }
+            });
+
+            // Check if the response is OK
+            if (!response.ok) {
+                throw new Error(`Failed to fetch document: ${response.statusText}`);
             }
-          });
-      
-          // Check if the response is OK
-          if (!response.ok) {
-            throw new Error(`Failed to fetch document: ${response.statusText}`);
-          }
-      
-          // Convert the response into a blob
-          const blob = await response.blob();
-      
-          // Create a temporary URL for the blob
-          const url = URL.createObjectURL(blob);
-      
-          // Open the document in a new tab
-          window.open(url, "_blank");
-      
-          // Optional: Revoke the URL after some time to release memory
-          setTimeout(() => URL.revokeObjectURL(url), 10000); // Revoke after 10 seconds
+
+            // Convert the response into a blob
+            const blob = await response.blob();
+
+            // Create a temporary URL for the blob
+            const url = URL.createObjectURL(blob);
+
+            // Open the document in a new tab
+            window.open(url, "_blank");
+
+            // Optional: Revoke the URL after some time to release memory
+            setTimeout(() => URL.revokeObjectURL(url), 10000); // Revoke after 10 seconds
         } catch (error) {
-          console.error("Error viewing the document:", error);
+            console.error("Error viewing the document:", error);
         }
-      }
+    }
 
     return (
-        
+
         <div className="p-6 bg-gray-50 min-h-screen">
             {/* Error Message */}
             {error && (
@@ -205,11 +217,34 @@ const DocumentManagement = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-gray-700 mb-2">Document File</label>
-                                <input
+                                {/* <input
                                     type="file"
                                     onChange={handleFileChange}
                                     className="w-full p-2 border rounded-lg"
-                                />
+                                /> */}
+                                <div class="flex items-center justify-center w-full">
+                                    <label for="resume" class="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
+                                        onDrop={handleDrop}
+                                        onDragOver={handleDragOver}
+                                        >
+                                        <div class="flex items-center justify-center">
+                                            <svg class="w-8 h-8 text-gray-500 " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2" />
+                                            </svg>
+                                            {fileName ?
+                                                (
+                                                    <p className="ml-3 text-sm text-gray-500">
+                                                        Selected file: <span className="font-medium">{fileName}</span>
+                                                    </p>
+                                                )
+                                                :
+                                                (<p class="ml-3 text-sm text-gray-500 "><span class="font-semibold">Click to upload</span> or drag and drop</p>)
+                                            }
+                                        </div>
+                                        <input id="resume" type="file" class="hidden" onChange={handleFileChange} />
+                                    </label>
+
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-gray-700 mb-2">Document Type</label>
