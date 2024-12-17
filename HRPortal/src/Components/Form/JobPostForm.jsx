@@ -85,7 +85,6 @@ function JobPostForm() {
       console.log(updateJob)
 
     } else {
-      // Add new job
       const newJob = {
 
         jobTitle: formData.title,
@@ -117,7 +116,6 @@ function JobPostForm() {
       setJobs(prevJobs => [...prevJobs, newJob]);
     }
 
-    // Reset form
     setFormData({
       title: '',
       location: '',

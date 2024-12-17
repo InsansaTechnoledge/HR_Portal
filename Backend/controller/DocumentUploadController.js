@@ -60,18 +60,15 @@ export const viewDocument = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Find the document by ID
     const document = await Document.findById(id);
 
     if (!document) {
       return res.status(404).json({ message: "Document not found" });
     }
 
-    // Set appropriate headers for the response
     res.setHeader("Content-Type", "application/octet-stream");
     res.setHeader("Content-Disposition", `inline; filename="${document.name}"`);
 
-    // Send the file buffer
     res.send(document.document);
   } catch (err) {
     res.status(500).json({ message: "Server Error", error: err.message });
@@ -83,18 +80,15 @@ export const downloadDocument = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Find the document by ID
     const document = await Document.findById(id);
 
     if (!document) {
       return res.status(404).json({ message: "Document not found" });
     }
 
-    // Set headers for file download
     res.setHeader("Content-Type", "application/octet-stream");
     res.setHeader("Content-Disposition", `attachment; filename="${document.name}"`);
 
-    // Send the file buffer
     res.send(document.document);
   } catch (err) {
     res.status(500).json({ message: "Server Error", error: err.message });

@@ -143,21 +143,16 @@ const DocumentManagement = () => {
                 }
             });
 
-            // Check if the response is OK
             if (!response.ok) {
                 throw new Error(`Failed to fetch document: ${response.statusText}`);
             }
 
-            // Convert the response into a blob
             const blob = await response.blob();
 
-            // Create a temporary URL for the blob
             const url = URL.createObjectURL(blob);
 
-            // Open the document in a new tab
             window.open(url, "_blank");
 
-            // Optional: Revoke the URL after some time to release memory
             setTimeout(() => URL.revokeObjectURL(url), 10000); // Revoke after 10 seconds
         } catch (error) {
             console.error("Error viewing the document:", error);

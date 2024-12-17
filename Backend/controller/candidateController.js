@@ -19,8 +19,6 @@ export const addCandidate = [
             if (!resumeBuffer) {
                 return res.status(400).json({ message: 'Resume file is required.' });
             }
-
-            // Create candidate object
             const candidate = {
                 name,
                 technology,
@@ -43,7 +41,7 @@ export const addCandidate = [
 
 export const getAllCandidates = async (req, res) => {
     try {
-        const candidates = await Candidate.find(); // Fetch all candidates
+        const candidates = await Candidate.find();
         res.status(200).json(candidates);
     } catch (error) {
         console.error('Error fetching candidates:', error.message);

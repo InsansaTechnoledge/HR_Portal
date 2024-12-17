@@ -14,7 +14,6 @@ const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// Routes
 router.post("/upload", upload.single("document"), uploadDocument);
 router.delete("/delete/:id", deleteDocument);
 router.get("/all", getAllDocuments);

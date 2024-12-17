@@ -54,12 +54,9 @@ const Sidebar = () => {
             <div
                 className={`bg-gray-800 overflow-auto pb-4 text-white ${isOpen ? "w-64" : "w-16"} duration-300 flex flex-col`}
             >
+                {/* Sidebar Header */}
                 <div className="flex items-center justify-between px-4 py-4 border-b border-gray-700">
-                    <h1
-                        className={`text-lg font-bold ${isOpen ? "block" : "hidden"} duration-300`}
-                    >
-                        Insansa
-                    </h1>
+                    <h1 className={`text-lg font-bold ${isOpen ? "block" : "hidden"} duration-300`}>Insansa</h1>
                     <button
                         className="text-gray-400 hover:text-white"
                         onClick={toggleSidebar}
@@ -67,6 +64,8 @@ const Sidebar = () => {
                         ☰
                     </button>
                 </div>
+
+                {/* Navigation Items */}
                 <nav className="mt-4 flex-1">
                     <ul className="space-y-2">
                         <SidebarItem
@@ -75,8 +74,9 @@ const Sidebar = () => {
                             isOpen={isOpen}
                             to="/home"
                         />
+
+                        {/* Dropdown Menu for Apps */}
                         <li>
-                            {/* Dropdown Menu for Apps */}
                             <button
                                 onClick={toggleAppsDropdown}
                                 className={`flex items-center justify-between w-full px-4 py-3 rounded-md ${isAppsOpen ? "bg-gray-700" : "hover:bg-gray-700"}`}
@@ -85,9 +85,7 @@ const Sidebar = () => {
                                     <span className="text-xl">
                                         <IconGridDots />
                                     </span>
-                                    <span
-                                        className={`${isOpen ? "block" : "hidden"} duration-300`}
-                                    >
+                                    <span className={`${isOpen ? "block" : "hidden"} duration-300`}>
                                         Apps
                                     </span>
                                 </div>
@@ -97,7 +95,6 @@ const Sidebar = () => {
                                     </span>
                                 )}
                             </button>
-                            {/* Dropdown Items */}
                             {isAppsOpen && (
                                 <ul className={`${isOpen ? "ml-8" : "ml-4"} mt-2 space-y-2`}>
                                     <SidebarItem
@@ -128,8 +125,8 @@ const Sidebar = () => {
                             )}
                         </li>
 
+                        {/* Dropdown for User Management */}
                         <li>
-                            {/* Dropdown for User Management */}
                             <button
                                 onClick={toggleUserDropdown}
                                 className={`flex items-center justify-between w-full px-4 py-3 rounded-md ${isUserDropdownOpen ? "bg-gray-700" : "hover:bg-gray-700"}`}
@@ -138,9 +135,7 @@ const Sidebar = () => {
                                     <span className="text-xl">
                                         <IconUser />
                                     </span>
-                                    <span
-                                        className={`${isOpen ? "block" : "hidden"} duration-300`}
-                                    >
+                                    <span className={`${isOpen ? "block" : "hidden"} duration-300`}>
                                         Talent Management
                                     </span>
                                 </div>
@@ -150,7 +145,6 @@ const Sidebar = () => {
                                     </span>
                                 )}
                             </button>
-                            {/* Dropdown Items */}
                             {isUserDropdownOpen && (
                                 <ul className={`${isOpen ? "ml-8" : "ml-4"} mt-2 space-y-2`}>
                                     <SidebarItem
@@ -175,6 +169,12 @@ const Sidebar = () => {
                             isOpen={isOpen}
                             to="/auth"
                         />
+                    </ul>
+                </nav>
+
+                {/* Logout Button at Bottom */}
+                <div className="mt-auto">
+                    <ul>
                         <SidebarItem
                             onClick={handleLogout}
                             icon={<IconLogout />}
@@ -183,9 +183,10 @@ const Sidebar = () => {
                             to="/"
                         />
                     </ul>
-                </nav>
+                </div>
             </div>
         </div>
+
     );
 };
 

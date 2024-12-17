@@ -1,6 +1,5 @@
 import passport from 'passport';
 import User from "../models/User.js";
-import crypto from 'crypto';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -16,16 +15,16 @@ export const login=async(req, res, next)=>{
     }
     passport.authenticate('local', async (err, user, info) => {
       if (err) {
-        return next(err); // Handle any errors that occur during authentication
+        return next(err);
       }
       if (!user) {
-        return res.status(401).json({ message: 'Invalid credentials' }); // Handle failed login
+        return res.status(401).json({ message: 'Invalid credentials' }); 
       }
 
       // If authentication is successful, log the user in and create a session
       req.login(user, (err) => {
         if (err) {
-          return next(err); // Handle any errors that occur during session creation
+          return next(err); 
         }
         return res.status(200).json({ message: 'Login successful', user: req.user });
       });
@@ -57,4 +56,4 @@ export const logout =async (req, res) => {
           res.status(200).json({ message: 'Logged out successfully' });
       });
   });
-}
+};
