@@ -65,9 +65,9 @@ const AuthenticationManagement = () => {
                 }
             } else {
                 // Add new user
-                const response = await axios.post(`${API_BASE_URL}/api/user/signup`, userForm);
+                const response = await axios.post(`${API_BASE_URL}/api/user/createUser`, userForm);
                 alert(response.data.message);
-                setUsers((prev) => [...prev, response.data.user]);
+                setUsers((prev) => [...prev, response.data.new_user]);
             }
 
             resetForm();

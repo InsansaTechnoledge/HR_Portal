@@ -21,8 +21,8 @@ export const createUser=async(req,res) => {
         role
       });
       
-      await newUser.save();
-      res.status(201).json({ message: 'User created successfully'});
+      const new_user = await newUser.save();
+      res.status(201).json({ message: 'User created successfully', new_user: new_user});
       }
     } catch (error) {
       console.error('Error during signup process:', error);

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import API_BASE_URL from '../../config';
 import axios from 'axios';
+import no_candidate from "/images/no-candidate.avif"
 
 const CandidatesTable = () => {
     const [candidates, setCandidates] = useState([]);
@@ -238,9 +239,17 @@ const CandidatesTable = () => {
                         </table>
                     </div>
                 ) : (
+                    <>
                     <div className="text-center text-gray-500 text-xl">
                         No candidates found.
                     </div>
+                    <div className="mt-16 flex justify-center items-center">
+                    <img
+                        className="rounded-full md:w-6/12 w-8/12"
+                        src={no_candidate}></img>
+                        
+                </div>
+                </>
                 )}
             </div>
         </div>
