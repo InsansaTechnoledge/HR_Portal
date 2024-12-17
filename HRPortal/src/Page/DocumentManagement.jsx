@@ -118,6 +118,36 @@ const DocumentManagement = () => {
         doc.uploadedBy.toLowerCase().includes(searchTerm.toLowerCase()) ||
         doc.employee.toLowerCase().includes(searchTerm.toLowerCase())
     );
+    const viewDocument = async (doc) => {
+        try {
+          // Fetch the document data as a buffer array from the API
+          const response = await fetch(`${API_BASE_URL}/api/documents/view/${doc._id}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/pdf', // Specify the expected document type
+            }
+          });
+      
+          // Check if the response is OK
+          if (!response.ok) {
+            throw new Error(`Failed to fetch document: ${response.statusText}`);
+          }
+      
+          // Convert the response into a blob
+          const blob = await response.blob();
+      
+          // Create a temporary URL for the blob
+          const url = URL.createObjectURL(blob);
+      
+          // Open the document in a new tab
+          window.open(url, "_blank");
+      
+          // Optional: Revoke the URL after some time to release memory
+          setTimeout(() => URL.revokeObjectURL(url), 10000); // Revoke after 10 seconds
+        } catch (error) {
+          console.error("Error viewing the document:", error);
+        }
+      }
 
     return (
         
@@ -257,8 +287,10 @@ const DocumentManagement = () => {
                                     <td className="p-2">{doc.uploadedBy}</td>
                                     <td className="p-2">{doc.employee}</td>
                                     <td className="p-2 text-right flex space-x-2 justify-end">
-                                        <button onClick={() => window.open(`${API_BASE_URL}/api/documents/view/${doc._id}`, "_blank")}
-                                            className="flex items-center px-3 py-1 bg-gray-100 rounded-lg hover:bg-gray-200">
+                                        <button 
+                                        disabled
+                                        onClick={() => { viewDocument(doc) }}
+                                            className="cursor-not-allowed flex items-center px-3 py-1 bg-gray-100 rounded-lg hover:bg-gray-200">
                                             <Eye className="mr-1 h-4 w-4" /> View
                                         </button>
                                         <a href={`${API_BASE_URL}/api/documents/download/${doc._id}`}
