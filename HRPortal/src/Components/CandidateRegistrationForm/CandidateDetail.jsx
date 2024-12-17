@@ -188,7 +188,7 @@ const CandidatesTable = () => {
         <div className="bg-gray-50 min-h-screen p-8">
             <div className="container mx-auto">
                 <h1 className="text-4xl font-extrabold text-gray-800 mb-8 text-center">
-                    Candidate Rooster
+                    Candidate Roster
                 </h1>
 
                 {/* Search Input */}
