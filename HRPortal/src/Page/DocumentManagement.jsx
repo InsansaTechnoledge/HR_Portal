@@ -65,6 +65,9 @@ const DocumentManagement = () => {
     // Handle file selection
     const handleFileChange = (e) => {
         const file = e.target.files[0];
+        if (file) {
+            setFileName(file.name)
+        }
         setFormData(prev => ({
             ...prev,
             name: file.name,

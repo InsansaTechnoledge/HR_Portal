@@ -24,9 +24,37 @@ const FeatureGrid = () => (
             </div>
         </div>
 
-
+        <h1 className="mt-10 font-extrabold text-3xl">APPLICATIONS</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-            {items.map((item, i) => (
+            {appItems.map((item, i) => (
+                <FeatureCard
+                    key={i}
+                    title={item.title}
+                    description={item.description}
+                    header={item.header}
+                    icon={item.icon}
+                    className={i === 3 || i === 6 ? "md:col-span-2" : ""}
+                />
+            ))}
+        </div>
+
+        <h1 className="mt-10 font-extrabold text-3xl">TALENT MANAGEMENT</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+            {appItems.map((item, i) => (
+                <FeatureCard
+                    key={i}
+                    title={item.title}
+                    description={item.description}
+                    header={item.header}
+                    icon={item.icon}
+                    className={i === 3 || i === 6 ? "md:col-span-2" : ""}
+                />
+            ))}
+        </div>
+
+        <h1 className="mt-10 font-extrabold text-3xl">AUTHENTICATOIN MANAGEMENT</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+            {appItems.map((item, i) => (
                 <FeatureCard
                     key={i}
                     title={item.title}
@@ -57,24 +85,38 @@ const Skeleton = () => (
 );
 
 // Feature Items
-const items = [
+const appItems = [
     {
         title: "Employee Docs Management",
         description: "Explore the birth of groundbreaking ideas and inventions.",
         header: <Skeleton />,
         icon: <IconClipboardCopy className="h-6 w-6 text-indigo-500" />,
-    },
-    {
-        title: "Talent Management",
-        description: "Dive into the transformative power of technology.",
-        header: <Skeleton />,
-        icon: <IconFileBroken className="h-6 w-6 text-indigo-500" />,
+        nav: "/docs"
     },
     {
         title: "Post Current Job Openings",
         description: "Discover the beauty of thoughtful and functional design.",
         header: <Skeleton />,
         icon: <IconSignature className="h-6 w-6 text-indigo-500" />,
+    },
+    {
+        title: "Job Application Management",
+        description: "Discover the beauty of thoughtful and functional design.",
+        header: <Skeleton />,
+        icon: <IconSignature className="h-6 w-6 text-indigo-500" />,
+    },
+    {
+        title: "Leave Tracker",
+        description: "Discover the beauty of thoughtful and functional design.",
+        header: <Skeleton />,
+        icon: <IconSignature className="h-6 w-6 text-indigo-500" />,
+    },
+    {
+        title: "Talent Management",
+        description: "Dive into the transformative power of technology.",
+        header: <Skeleton />,
+        icon: <IconFileBroken className="h-6 w-6 text-indigo-500" />,
+        nav: ""
     },
     {
         title: "Job Application Management",
