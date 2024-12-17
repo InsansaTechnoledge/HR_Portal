@@ -65,6 +65,9 @@ const DocumentManagement = () => {
     // Handle file selection
     const handleFileChange = (e) => {
         const file = e.target.files[0];
+        if (file) {
+            setFileName(file.name)
+        }
         setFormData(prev => ({
             ...prev,
             name: file.name,
@@ -352,11 +355,16 @@ const DocumentManagement = () => {
                     </table>
                 </div>
             </div>
+                    {
+                        error ? 
                     <div className="mt-4 flex justify-center items-center">
                         <img
-                        className="rounded-full w-4/12" 
+                        className="rounded-full md:w-4/12 w-8/12" 
                         src={no_doc_img}></img>
                     </div>
+                    :
+                    null    
+                }
         </div>
 
     );
