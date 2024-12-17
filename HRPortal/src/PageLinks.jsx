@@ -39,7 +39,7 @@ function AppLayout() {
         <div className="flex h-screen">
             {showSidebar && <Sidebar />}
             {isMobile && location.pathname !== '/' && <MobileBar />}
-            <div className={`flex-1 p-4 overflow-auto ${showSidebar ? '' : 'w-full'}`}>
+            <div className={`flex-1 p-4 overflow-auto ${showSidebar ? '' : 'w-full mb-14'}`}>
                 <Routes>
                     <Route path="/" element={<Login />} />
                     <Route
@@ -53,33 +53,33 @@ function AppLayout() {
                     <Route
                         path="/home"
                         element={
-                            <ProtectedRoute>
+                            // <ProtectedRoute>
                                 <Home />
-                            </ProtectedRoute>
+                            // </ProtectedRoute>
                         }
                     />
                     <Route
                         path="/docs"
                         element={
-                            <ProtectedRoute>
+                            // <ProtectedRoute>
                                 <DocumentManagement />
-                            </ProtectedRoute>
+                            // </ProtectedRoute>
                         }
                     />
                     <Route
                         path="/leave-tracker"
                         element={
-                            <ProtectedRoute>
+                            // <ProtectedRoute>
                                 <LeaveTracker />
-                            </ProtectedRoute>
+                            // </ProtectedRoute>
                         }
                     />
                     <Route
                         path="/talent"
                         element={
-                            <ProtectedRoute>
+                            // <ProtectedRoute>
                                 <TalentManagement />
-                            </ProtectedRoute>
+                            // </ProtectedRoute>
                         }
                     />
                     <Route
@@ -93,17 +93,17 @@ function AppLayout() {
                     <Route
                         path="/application"
                         element={
-                            <ProtectedRoute>
+                            // <ProtectedRoute>
                                 <JobApplication />
-                            </ProtectedRoute>
+                            // </ProtectedRoute>
                         }
                     />
                     <Route
                         path="/auth"
                         element={
-                            <ProtectedRoute>
+                            // <ProtectedRoute>
                                 <AuthenticationManagement />
-                            </ProtectedRoute>
+                            // </ProtectedRoute>
                         }
                     />
                     <Route

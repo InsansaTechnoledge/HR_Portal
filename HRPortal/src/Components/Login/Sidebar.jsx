@@ -31,7 +31,7 @@ const Sidebar = () => {
         <div className="flex h-screen">
             {/* Sidebar */}
             <div
-                className={`bg-gray-800 text-white ${isOpen ? "w-64" : "w-16"} duration-300 flex flex-col`}
+                className={`bg-gray-800 overflow-auto pb-4 text-white ${isOpen ? "w-64" : "w-16"} duration-300 flex flex-col`}
             >
                 <div className="flex items-center justify-between px-4 py-4 border-b border-gray-700">
                     <h1
