@@ -14,7 +14,6 @@ import Home from './Page/Home';
 import CandidateRegistration from './Page/CandidateRegistration';
 import DocumentManagement from './Page/DocumentManagement';
 import Sidebar from './Components/Login/Sidebar';
-// import BottomBar from './Components/Navigation/BottomBar';
 import MobileBar from './Components/Login/MobileBar';
 import TalentManagement from './Page/TalentManagement';
 import JobApplication from './Page/JobApplication';

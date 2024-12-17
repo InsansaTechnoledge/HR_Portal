@@ -48,7 +48,6 @@ const CandidatesTable = () => {
 
     const downloadResume = (resume, candidateName) => {
         try {
-            // Ensure resume and data exist
             if (!resume || !resume.data) {
                 console.error('No resume data available');
                 return;
@@ -82,7 +81,6 @@ const CandidatesTable = () => {
         }
     };
 
-    // Memoized search functionality
     const filteredCandidates = useMemo(() => {
         if (!searchTerm) return candidates;
 
@@ -98,7 +96,6 @@ const CandidatesTable = () => {
     const renderField = (field, value, candidate) => {
         const Icon = iconsMap[field];
 
-        // Handle LinkedIn Field
         if (field === 'linkedIn' && value) {
             return (
                 <div className="flex items-center">
@@ -121,9 +118,9 @@ const CandidatesTable = () => {
             if(value?.data) {
                 console.log(value?.data)
             try {
-                // Create a Blob from binary data
+
             const blob = new Blob([new Uint8Array(value.data)], {
-                type: 'application/pdf', // Use 'application/pdf' or 'application/msword' as appropriate
+                type: 'application/pdf', 
             });
 
             // Generate a blob URL

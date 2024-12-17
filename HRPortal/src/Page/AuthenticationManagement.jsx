@@ -66,7 +66,7 @@ const AuthenticationManagement = () => {
         }
 
         console.log(newUser)
-        const response = await axios.post(`${API_BASE_URL}/api/user/signup`,newUser, {
+        const response = await axios.post(`${API_BASE_URL}/api/user/createUser`,newUser, {
           headers: {
             'content-type': 'application/json'
           }  
