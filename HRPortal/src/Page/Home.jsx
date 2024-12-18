@@ -1,13 +1,7 @@
 import React from "react";
-import Sidebar from "../Components/Login/Sidebar";
 import {
-    IconArrowWaveRightUp,
-    IconBoxAlignRightFilled,
-    IconBoxAlignTopLeft,
     IconClipboardCopy,
-    IconFileBroken,
     IconSignature,
-    IconTableColumn,
 } from "@tabler/icons-react";
 
 import emp_doc_man from "/images/emp_doc_man.png"

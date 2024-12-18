@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const ProtectedRoute = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(null);
-    const location = useLocation(); 
+    const location = useLocation();
+    const navigate = useNavigate(); // Add useNavigate hook
 
     useEffect(() => {
         const checkSession = async () => {
@@ -17,22 +18,26 @@ const ProtectedRoute = ({ children }) => {
                 } else {
                     setIsAuthenticated(false);
                     localStorage.removeItem('user');
+                    // Redirect immediately if not authenticated
+                    navigate('/', { replace: true, state: { from: location } });
                 }
             } catch (error) {
                 setIsAuthenticated(false);
                 localStorage.removeItem('user');
+                // Redirect immediately on error
+                navigate('/', { replace: true, state: { from: location } });
             }
         };
 
         checkSession();
-    }, []);
+    }, [navigate, location]); // Add navigate and location as dependencies
 
     if (isAuthenticated === null) {
         return <div>Loading...</div>;
     }
 
     if (!isAuthenticated) {
-        return <Navigate to="/" state={{ from: location }} replace />;
+        return null; // No need to navigate here as it's handled in useEffect
     }
 
     return children;

@@ -14,6 +14,7 @@ export const login=async(req, res, next)=>{
     if (!user) {
       return res.status(400).json({ message: 'User not found, please sign up first.' });
     }
+    
     passport.authenticate('local', async (err, user, info) => {
       if (err) {
         return next(err);
@@ -59,14 +60,26 @@ export const checkSession =async (req, res) => {
   }
 
 //logout route  
-export const logout =async (req, res) => {
-  req.logout((err) => {
+export const logout = async (req, res) => {
+  req.logout((err) => { //Use req.session.destroy inside the req.logout callback
       if (err) {
           return res.status(500).json({ message: 'Error logging out' });
       }
-      req.session.destroy(() => {
-          res.clearCookie('connect.sid');  // Clear session cookie
+      console.log('Logged out successfully');
+      
+      req.session.destroy((err) => { // Callback to handle potential errors
+          if (err) {
+              console.error("Error destroying session:", err); // Log the error
+              return res.status(500).json({ message: 'Error destroying session' });
+          }
+          res.clearCookie('connect.sid', { 
+              httpOnly: true, // Ensure cookie is only accessible via HTTP
+              secure: process.env.NODE_ENV === 'production', // Set 'secure' flag in production
+              sameSite: 'strict' //  Prevent CSRF attacks
+          });
+          console.log('Session destroyed');
           res.status(200).json({ message: 'Logged out successfully' });
       });
+
   });
 };
