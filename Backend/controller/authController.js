@@ -1,6 +1,7 @@
 import passport from 'passport';
 import User from "../models/User.js";
 import dotenv from 'dotenv';
+import generateAuthToken from '../utils/generateAuthToken.js';
 dotenv.config();
 
 //login route
@@ -29,6 +30,18 @@ export const login=async(req, res, next)=>{
         return res.status(200).json({ message: 'Login successful', user: req.user });
       });
     })(req, res, next); // Call passport.authenticate
+
+    // const token = generateAuthToken(user);
+
+    // res.cookie("jwtAuth", token, {
+    //   expires: new Date(Date.now() + 31536000),
+    //   httpOnly: false,
+    //   // secure: process.env.NODE_ENV !== 'development',
+    //   // sameSite: process.env.NODE_ENV === 'development' ? 'Lax' : 'None'
+    //   secure: true,
+    //   sameSite: "None"
+    // });
+    // console.log("cookie created");
 
   } catch (error) {
     console.error('Error during login process:', error);

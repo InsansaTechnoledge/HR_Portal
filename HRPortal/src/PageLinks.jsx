@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import {
     BrowserRouter as Router,
     Routes,
@@ -20,10 +20,14 @@ import JobApplication from './Page/JobApplication';
 import AuthenticationManagement from './Page/AuthenticationManagement';
 import LeaveTracker from './Page/LeaveTracker';
 import CandidateDetails from './Components/CandidateRegistrationForm/CandidateDetail';
+import { userContext } from './Context/userContext';
+import axios from 'axios';
+import API_BASE_URL from './config';
 
 function AppLayout() {
     const location = useLocation();
     const token = localStorage.getItem('token');
+    const {user,setUser} = useContext(userContext);
 
     // Redirect to login if not logged in
     // if (!token && location.pathname !== '/') {
@@ -33,6 +37,11 @@ function AppLayout() {
     // Show Sidebar for larger screens and BottomBar for smaller screens
     const isMobile = useMediaQuery({ query: '(max-width: 768px)' });
     const showSidebar = location.pathname !== '/' && !isMobile;
+
+
+    const getUserData = async () => {
+        const response = axios.get(`${API_BASE_URL}/auth/checkCookies`);
+    }
 
     return (
         <div className="flex h-screen">
