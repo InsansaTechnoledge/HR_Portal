@@ -8,6 +8,7 @@ import {
     AlertCircle,
     CheckCircle2
 } from 'lucide-react';
+import API_BASE_URL from '../config';
 
 // Departments list for dropdown
 const DEPARTMENTS = [
@@ -63,9 +64,13 @@ const AddEmployeePage = () => {
         try {
             // Submit to backend
             const response = await axios.post(
-                'http://localhost:5000/api/employees',
+                `${API_BASE_URL}/api/employee/add`,
                 employeeData
             );
+
+            if(response.status!==201){
+                console.log(response.data.message,response.data.updatedEmp);
+            }
 
             // Success handling
             setSubmitStatus({

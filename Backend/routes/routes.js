@@ -3,6 +3,7 @@ import job from "./job.js";
 import candidate from "./candidate.js";
 import documentupload from "./documentupload.js"; 
 import user from "./user.js"
+import employee from "./employee.js"
 
 const routes = (app) => {
     app.use("/api/auth", auth);
@@ -10,6 +11,7 @@ const routes = (app) => {
     app.use("/api/candidate", candidate);
     app.use("/api/documents", documentupload); 
     app.use("/api/user", user); 
+    app.use("/api/employee",employee);
 };
 
 export default routes;

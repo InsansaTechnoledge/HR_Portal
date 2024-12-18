@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import {
@@ -8,6 +8,8 @@ import {
     Plus,
     X
 } from 'lucide-react';
+import axios from 'axios';
+import API_BASE_URL from '../config';
 
 const initialEmployees = [
     {
@@ -51,11 +53,24 @@ const LeaveTracker = () => {
         endDate: '',
     });
 
-    const selectedEmployee = employees.find((emp) => emp.id === selectedEmployeeId);
 
-    const handleAddLeave = () => {
+    useEffect(()=>{
+        const fetchEmployees = async () => {
+            const response = await axios.get(`${API_BASE_URL}/api/employee`);
+
+            if(response.status===201){
+               setEmployees(response.data.employees);
+            }
+        }
+
+        fetchEmployees();
+    },[])
+
+    const selectedEmployee = employees.find((emp) => emp.empId === selectedEmployeeId);
+
+    const handleAddLeave = async () => {
         const updatedEmployees = employees.map((emp) => {
-            if (emp.id === selectedEmployeeId) {
+            if (emp.empId === selectedEmployeeId) {
                 return {
                     ...emp,
                     leaveHistory: [...emp.leaveHistory, { ...newLeave }],
@@ -63,6 +78,19 @@ const LeaveTracker = () => {
             }
             return emp;
         });
+
+        console.log(updatedEmployees);
+
+        const response = await axios.post(`${API_BASE_URL}/api/employee/addLeave/${updatedEmployees.empId}`,newLeave,{
+            headers: {
+                'content-type': 'application/json'
+            }
+        });
+
+        if(response.status===201){
+            alert("Leave added");
+        }
+
         setEmployees(updatedEmployees);
         setShowAddLeaveModal(false);
         setNewLeave({ type: '', startDate: '', endDate: '' });
@@ -138,7 +166,7 @@ const LeaveTracker = () => {
                         className="w-full rounded-md border-gray-300 shadow-sm"
                     >
                         {employees.map((emp) => (
-                            <option key={emp.id} value={emp.id}>
+                            <option key={emp.empId} value={emp.empId}>
                                 {emp.name} - {emp.department}
                             </option>
                         ))}
