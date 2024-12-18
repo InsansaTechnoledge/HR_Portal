@@ -86,7 +86,7 @@ function AppLayout() {
                     />
 
                     {/* Admin-Only Routes */}
-                    {role === 'admin' && (
+                    {user && user.role !== "user" && (
                         <>
                             <Route
                                 path="/post-job"
@@ -129,14 +129,6 @@ function AppLayout() {
                                 }
                             />
                             <Route
-                                path="/auth"
-                                element={
-                                    <ProtectedRoute>
-                                        <AuthenticationManagement />
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route
                                 path="/register-candidate"
                                 element={
                                     <ProtectedRoute>
@@ -144,8 +136,24 @@ function AppLayout() {
                                     </ProtectedRoute>
                                 }
                             />
+
+                                
                         </>
                     )}
+
+                    {
+                        user && user.role==='superAdmin' ?
+                        <Route
+                        path="/auth"
+                        element={
+                            <ProtectedRoute>
+                                <AuthenticationManagement />
+                            </ProtectedRoute>
+                        }
+                        />
+                        :
+                        null
+                    }
                 </Routes>
             </div>
         </div>
