@@ -41,7 +41,7 @@ function AppLayout() {
 
 
     const getUserData = async () => {
-        const response = await axios.get(`${API_BASE_URL}/auth/checkCookies`);
+        const response = await axios.get(`${API_BASE_URL}/api/auth/checkCookies`);
 
         if(response.status===201){
             console.log(response.data.user);
