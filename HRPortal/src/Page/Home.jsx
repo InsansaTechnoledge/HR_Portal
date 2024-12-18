@@ -18,6 +18,8 @@ import { userContext } from "../Context/userContext";
 const FeatureGrid = () => {
 
     const { user } = useContext(userContext);
+ 
+    const Name = user?.userName; // fetching the name of user
 
     return (
         <div className="max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
@@ -26,6 +28,9 @@ const FeatureGrid = () => {
                     <h2 className="text-4xl font-extrabold tracking-tight">
                         Insansa's HR Portal
                     </h2>
+                    <p className="mt-4 text-lg md:text-xl text-gray-200">
+                        Welcome {Name}
+                    </p>
                     <p className="mt-4 text-lg md:text-xl text-gray-200">
                         Explore Inside Requirements and Manage Workforce Effectively
                     </p>

@@ -16,12 +16,17 @@ import { userContext } from "../../Context/userContext";
 
 
 const Sidebar = () => {
+
+
     const [isOpen, setIsOpen] = useState(true);
     const [dropdowns, setDropdowns] = useState({
         apps: false,
         user: false,
     });
     const {user,setUser} = useContext(userContext);
+
+    const Name = user?.userName; // fetching the name of user
+
 
     const toggleSidebar = () => setIsOpen(!isOpen);
 
@@ -74,7 +79,7 @@ const Sidebar = () => {
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-4 border-b border-gray-700">
-                    {isOpen && <h1 className="text-lg font-bold">Insansa</h1>}
+                    {isOpen && <h1 className="text-lg font-bold">Hey, {Name}</h1>}
                     <button className="text-gray-400 hover:text-white" onClick={toggleSidebar}>
                         ☰
                     </button>
