@@ -70,7 +70,7 @@ const Sidebar = () => {
     return (
         <div className="flex h-screen">
             <aside
-                className={`bg-gray-800 text-white transition-width duration-300 ${isOpen ? "w-64" : "w-16"} flex flex-col`}
+                className={`bg-gray-800 overflow-auto text-white transition-width duration-300 ${isOpen ? "w-64" : "w-16"} flex flex-col`}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-4 border-b border-gray-700">
