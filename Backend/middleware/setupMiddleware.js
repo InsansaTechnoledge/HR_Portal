@@ -43,7 +43,8 @@ const configureApp = (app) => {
         secure: process.env.NODE_ENV === 'production', // Secure cookies only in production (HTTPS)
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',  // Allow cookies to be sent cross-origin
         httpOnly: true,    // Make sure cookies are not accessible via JavaScript
-        maxAge: 7 * 24 * 60 * 60 * 1000,  // Set cookie expiration to 1 week
+        // maxAge: 7 * 24 * 60 * 60 * 1000,
+         maxAge: 3600000,  // Set cookie expiration to 1 week
       },
       store: MongoStore.create({
         mongoUrl: process.env.MONGO_URI,  

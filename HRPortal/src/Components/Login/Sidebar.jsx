@@ -9,6 +9,10 @@ import {
     IconChevronUp,
 } from "@tabler/icons-react";
 import { NavLink } from "react-router-dom";
+import { useNavigate } from 'react-router-dom';
+import API_BASE_URL  from '../../config';
+import axios from 'axios';
+
 
 const Sidebar = () => {
     const [isOpen, setIsOpen] = useState(true);
@@ -27,26 +31,7 @@ const Sidebar = () => {
         setIsUserDropdownOpen(!isUserDropdownOpen);
     };
 
-    const handleLogout = async () => {
-        try{
-        const response = await axios.post(`${API_BASE_URL}/api/auth/logout`, null,{
-            withCredentials: true,
-        });
-        if(response.status === 200){
-            Navigate('/');
-        }
-        else{
-            console.error("logout failed:",response.data.message ||response.statusText);
-            alert("Logout failed. Please try again");
-        }
-
-    }
-    catch (error){
-        console.error("Logout error:", error);
-        alert("An error occurred during logout."); 
-    }
-}
-
+    
 
     return (
         <div className="flex h-screen">
@@ -176,7 +161,7 @@ const Sidebar = () => {
                 <div className="mt-auto">
                     <ul>
                         <SidebarItem
-                            onClick={handleLogout}
+                            
                             icon={<IconLogout />}
                             label="Logout"
                             isOpen={isOpen}
@@ -191,8 +176,31 @@ const Sidebar = () => {
 };
 
 const SidebarItem = ({ icon, label, isOpen, to }) => {
+    const navigate =useNavigate();
+    const handleLogout = async () => {
+        try {
+            console.log("Logging out...");
+            
+            const response = await axios.post(`${API_BASE_URL}/api/auth/logout`, null, {
+                withCredentials: true,
+            });
+            if (response.status === 200) { 
+                document.cookie = 'connect.sid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';               
+                localStorage.removeItem('user'); // Clear local storage
+                navigate('/', { replace: true }); // Redirect to login
+            } else {
+                console.error("Logout failed:", response.data.message || response.statusText);
+                alert("Logout failed. Please try again");
+            }
+
+        } catch (error) {
+            console.error("Logout error:", error);
+            alert("An error occurred during logout.");
+        }
+    }
+    
     return (
-        <li>
+        <li onClick={label === "Logout" ? handleLogout : null}>
             <NavLink
                 to={to}
                 className={({ isActive }) =>
