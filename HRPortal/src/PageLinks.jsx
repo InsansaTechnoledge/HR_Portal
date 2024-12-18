@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
     BrowserRouter as Router,
     Routes,
@@ -29,6 +29,7 @@ function AppLayout() {
     const location = useLocation();
     const token = localStorage.getItem('token');
     const {user,setUser} = useContext(userContext);
+    const [loading, setLoading] = useState(true); // Add a loading state
 
     // Redirect to login if not logged in
     // if (!token && location.pathname !== '/') {
@@ -41,19 +42,32 @@ function AppLayout() {
 
 
     const getUserData = async () => {
-        axios.defaults.withCredentials = true;
-        const response = await axios.get(`${API_BASE_URL}/api/auth/checkCookies`);
+        try{
 
-        if(response.status===201){
-            setUser(response.data.user);
+            axios.defaults.withCredentials = true;
+            const response = await axios.get(`${API_BASE_URL}/api/auth/checkCookies`);
+            
+            if(response.status===201){
+                setUser(response.data.user);
+            }
+            console.log(response.data);
         }
-        console.log(response.data);
+        catch(err){
+            console.log(err);
+        }
+        finally{
+            setLoading(false);
+        }
     }
 
     useEffect(()=> {
         
         getUserData();
     },[])
+
+    if (loading) {
+        return <div>Loading...</div>; // You can replace this with a proper loading spinner or component
+    }
 
     return (
         <div className="flex h-screen">
@@ -121,9 +135,9 @@ function AppLayout() {
                     <Route
                         path="/auth"
                         element={
-                            // <ProtectedRoute>
+                            <ProtectedRoute>
                                 <AuthenticationManagement />
-                            // </ProtectedRoute>
+                            </ProtectedRoute>
                         }
                     />
                     <Route
