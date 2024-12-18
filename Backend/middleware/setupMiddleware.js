@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import flash from 'connect-flash';
 
+
 const configureApp = (app) => {
   app.set('trust proxy', 1);
 

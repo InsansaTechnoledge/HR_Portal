@@ -11,7 +11,6 @@ const app = express();
 
 // Setup middleware
 setupMiddleware(app);
-
 // Routes
 routes(app);
 

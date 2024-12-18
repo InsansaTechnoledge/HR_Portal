@@ -1,15 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { userContext } from '../Context/userContext';
 
 const ProtectedRoute = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(null);
     const location = useLocation();
     const navigate = useNavigate(); // Add useNavigate hook
+    const {user, setUser} = useContext(userContext);
+
 
     useEffect(() => {
         const checkSession = async () => {
             try {
+                console.log(children.path);
                 const response = await axios.get(`http://localhost:3000/api/auth/checkSession`, { withCredentials: true });
 
                 if (response.status === 200) {

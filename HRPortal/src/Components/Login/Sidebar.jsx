@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import {
     IconHome,
     IconGridDots,
@@ -12,6 +12,7 @@ import { NavLink } from "react-router-dom";
 import { useNavigate } from 'react-router-dom';
 import API_BASE_URL  from '../../config';
 import axios from 'axios';
+import { userContext } from "../../Context/userContext";
 
 
 const Sidebar = () => {
@@ -20,6 +21,7 @@ const Sidebar = () => {
         apps: false,
         user: false,
     });
+    const {user,setUser} = useContext(userContext);
 
     const toggleSidebar = () => setIsOpen(!isOpen);
 
@@ -36,10 +38,13 @@ const Sidebar = () => {
             const response = await axios.post(`${API_BASE_URL}/api/auth/logout`, null, {
                 withCredentials: true,
             });
+
             if (response.status === 200) { 
-                document.cookie = 'connect.sid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';               
+                document.cookie = 'jwtAuth=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;'; 
+                setUser(null);              
                 localStorage.removeItem('user'); // Clear local storage
                 navigate('/', { replace: true }); // Redirect to login
+                
             } else {
                 console.error("Logout failed:", response.data.message || response.statusText);
                 alert("Logout failed. Please try again");
@@ -67,7 +72,7 @@ const Sidebar = () => {
                 {/* Navigation */}
                 <nav className="flex-1 mt-4">
                     <ul className="space-y-2">
-                        <SidebarItem icon={<IconHome />} label="Home" isOpen={isOpen} to="/home" />
+                        <SidebarItem icon={<IconHome />} label="Home" isOpen={isOpen} to="/" />
 
                         {/* Apps Dropdown */}
                         <SidebarDropdown

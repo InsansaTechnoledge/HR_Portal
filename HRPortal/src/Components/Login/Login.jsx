@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import axios from 'axios';
 import { useNavigate ,useLocation} from 'react-router-dom';
+import { userContext } from '../../Context/userContext';
 
 const Login = () => {
     const [userEmail, setEmail] = useState('');
@@ -8,7 +9,8 @@ const Login = () => {
     const [errorMessage, setErrorMessage] = useState('');
     const navigate = useNavigate();
     const location = useLocation();
-    const from = location.state?.from?.pathname || '/home';
+    // const from = location.state?.from?.pathname || '/';
+    const {user,setUser} = useContext(userContext);
 
     const handleLogin = async () => {
         try {
@@ -18,11 +20,16 @@ const Login = () => {
                 password,
             }, { withCredentials: true });
     
+            if(response.status===200){
+                setUser(response.data.user);
+            }
+
             // Handle successful login
-            alert('Login successful!');
-            navigate(from, { replace: true });
-            console.log(response.data); // Debugging
-            window.location.href = '/home'; 
+            // alert('Login successful!');
+            navigate('/')
+            // navigate(from, { replace: true });
+            // console.log(response.data); // Debugging
+            // window.location.href = '/'; 
             
         } catch (error) {
             // Handle errors

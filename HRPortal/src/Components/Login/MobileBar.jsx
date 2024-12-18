@@ -12,7 +12,7 @@ import { NavLink } from "react-router-dom";
 
 // Configuration for navigation items
 const NAV_ITEMS = [
-    { icon: IconHome, label: 'Home', to: '/home' },
+    { icon: IconHome, label: 'Home', to: '/' },
     { icon: IconUser, label: 'Talent', to: '/register-candidate' },
     { icon: IconSettings, label: 'Auth', to: '/auth' },
     { icon: IconLogout, label: 'Logout', to: '/' },

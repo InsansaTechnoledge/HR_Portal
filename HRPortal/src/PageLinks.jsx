@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import {
     BrowserRouter as Router,
     Routes,
@@ -37,39 +37,37 @@ function AppLayout() {
 
     // Show Sidebar for larger screens and BottomBar for smaller screens
     const isMobile = useMediaQuery({ query: '(max-width: 768px)' });
-    const showSidebar = location.pathname !== '/' && !isMobile;
+    const showSidebar = user && !isMobile;
 
 
     const getUserData = async () => {
+        axios.defaults.withCredentials = true;
         const response = await axios.get(`${API_BASE_URL}/api/auth/checkCookies`);
 
         if(response.status===201){
-            console.log(response.data.user);
             setUser(response.data.user);
         }
+        console.log(response.data);
     }
+
+    useEffect(()=> {
+        
+        getUserData();
+    },[])
 
     return (
         <div className="flex h-screen">
             {showSidebar && <Sidebar />}
-            {isMobile && location.pathname !== '/' && <MobileBar />}
+            {isMobile && !user && <MobileBar />}
             <div className={`flex-1 p-4 overflow-auto ${showSidebar ? '' : 'w-full mb-14'}`}>
                 <Routes>
-                    <Route path="/" element={<Login />} />
+                    <Route path="/" element={user ? <Home/> : <Login /> }/>
                     <Route
                         path="/post-job"
                         element={
                             <ProtectedRoute>
                                 <JobPostForm />
                              </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/home"
-                        element={
-                            <ProtectedRoute>
-                                <Home />
-                            </ProtectedRoute>
                         }
                     />
                     <Route

@@ -9,40 +9,40 @@ export const login=async(req, res, next)=>{
   const { userEmail, password } = req.body;
 
   try {
-    let user = await User.findOne({ userEmail });
+    const user = await User.findOne({ userEmail });
 
     if (!user) {
       return res.status(400).json({ message: 'User not found, please sign up first.' });
     }
     
-    passport.authenticate('local', async (err, user, info) => {
-      if (err) {
-        return next(err);
-      }
-      if (!user) {
-        return res.status(401).json({ message: 'Invalid credentials' }); 
-      }
+    // passport.authenticate('local', async (err, user, info) => {
+    //   if (err) {
+    //     return next(err);
+    //   }
+    //   if (!user) {
+    //     return res.status(401).json({ message: 'Invalid credentials' }); 
+    //   }
 
-      // If authentication is successful, log the user in and create a session
-      req.login(user, (err) => {
-        if (err) {
-          return next(err); 
-        }
-        return res.status(200).json({ message: 'Login successful', user: req.user });
-      });
-    })(req, res, next); // Call passport.authenticate
+    //   // If authentication is successful, log the user in and create a session
+    //   req.login(user, (err) => {
+    //     if (err) {
+    //       return next(err); 
+    //     }
+    //     return res.status(200).json({ message: 'Login successful', user: req.user });
+    //   });
+    // })(req, res, next); // Call passport.authenticate
 
-    // const token = generateAuthToken(user);
+    const token = generateAuthToken(user);
 
-    // res.cookie("jwtAuth", token, {
-    //   expires: new Date(Date.now() + 31536000),
-    //   httpOnly: false,
-    //   // secure: process.env.NODE_ENV !== 'development',
-    //   // sameSite: process.env.NODE_ENV === 'development' ? 'Lax' : 'None'
-    //   secure: true,
-    //   sameSite: "None"
-    // });
-    // console.log("cookie created");
+    res.cookie("jwtAuth", token, {
+      expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year expiration
+      httpOnly: true,                                            // Prevents client-side JS access
+      secure: process.env.NODE_ENV !== 'development',            // HTTPS only in production
+      sameSite: process.env.NODE_ENV === 'development' ? "Lax" : "None" // Adjust for environment
+  });
+  
+    console.log("cookie created");
+    res.status(200).json({ message: 'Login successful', user: user });
 
   } catch (error) {
     console.error('Error during login process:', error);
@@ -83,3 +83,17 @@ export const logout = async (req, res) => {
 
   });
 };
+
+export const getUser = async (req,res) => {
+  try{
+    const userId = req.userId;
+    
+    const user = await User.findOne({"userId":userId});
+      
+    res.status(201).json({message:"User found!",user: user});
+  }
+  catch(err){
+    console.log(err);
+    res.status(400).json({message:err});
+  }
+}
