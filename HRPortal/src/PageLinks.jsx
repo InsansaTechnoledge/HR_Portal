@@ -20,6 +20,7 @@ import JobApplication from './Page/JobApplication';
 import AuthenticationManagement from './Page/AuthenticationManagement';
 import LeaveTracker from './Page/LeaveTracker';
 import CandidateDetails from './Components/CandidateRegistrationForm/CandidateDetail';
+import AddEmployeePage from './Page/AddEmployee';
 
 function AppLayout() {
     const location = useLocation();
@@ -70,6 +71,14 @@ function AppLayout() {
                         element={
                             <ProtectedRoute>
                                 <LeaveTracker />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/add-employee"
+                        element={
+                            <ProtectedRoute>
+                                <AddEmployeePage />
                             </ProtectedRoute>
                         }
                     />

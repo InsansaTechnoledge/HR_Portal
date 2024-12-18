@@ -13,6 +13,7 @@ export const login=async(req, res, next)=>{
     if (!user) {
       return res.status(400).json({ message: 'User not found, please sign up first.' });
     }
+    
     passport.authenticate('local', async (err, user, info) => {
       if (err) {
         return next(err);
