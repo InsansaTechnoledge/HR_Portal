@@ -26,8 +26,8 @@ import API_BASE_URL from './config';
 import AddEmployeePage from './Page/AddEmployee';
 
 function AppLayout() {
-    const location = useLocation();
-    const token = localStorage.getItem('token');
+    // const location = useLocation();
+    // const token = localStorage.getItem('token');
     const { user, setUser } = useContext(userContext);
     const [loading, setLoading] = useState(true);
 

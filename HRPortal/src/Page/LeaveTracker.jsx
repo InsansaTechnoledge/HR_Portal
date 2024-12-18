@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import {
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+import { userContext } from '../Context/userContext';
 
 const initialEmployees = [
     {
@@ -52,15 +53,27 @@ const LeaveTracker = () => {
         startDate: '',
         endDate: '',
     });
-
+    const {user,setUser} = useContext(userContext);
 
     useEffect(()=>{
         const fetchEmployees = async () => {
             const response = await axios.get(`${API_BASE_URL}/api/employee`);
 
             if(response.status===201){
-               setEmployees(response.data.employees);
+                const employees = response.data.employees;
+
+                if(user && user.role==="user"){
+                    const filteredEmployees = employees.filter(emp => emp.email === user.userEmail);
+                    setEmployees(filteredEmployees);
+                }
+                else{
+                    setEmployees(employees);
+
+                }
+
             }
+
+            
         }
 
         fetchEmployees();
