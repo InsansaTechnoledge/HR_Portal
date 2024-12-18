@@ -75,8 +75,11 @@ const FeatureGrid = () => {
                             ))}
                         </div>
 
-                        <h1 className="mt-10 font-extrabold text-3xl">AUTHENTICATION MANAGEMENT</h1>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+                        {
+                            user && user.role==='superAdmin' ?
+                            <>
+                            <h1 className="mt-10 font-extrabold text-3xl">AUTHENTICATION MANAGEMENT</h1>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
                             {authenticationItems.map((item, i) => (
                                 <FeatureCard
                                     key={i}
@@ -87,9 +90,12 @@ const FeatureGrid = () => {
                                     className={"md:col-span-3"}
                                     nav={item.nav}
                                     img={item.img}
-                                />
-                            ))}
+                                    />
+                                ))}
                         </div>
+                        </>
+                        :null
+                            }
                     </>
             }
         </div>
