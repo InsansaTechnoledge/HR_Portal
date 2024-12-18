@@ -72,7 +72,7 @@ function AppLayout() {
     return (
         <div className="flex h-screen">
             {showSidebar && <Sidebar />}
-            {isMobile && !user && <MobileBar />}
+            {isMobile && user && <MobileBar />}
             <div className={`flex-1 p-4 overflow-auto ${showSidebar ? '' : 'w-full mb-14'}`}>
                 <Routes>
                     <Route path="/" element={user ? <Home/> : <Login /> }/>
