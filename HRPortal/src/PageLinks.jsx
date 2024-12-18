@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
     BrowserRouter as Router,
     Routes,
@@ -28,48 +28,46 @@ import AddEmployeePage from './Page/AddEmployee';
 function AppLayout() {
     const location = useLocation();
     const token = localStorage.getItem('token');
-    const {user,setUser} = useContext(userContext);
+    const { user, setUser } = useContext(userContext);
+    const [loading, setLoading] = useState(true);
 
-    // Redirect to login if not logged in
-    // if (!token && location.pathname !== '/') {
-    //     return <Navigate to="/" replace />;
-    // }
-
-    // Show Sidebar for larger screens and BottomBar for smaller screens
+    // Determine if the user is on a mobile device
     const isMobile = useMediaQuery({ query: '(max-width: 768px)' });
     const showSidebar = user && !isMobile;
 
-
     const getUserData = async () => {
-        axios.defaults.withCredentials = true;
-        const response = await axios.get(`${API_BASE_URL}/api/auth/checkCookies`);
-
-        if(response.status===201){
-            setUser(response.data.user);
+        try {
+            axios.defaults.withCredentials = true;
+            const response = await axios.get(`${API_BASE_URL}/api/auth/checkCookies`);
+            if (response.status === 201) {
+                setUser(response.data.user);
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
         }
-        console.log(response.data);
+    };
+
+    useEffect(() => {
+        getUserData();
+    }, []);
+
+    if (loading) {
+        return <div>Loading...</div>; // You can replace this with a proper loading spinner or component
     }
 
-    useEffect(()=> {
-        
-        getUserData();
-    },[])
+    // Role-based access control
+    const role = user?.role; // 'admin' or 'user'
 
     return (
         <div className="flex h-screen">
             {showSidebar && <Sidebar />}
-            {isMobile && !user && <MobileBar />}
+            {isMobile && user && <MobileBar />}
             <div className={`flex-1 p-4 overflow-auto ${showSidebar ? '' : 'w-full mb-14'}`}>
                 <Routes>
-                    <Route path="/" element={user ? <Home/> : <Login /> }/>
-                    <Route
-                        path="/post-job"
-                        element={
-                            <ProtectedRoute>
-                                <JobPostForm />
-                             </ProtectedRoute>
-                        }
-                    />
+                    {/* Common Routes */}
+                    <Route path="/" element={user ? <Home /> : <Login />} />
                     <Route
                         path="/docs"
                         element={
@@ -86,54 +84,68 @@ function AppLayout() {
                             </ProtectedRoute>
                         }
                     />
-                    <Route
-                        path="/add-employee"
-                        element={
-                            <ProtectedRoute>
-                                <AddEmployeePage />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/talent"
-                        element={
-                            <ProtectedRoute>
-                                <TalentManagement />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/candidate-detail"
-                        element={
-                            <ProtectedRoute>
-                                <CandidateDetails />
-                             </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/application"
-                        element={
-                            <ProtectedRoute>
-                                <JobApplication />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/auth"
-                        element={
-                            // <ProtectedRoute>
-                                <AuthenticationManagement />
-                            // </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/register-candidate"
-                        element={
-                            <ProtectedRoute>
-                                <CandidateRegistration />
-                            </ProtectedRoute>
-                        }
-                    />
+
+                    {/* Admin-Only Routes */}
+                    {role === 'admin' && (
+                        <>
+                            <Route
+                                path="/post-job"
+                                element={
+                                    <ProtectedRoute>
+                                        <JobPostForm />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/add-employee"
+                                element={
+                                    <ProtectedRoute>
+                                        <AddEmployeePage />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/talent"
+                                element={
+                                    <ProtectedRoute>
+                                        <TalentManagement />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/candidate-detail"
+                                element={
+                                    <ProtectedRoute>
+                                        <CandidateDetails />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/application"
+                                element={
+                                    <ProtectedRoute>
+                                        <JobApplication />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/auth"
+                                element={
+                                    <ProtectedRoute>
+                                        <AuthenticationManagement />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/register-candidate"
+                                element={
+                                    <ProtectedRoute>
+                                        <CandidateRegistration />
+                                    </ProtectedRoute>
+                                }
+                            />
+                        </>
+                    )}
                 </Routes>
             </div>
         </div>

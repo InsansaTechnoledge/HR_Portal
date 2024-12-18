@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { Upload, File, Trash2, Eye, Download, Plus, X } from "lucide-react";
 import API_BASE_URL from "../config";
 import { Search } from "lucide-react";
 import no_doc_img from "/images/no-document.avif"; 
+import { userContext } from "../Context/userContext";
 
 const DocumentManagement = () => {
 
@@ -13,6 +14,7 @@ const DocumentManagement = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [fileName, setFileName] = useState("No file choosen")
+    const {user} = useContext(userContext);
 
     // Upload form state
     const [formData, setFormData] = useState({
@@ -45,7 +47,16 @@ const DocumentManagement = () => {
             setLoading(true);
             const response = await axios.get(`${API_BASE_URL}/api/documents/all`);
             const data = Array.isArray(response.data.data) ? response.data.data : [];
-            setDocuments(data);
+            
+            console.log(data);
+
+            if (user && user.role === "user") {
+                const filteredData = data.filter(doc => doc.employee.toLowerCase() === user.userName.toLowerCase());
+                setDocuments(filteredData);
+            } else {
+                setDocuments(data);
+            }
+            
             setLoading(false);
         } catch (err) {
             setError("Failed to fetch documents");
@@ -194,10 +205,12 @@ const DocumentManagement = () => {
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
                     <h1 className="text-xl font-bold text-gray-700">Document Management</h1>
-                    <button
+                    {
+                        user.role==="user" ? null :
+                        <button
                         onClick={() => setShowUploadForm(!showUploadForm)}
                         className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                    >
+                        >
                         {showUploadForm ? (
                             <>
                                 <X className="mr-2 h-4 w-4" /> Cancel
@@ -208,6 +221,7 @@ const DocumentManagement = () => {
                             </>
                         )}
                     </button>
+                    }
                 </div>
 
                 {/* Upload Form */}
@@ -272,7 +286,7 @@ const DocumentManagement = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-gray-700 mb-2">Employee Name</label>
+                                <label className="block text-gray-700 mb-2">Employee Username</label>
                                 <input
                                     type="text"
                                     name="employee"
@@ -344,10 +358,17 @@ const DocumentManagement = () => {
                                             className="flex items-center px-3 py-1 bg-gray-100 rounded-lg hover:bg-gray-200">
                                             <Download className="mr-1 h-4 w-4" /> Download
                                         </a>
-                                        <button onClick={() => handleDeleteDocument(doc._id)}
-                                            className="flex items-center px-3 py-1 bg-red-100 text-red-600 rounded-lg hover:bg-red-200">
-                                            <Trash2 className="mr-1 h-4 w-4" /> Delete
-                                        </button>
+                                        {
+                                            user && user.role==="user"
+                                            ?
+                                            null
+                                            :
+                                            <button onClick={() => handleDeleteDocument(doc._id)}
+                                                className="flex items-center px-3 py-1 bg-red-100 text-red-600 rounded-lg hover:bg-red-200">
+                                                <Trash2 className="mr-1 h-4 w-4" /> Delete
+                                            </button>
+
+                                        }
                                     </td>
                                 </tr>
                             ))}

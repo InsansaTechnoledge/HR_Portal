@@ -14,12 +14,17 @@ import { useNavigate } from 'react-router-dom';
 import { userContext } from "../../Context/userContext";
 
 const Sidebar = () => {
+
+
     const [isOpen, setIsOpen] = useState(true);
     const [dropdowns, setDropdowns] = useState({
         apps: false,
         user: false,
     });
     const { user, setUser } = useContext(userContext);
+
+    const Name = user?.userName; // fetching the name of user
+
 
     const toggleSidebar = () => setIsOpen(!isOpen);
 
@@ -60,11 +65,11 @@ const Sidebar = () => {
     return (
         <div className="flex h-screen">
             <aside
-                className={`bg-gray-800 text-white transition-width duration-300 ${isOpen ? "w-64" : "w-16"} flex flex-col`}
+                className={`bg-gray-800 overflow-auto text-white transition-width duration-300 ${isOpen ? "w-64" : "w-16"} flex flex-col`}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-4 border-b border-gray-700">
-                    {isOpen && <h1 className="text-lg font-bold">Insansa</h1>}
+                    {isOpen && <h1 className="text-lg font-bold">Hey, {Name}</h1>}
                     <button className="text-gray-400 hover:text-white" onClick={toggleSidebar}>
                         ☰
                     </button>
