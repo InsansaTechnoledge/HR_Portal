@@ -47,7 +47,14 @@ const DocumentManagement = () => {
             setLoading(true);
             const response = await axios.get(`${API_BASE_URL}/api/documents/all`);
             const data = Array.isArray(response.data.data) ? response.data.data : [];
-            setDocuments(data);
+            
+            if (user && user.role === 'user') {
+                const filteredData = data.filter(doc => doc.employee === role.userName);
+                setDocuments(filteredData);
+            } else {
+                setDocuments(data);
+            }
+
             setLoading(false);
         } catch (err) {
             setError("Failed to fetch documents");
@@ -196,10 +203,12 @@ const DocumentManagement = () => {
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
                     <h1 className="text-xl font-bold text-gray-700">Document Management</h1>
-                    <button
+                    {
+                        user.role==="user" ? null :
+                        <button
                         onClick={() => setShowUploadForm(!showUploadForm)}
                         className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                    >
+                        >
                         {showUploadForm ? (
                             <>
                                 <X className="mr-2 h-4 w-4" /> Cancel
@@ -210,6 +219,7 @@ const DocumentManagement = () => {
                             </>
                         )}
                     </button>
+                    }
                 </div>
 
                 {/* Upload Form */}
@@ -274,7 +284,7 @@ const DocumentManagement = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-gray-700 mb-2">Employee Name</label>
+                                <label className="block text-gray-700 mb-2">Employee Username</label>
                                 <input
                                     type="text"
                                     name="employee"
