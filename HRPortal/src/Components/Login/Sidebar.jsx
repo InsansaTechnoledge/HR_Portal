@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import {
     IconHome,
     IconGridDots,
@@ -39,11 +39,15 @@ const Sidebar = () => {
                 withCredentials: true,
             });
 
-            if (response.status === 200) { 
-                document.cookie = 'jwtAuth=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;'; 
-                setUser(null);              
-                localStorage.removeItem('user'); // Clear local storage
-                navigate('/', { replace: true }); // Redirect to login
+            if (response.status === 201) { 
+                // document.cookie = 'jwtAuth=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;'; 
+                console.log("SSS",user);
+                setUser(null);           
+                console.log("DDD",user);
+                // setTimeout(  () => {console.log("DDD",user)} ,5000);
+               
+                // localStorage.removeItem('user'); // Clear local storage
+                // navigate('/', { replace: true }); // Redirect to login
                 
             } else {
                 console.error("Logout failed:", response.data.message || response.statusText);
@@ -55,6 +59,13 @@ const Sidebar = () => {
             alert("An error occurred during logout.");
         }
     }
+
+    useEffect(() => {
+        if (user === null) {
+            console.log("User is now null, redirecting...");
+            navigate('/', { replace: true });  // Redirect to login after user is null
+        }
+    }, [user, navigate]);
 
     return (
         <div className="flex h-screen">

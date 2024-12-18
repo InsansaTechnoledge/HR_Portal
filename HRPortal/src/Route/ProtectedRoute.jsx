@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { userContext } from '../Context/userContext';
+import Login from '../Components/Login/Login';
 
 const ProtectedRoute = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(null);
@@ -9,6 +10,8 @@ const ProtectedRoute = ({ children }) => {
     const navigate = useNavigate(); // Add useNavigate hook
     const {user, setUser} = useContext(userContext);
 
+    console.log("PROT",user);
+    return (user ? children : <Navigate to='/' replace/>)
 
     useEffect(() => {
         const checkSession = async () => {
