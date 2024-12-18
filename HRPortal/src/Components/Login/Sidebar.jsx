@@ -27,7 +27,29 @@ const Sidebar = () => {
         setDropdowns((prev) => ({ ...prev, [name]: !prev[name] }));
     };
 
-    
+
+    const navigate =useNavigate();
+    const handleLogout = async () => {
+        try {
+            console.log("Logging out...");
+            
+            const response = await axios.post(`${API_BASE_URL}/api/auth/logout`, null, {
+                withCredentials: true,
+            });
+            if (response.status === 200) { 
+                document.cookie = 'connect.sid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';               
+                localStorage.removeItem('user'); // Clear local storage
+                navigate('/', { replace: true }); // Redirect to login
+            } else {
+                console.error("Logout failed:", response.data.message || response.statusText);
+                alert("Logout failed. Please try again");
+            }
+
+        } catch (error) {
+            console.error("Logout error:", error);
+            alert("An error occurred during logout.");
+        }
+    }
 
     return (
         <div className="flex h-screen">
@@ -94,31 +116,8 @@ const Sidebar = () => {
 };
 
 const SidebarItem = ({ icon, label, isOpen, to }) => {
-    const navigate =useNavigate();
-    const handleLogout = async () => {
-        try {
-            console.log("Logging out...");
-            
-            const response = await axios.post(`${API_BASE_URL}/api/auth/logout`, null, {
-                withCredentials: true,
-            });
-            if (response.status === 200) { 
-                document.cookie = 'connect.sid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';               
-                localStorage.removeItem('user'); // Clear local storage
-                navigate('/', { replace: true }); // Redirect to login
-            } else {
-                console.error("Logout failed:", response.data.message || response.statusText);
-                alert("Logout failed. Please try again");
-            }
-
-        } catch (error) {
-            console.error("Logout error:", error);
-            alert("An error occurred during logout.");
-        }
-    }
-    
     return (
-        <li onClick={label === "Logout" ? handleLogout : null}>
+        <li>
             <NavLink
                 to={to}
                 className={({ isActive }) =>
@@ -133,5 +132,21 @@ const SidebarItem = ({ icon, label, isOpen, to }) => {
         </li>
     );
 };
+const SidebarDropdown = ({ icon, label, isOpen, isExpanded, toggleDropdown, children }) => (
+    <li>
+        <button
+            onClick={toggleDropdown}
+            className={`flex items-center justify-between w-full px-4 py-3 rounded-md ${isExpanded ? "bg-gray-700" : "hover:bg-gray-700"
+                }`}
+        >
+            <div className="flex items-center space-x-3">
+                {icon}
+                {isOpen && <span>{label}</span>}
+            </div>
+            {isOpen && (isExpanded ? <IconChevronUp /> : <IconChevronDown />)}
+        </button>
+        {isExpanded && <ul className="ml-8 mt-2 space-y-2">{children}</ul>}
+    </li>
+);
 
 export default Sidebar;
