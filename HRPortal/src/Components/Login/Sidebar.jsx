@@ -39,6 +39,7 @@ const Sidebar = () => {
             console.error("logout failed:",response.data.message ||response.statusText);
             alert("Logout failed. Please try again");
         }
+        localStorage.removeItem("user");
         localStorage.clear();
         localStorage.setItem("user2", "!@#")
 
@@ -122,6 +123,12 @@ const Sidebar = () => {
                                         label="Leave Tracker"
                                         isOpen={isOpen}
                                         to="/leave-tracker"
+                                    />
+                                    <SidebarItem
+                                        icon={<IconGridDots />}
+                                        label="Add Employee"
+                                        isOpen={isOpen}
+                                        to="/add-employee"
                                     />
                                 </ul>
                             )}

@@ -23,6 +23,7 @@ import CandidateDetails from './Components/CandidateRegistrationForm/CandidateDe
 import { userContext } from './Context/userContext';
 import axios from 'axios';
 import API_BASE_URL from './config';
+import AddEmployeePage from './Page/AddEmployee';
 
 function AppLayout() {
     const location = useLocation();
@@ -79,6 +80,14 @@ function AppLayout() {
                         element={
                             <ProtectedRoute>
                                 <LeaveTracker />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/add-employee"
+                        element={
+                            <ProtectedRoute>
+                                <AddEmployeePage />
                             </ProtectedRoute>
                         }
                     />
