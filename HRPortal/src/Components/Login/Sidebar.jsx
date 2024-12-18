@@ -12,210 +12,128 @@ import { NavLink } from "react-router-dom";
 
 const Sidebar = () => {
     const [isOpen, setIsOpen] = useState(true);
-    const [isAppsOpen, setIsAppsOpen] = useState(false); // State for Apps dropdown
-    const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false); // State for User Management dropdown
+    const [dropdowns, setDropdowns] = useState({
+        apps: false,
+        user: false,
+    });
 
-    const toggleSidebar = () => {
-        setIsOpen(!isOpen);
-    };
+    const toggleSidebar = () => setIsOpen(!isOpen);
 
-    const toggleAppsDropdown = () => {
-        setIsAppsOpen(!isAppsOpen);
-    };
-
-    const toggleUserDropdown = () => {
-        setIsUserDropdownOpen(!isUserDropdownOpen);
+    const toggleDropdown = (name) => {
+        setDropdowns((prev) => ({ ...prev, [name]: !prev[name] }));
     };
 
     const handleLogout = async () => {
-        try{
-        const response = await axios.post(`${API_BASE_URL}/api/auth/logout`, null,{
-            withCredentials: true,
-        });
-        if(response.status === 200){
-            Navigate('/');
+        try {
+            // Replace API_BASE_URL with your actual API URL
+            const response = await axios.post(`${API_BASE_URL}/api/auth/logout`, null, {
+                withCredentials: true,
+            });
+            if (response.status === 200) {
+                Navigate("/");
+                localStorage.clear();
+            } else {
+                alert("Logout failed. Please try again.");
+            }
+        } catch (error) {
+            alert("An error occurred during logout.");
         }
-        else{
-            console.error("logout failed:",response.data.message ||response.statusText);
-            alert("Logout failed. Please try again");
-        }
-        localStorage.removeItem("user");
-        localStorage.clear();
-        localStorage.setItem("user2", "!@#")
-
-    }
-    catch (error){
-        console.error("Logout error:", error);
-        alert("An error occurred during logout."); 
-    }
-}
-
+    };
 
     return (
         <div className="flex h-screen">
-            {/* Sidebar */}
-            <div
-                className={`bg-gray-800 overflow-auto pb-4 text-white ${isOpen ? "w-64" : "w-16"} duration-300 flex flex-col`}
+            <aside
+                className={`bg-gray-800 text-white transition-width duration-300 ${isOpen ? "w-64" : "w-16"} flex flex-col`}
             >
-                {/* Sidebar Header */}
+                {/* Header */}
                 <div className="flex items-center justify-between px-4 py-4 border-b border-gray-700">
-                    <h1 className={`text-lg font-bold ${isOpen ? "block" : "hidden"} duration-300`}>Insansa</h1>
-                    <button
-                        className="text-gray-400 hover:text-white"
-                        onClick={toggleSidebar}
-                    >
+                    {isOpen && <h1 className="text-lg font-bold">Insansa</h1>}
+                    <button className="text-gray-400 hover:text-white" onClick={toggleSidebar}>
                         ☰
                     </button>
                 </div>
 
-                {/* Navigation Items */}
-                <nav className="mt-4 flex-1">
+                {/* Navigation */}
+                <nav className="flex-1 mt-4">
                     <ul className="space-y-2">
-                        <SidebarItem
-                            icon={<IconHome />}
-                            label="Home"
+                        <SidebarItem icon={<IconHome />} label="Home" isOpen={isOpen} to="/home" />
+
+                        {/* Apps Dropdown */}
+                        <SidebarDropdown
+                            icon={<IconGridDots />}
+                            label="Apps"
                             isOpen={isOpen}
-                            to="/home"
-                        />
+                            isExpanded={dropdowns.apps}
+                            toggleDropdown={() => toggleDropdown("apps")}
+                        >
+                            <SidebarItem icon={<IconGridDots />} label="Employee Docs Management" isOpen={isOpen} to="/docs" />
+                            <SidebarItem icon={<IconGridDots />} label="Post Current Job Openings" isOpen={isOpen} to="/post-job" />
+                            <SidebarItem icon={<IconGridDots />} label="Job Application Management" isOpen={isOpen} to="/application" />
+                            <SidebarItem icon={<IconGridDots />} label="Leave Tracker" isOpen={isOpen} to="/leave-tracker" />
+                            <SidebarItem icon={<IconGridDots />} label="Add Employee" isOpen={isOpen} to="/add-employee" />
+                        </SidebarDropdown>
 
-                        {/* Dropdown Menu for Apps */}
-                        <li>
-                            <button
-                                onClick={toggleAppsDropdown}
-                                className={`flex items-center justify-between w-full px-4 py-3 rounded-md ${isAppsOpen ? "bg-gray-700" : "hover:bg-gray-700"}`}
-                            >
-                                <div className="flex items-center space-x-3">
-                                    <span className="text-xl">
-                                        <IconGridDots />
-                                    </span>
-                                    <span className={`${isOpen ? "block" : "hidden"} duration-300`}>
-                                        Apps
-                                    </span>
-                                </div>
-                                {isOpen && (
-                                    <span>
-                                        {isAppsOpen ? <IconChevronUp /> : <IconChevronDown />}
-                                    </span>
-                                )}
-                            </button>
-                            {isAppsOpen && (
-                                <ul className={`${isOpen ? "ml-8" : "ml-4"} mt-2 space-y-2`}>
-                                    <SidebarItem
-                                        icon={<IconGridDots />}
-                                        label="Employee Docs Management"
-                                        isOpen={isOpen}
-                                        to="/docs"
-                                    />
-                                    <SidebarItem
-                                        icon={<IconGridDots />}
-                                        label="Post Current Job Openings"
-                                        isOpen={isOpen}
-                                        to="/post-job"
-                                    />
-                                    <SidebarItem
-                                        icon={<IconGridDots />}
-                                        label="Job Application Management"
-                                        isOpen={isOpen}
-                                        to="/application"
-                                    />
-                                    <SidebarItem
-                                        icon={<IconGridDots />}
-                                        label="Leave Tracker"
-                                        isOpen={isOpen}
-                                        to="/leave-tracker"
-                                    />
-                                    <SidebarItem
-                                        icon={<IconGridDots />}
-                                        label="Add Employee"
-                                        isOpen={isOpen}
-                                        to="/add-employee"
-                                    />
-                                </ul>
-                            )}
-                        </li>
-
-                        {/* Dropdown for User Management */}
-                        <li>
-                            <button
-                                onClick={toggleUserDropdown}
-                                className={`flex items-center justify-between w-full px-4 py-3 rounded-md ${isUserDropdownOpen ? "bg-gray-700" : "hover:bg-gray-700"}`}
-                            >
-                                <div className="flex items-center space-x-3">
-                                    <span className="text-xl">
-                                        <IconUser />
-                                    </span>
-                                    <span className={`${isOpen ? "block" : "hidden"} duration-300`}>
-                                        Talent Management
-                                    </span>
-                                </div>
-                                {isOpen && (
-                                    <span>
-                                        {isUserDropdownOpen ? <IconChevronUp /> : <IconChevronDown />}
-                                    </span>
-                                )}
-                            </button>
-                            {isUserDropdownOpen && (
-                                <ul className={`${isOpen ? "ml-8" : "ml-4"} mt-2 space-y-2`}>
-                                    <SidebarItem
-                                        icon={<IconUser />}
-                                        label="Register Candidate"
-                                        isOpen={isOpen}
-                                        to="/register-candidate"
-                                    />
-                                    <SidebarItem
-                                        icon={<IconUser />}
-                                        label="Candidate Roster"
-                                        isOpen={isOpen}
-                                        to="/candidate-detail"
-                                    />
-                                </ul>
-                            )}
-                        </li>
-
-                        <SidebarItem
-                            icon={<IconSettings />}
-                            label="Authentication Management"
+                        {/* Talent Management Dropdown */}
+                        <SidebarDropdown
+                            icon={<IconUser />}
+                            label="Talent Management"
                             isOpen={isOpen}
-                            to="/auth"
-                        />
+                            isExpanded={dropdowns.user}
+                            toggleDropdown={() => toggleDropdown("user")}
+                        >
+                            <SidebarItem icon={<IconUser />} label="Register Candidate" isOpen={isOpen} to="/register-candidate" />
+                            <SidebarItem icon={<IconUser />} label="Candidate Roster" isOpen={isOpen} to="/candidate-detail" />
+                        </SidebarDropdown>
+
+                        <SidebarItem icon={<IconSettings />} label="Authentication Management" isOpen={isOpen} to="/auth" />
                     </ul>
                 </nav>
 
-                {/* Logout Button at Bottom */}
-                <div className="mt-auto">
-                    <ul>
-                        <button onClick={handleLogout}>Logout</button>
-                        <SidebarItem
-                            onClick={handleLogout}
-                            icon={<IconLogout />}
-                            label="Logout"
-                            isOpen={isOpen}
-                            to="/"
-                        />
-                    </ul>
+                {/* Logout Button */}
+                <div className="mt-auto px-4 py-4">
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center w-full px-4 py-3 text-red-500 rounded-md hover:bg-red-700 hover:text-white"
+                    >
+                        <IconLogout className="text-xl" />
+                        {isOpen && <span className="ml-3">Logout</span>}
+                    </button>
                 </div>
-            </div>
+            </aside>
         </div>
-
     );
 };
 
-const SidebarItem = ({ icon, label, isOpen, to }) => {
-    return (
-        <li>
-            <NavLink
-                to={to}
-                className={({ isActive }) =>
-                    `flex items-center space-x-3 px-4 py-3 rounded-md ${isActive ? "bg-indigo-600 text-white" : "hover:bg-gray-700"}`
-                }
-            >
-                <span className="text-xl">{icon}</span>
-                <span className={`${isOpen ? "block" : "hidden"} duration-300`}>
-                    {label}
-                </span>
-            </NavLink>
-        </li>
-    );
-};
+const SidebarItem = ({ icon, label, isOpen, to }) => (
+    <li>
+        <NavLink
+            to={to}
+            className={({ isActive }) =>
+                `flex items-center space-x-3 px-4 py-3 rounded-md ${isActive ? "bg-indigo-600 text-white" : "hover:bg-gray-700"
+                }`
+            }
+        >
+            {icon}
+            {isOpen && <span>{label}</span>}
+        </NavLink>
+    </li>
+);
+
+const SidebarDropdown = ({ icon, label, isOpen, isExpanded, toggleDropdown, children }) => (
+    <li>
+        <button
+            onClick={toggleDropdown}
+            className={`flex items-center justify-between w-full px-4 py-3 rounded-md ${isExpanded ? "bg-gray-700" : "hover:bg-gray-700"
+                }`}
+        >
+            <div className="flex items-center space-x-3">
+                {icon}
+                {isOpen && <span>{label}</span>}
+            </div>
+            {isOpen && (isExpanded ? <IconChevronUp /> : <IconChevronDown />)}
+        </button>
+        {isExpanded && <ul className="ml-8 mt-2 space-y-2">{children}</ul>}
+    </li>
+);
 
 export default Sidebar;
