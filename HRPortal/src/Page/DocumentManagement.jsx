@@ -48,13 +48,15 @@ const DocumentManagement = () => {
             const response = await axios.get(`${API_BASE_URL}/api/documents/all`);
             const data = Array.isArray(response.data.data) ? response.data.data : [];
             
-            if (user && user.role === 'user') {
-                const filteredData = data.filter(doc => doc.employee === role.userName);
+            console.log(data);
+
+            if (user && user.role === "user") {
+                const filteredData = data.filter(doc => doc.employee.toLowerCase() === user.userName.toLowerCase());
                 setDocuments(filteredData);
             } else {
                 setDocuments(data);
             }
-
+            
             setLoading(false);
         } catch (err) {
             setError("Failed to fetch documents");
@@ -356,10 +358,17 @@ const DocumentManagement = () => {
                                             className="flex items-center px-3 py-1 bg-gray-100 rounded-lg hover:bg-gray-200">
                                             <Download className="mr-1 h-4 w-4" /> Download
                                         </a>
-                                        <button onClick={() => handleDeleteDocument(doc._id)}
-                                            className="flex items-center px-3 py-1 bg-red-100 text-red-600 rounded-lg hover:bg-red-200">
-                                            <Trash2 className="mr-1 h-4 w-4" /> Delete
-                                        </button>
+                                        {
+                                            user && user.role==="user"
+                                            ?
+                                            null
+                                            :
+                                            <button onClick={() => handleDeleteDocument(doc._id)}
+                                                className="flex items-center px-3 py-1 bg-red-100 text-red-600 rounded-lg hover:bg-red-200">
+                                                <Trash2 className="mr-1 h-4 w-4" /> Delete
+                                            </button>
+
+                                        }
                                     </td>
                                 </tr>
                             ))}
