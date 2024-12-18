@@ -41,6 +41,7 @@ const DocumentManagement = () => {
         fetchDocuments();
     }, []);
 
+
     // Fetch all documents
     const fetchDocuments = async () => {
         try {
@@ -49,7 +50,7 @@ const DocumentManagement = () => {
             const data = Array.isArray(response.data.data) ? response.data.data : [];
             
             if (user && user.role === 'user') {
-                const filteredData = data.filter(doc => doc.employee === role.userName);
+                const filteredData = data.filter(doc => doc.employee === user.userName);
                 setDocuments(filteredData);
             } else {
                 setDocuments(data);
