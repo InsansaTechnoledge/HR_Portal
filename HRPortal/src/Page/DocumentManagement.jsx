@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { Upload, File, Trash2, Eye, Download, Plus, X } from "lucide-react";
 import API_BASE_URL from "../config";
 import { Search } from "lucide-react";
 import no_doc_img from "/images/no-document.avif"; 
+import { userContext } from "../Context/userContext";
 
 const DocumentManagement = () => {
 
@@ -13,6 +14,7 @@ const DocumentManagement = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [fileName, setFileName] = useState("No file choosen")
+    const {user} = useContext(userContext);
 
     // Upload form state
     const [formData, setFormData] = useState({
