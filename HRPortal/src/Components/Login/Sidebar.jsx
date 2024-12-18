@@ -7,13 +7,11 @@ import {
     IconLogout,
     IconChevronDown,
     IconChevronUp,
+    IconCrown,
 } from "@tabler/icons-react";
 import { NavLink } from "react-router-dom";
 import { useNavigate } from 'react-router-dom';
-import API_BASE_URL  from '../../config';
-import axios from 'axios';
 import { userContext } from "../../Context/userContext";
-
 
 const Sidebar = () => {
 
@@ -23,7 +21,7 @@ const Sidebar = () => {
         apps: false,
         user: false,
     });
-    const {user,setUser} = useContext(userContext);
+    const { user, setUser } = useContext(userContext);
 
     const Name = user?.userName; // fetching the name of user
 
@@ -34,26 +32,18 @@ const Sidebar = () => {
         setDropdowns((prev) => ({ ...prev, [name]: !prev[name] }));
     };
 
-
-    const navigate =useNavigate();
+    const navigate = useNavigate();
+    // const handleLogout = useLogout();
     const handleLogout = async () => {
         try {
             console.log("Logging out...");
-            
+
             const response = await axios.post(`${API_BASE_URL}/api/auth/logout`, null, {
                 withCredentials: true,
             });
 
-            if (response.status === 201) { 
-                // document.cookie = 'jwtAuth=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;'; 
-                console.log("SSS",user);
-                setUser(null);           
-                console.log("DDD",user);
-                // setTimeout(  () => {console.log("DDD",user)} ,5000);
-               
-                // localStorage.removeItem('user'); // Clear local storage
-                // navigate('/', { replace: true }); // Redirect to login
-                
+            if (response.status === 201) {
+                setUser(null);
             } else {
                 console.error("Logout failed:", response.data.message || response.statusText);
                 alert("Logout failed. Please try again");
@@ -63,7 +53,7 @@ const Sidebar = () => {
             console.error("Logout error:", error);
             alert("An error occurred during logout.");
         }
-    }
+    };
 
     useEffect(() => {
         if (user === null) {
@@ -90,7 +80,23 @@ const Sidebar = () => {
                     <ul className="space-y-2">
                         <SidebarItem icon={<IconHome />} label="Home" isOpen={isOpen} to="/" />
 
-                        {/* Apps Dropdown */}
+                        {/* Apps Dropdown for User */}
+                        {user && user.role === 'user' && (
+                            <SidebarDropdown
+                                icon={<IconGridDots />}
+                                label="Apps"
+                                isOpen={isOpen}
+                                isExpanded={dropdowns.apps}
+                                toggleDropdown={() => toggleDropdown("apps")}
+                            >
+                                <SidebarItem icon={<IconGridDots />} label="Employee Docs Management" isOpen={isOpen} to="/docs" />
+                                <SidebarItem icon={<IconGridDots />} label="Leave Tracker" isOpen={isOpen} to="/leave-tracker" />
+                            </SidebarDropdown>
+                        )}
+
+                        {/* Apps Dropdown for Admin/SuperAdmin */}
+                        {user && (user.role === 'admin' || user.role === 'superAdmin') && (
+                    <>
                         <SidebarDropdown
                             icon={<IconGridDots />}
                             label="Apps"
@@ -105,7 +111,6 @@ const Sidebar = () => {
                             <SidebarItem icon={<IconGridDots />} label="Add Employee" isOpen={isOpen} to="/add-employee" />
                         </SidebarDropdown>
 
-                        {/* Talent Management Dropdown */}
                         <SidebarDropdown
                             icon={<IconUser />}
                             label="Talent Management"
@@ -116,8 +121,16 @@ const Sidebar = () => {
                             <SidebarItem icon={<IconUser />} label="Register Candidate" isOpen={isOpen} to="/register-candidate" />
                             <SidebarItem icon={<IconUser />} label="Candidate Roster" isOpen={isOpen} to="/candidate-detail" />
                         </SidebarDropdown>
+                    </>
+                        )}
 
+
+                        {/* Super Admin Page for SuperAdmin */}
+                        {user && user.role === 'superAdmin' && (
                         <SidebarItem icon={<IconSettings />} label="Authentication Management" isOpen={isOpen} to="/auth" />
+
+                        )}
+
                     </ul>
                 </nav>
 
@@ -153,12 +166,12 @@ const SidebarItem = ({ icon, label, isOpen, to }) => {
         </li>
     );
 };
+
 const SidebarDropdown = ({ icon, label, isOpen, isExpanded, toggleDropdown, children }) => (
     <li>
         <button
             onClick={toggleDropdown}
-            className={`flex items-center justify-between w-full px-4 py-3 rounded-md ${isExpanded ? "bg-gray-700" : "hover:bg-gray-700"
-                }`}
+            className={`flex items-center justify-between w-full px-4 py-3 rounded-md ${isExpanded ? "bg-gray-700" : "hover:bg-gray-700"}`}
         >
             <div className="flex items-center space-x-3">
                 {icon}
