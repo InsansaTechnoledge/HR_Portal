@@ -12,8 +12,11 @@ import {
 import { NavLink } from "react-router-dom";
 import { useNavigate } from 'react-router-dom';
 import { userContext } from "../../Context/userContext";
+// import useLogout from "../../Context/useLogout";
 import axios from 'axios';
-import API_BASE_URL from '../../config'
+import API_BASE_URL from '../../config';
+const { setUser } = useContext(userContext);  
+
 
 const Sidebar = () => {
 
@@ -23,7 +26,7 @@ const Sidebar = () => {
         apps: false,
         user: false,
     });
-    const { user, setUser } = useContext(userContext);
+    const { user } = useContext(userContext);
 
     const Name = user?.userName; // fetching the name of user
 
@@ -35,7 +38,7 @@ const Sidebar = () => {
     };
 
     const navigate = useNavigate();
-    // const handleLogout = useLogout();
+    // const { handleLogout } = useLogout();
     const handleLogout = async () => {
         try {
             console.log("Logging out...");

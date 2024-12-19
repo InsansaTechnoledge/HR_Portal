@@ -9,6 +9,7 @@ import {
     IconChevronDown,
 } from "@tabler/icons-react";
 import { NavLink } from "react-router-dom";
+// import useLogout from '../../Context/useLogout';
 
 // Configuration for navigation items
 const NAV_ITEMS = [
@@ -25,10 +26,19 @@ const DROPDOWN_ITEMS = [
     { label: 'Leave Tracker', to: '/leave-tracker' },
 ];
 
+// const { handleLogout } = useLogout();
+const handleClick = (e) => {
+    alert("HH");
+    if (label === 'Logout') {
+        // handleLogout();
+        alert("DD")
+    }
+};
 // Memoized component to prevent unnecessary re-renders
 const BottomBarItem = memo(({ icon: Icon, label, to }) => (
     <NavLink
-        to={to}
+    onClick={handleClick}
+        // to={to}
         className={({ isActive }) => `
             flex flex-col items-center space-y-1 text-sm 
             ${isActive ? "text-indigo-500" : "hover:text-gray-400"}
