@@ -142,7 +142,7 @@ const Sidebar = () => {
                 {/* Logout Button */}
                 <div className="mt-auto px-4 py-4">
                     <button
-                        onClick={handleLogout}
+                        onClick={()=>handleLogout(setUser)}
                         className="flex items-center w-full px-4 py-3 text-red-500 rounded-md hover:bg-red-700 hover:text-white"
                     >
                         <IconLogout className="text-xl" />
