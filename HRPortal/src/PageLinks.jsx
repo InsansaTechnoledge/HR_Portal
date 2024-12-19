@@ -24,6 +24,8 @@ import { userContext } from './Context/userContext';
 import axios from 'axios';
 import API_BASE_URL from './config';
 import AddEmployeePage from './Page/AddEmployee';
+import SuperAdminRoute from './Route/SuperAdminRoute';
+import AdminRoute from './Route/AdminRoute';
 
 function AppLayout() {
     // const location = useLocation();
@@ -57,9 +59,6 @@ function AppLayout() {
         return <div>Loading...</div>; // You can replace this with a proper loading spinner or component
     }
 
-    // Role-based access control
-    const role = user?.role; // 'admin' or 'user'
-
     return (
         <div className="flex h-screen">
             {showSidebar && <Sidebar />}
@@ -86,74 +85,66 @@ function AppLayout() {
                     />
 
                     {/* Admin-Only Routes */}
-                    {user && user.role !== "user" && (
-                        <>
-                            <Route
-                                path="/post-job"
-                                element={
-                                    <ProtectedRoute>
-                                        <JobPostForm />
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route
-                                path="/add-employee"
-                                element={
-                                    <ProtectedRoute>
-                                        <AddEmployeePage />
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route
-                                path="/talent"
-                                element={
-                                    <ProtectedRoute>
-                                        <TalentManagement />
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route
-                                path="/candidate-detail"
-                                element={
-                                    <ProtectedRoute>
-                                        <CandidateDetails />
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route
-                                path="/application"
-                                element={
-                                    <ProtectedRoute>
-                                        <JobApplication />
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route
-                                path="/register-candidate"
-                                element={
-                                    <ProtectedRoute>
-                                        <CandidateRegistration />
-                                    </ProtectedRoute>
-                                }
-                            />
 
-                                
-                        </>
-                    )}
+                    <Route
+                        path="/post-job"
+                        element={
+                            <AdminRoute>
+                                <JobPostForm />
+                            </AdminRoute>
+                        }
+                    />
+                    <Route
+                        path="/add-employee"
+                        element={
+                            <AdminRoute>
+                                <AddEmployeePage />
+                            </AdminRoute>
+                        }
+                    />
+                    <Route
+                        path="/talent"
+                        element={
+                            <AdminRoute>
+                                <TalentManagement />
+                            </AdminRoute>
+                        }
+                    />
+                    <Route
+                        path="/candidate-detail"
+                        element={
+                            <AdminRoute>
+                                <CandidateDetails />
+                            </AdminRoute>
+                        }
+                    />
+                    <Route
+                        path="/application"
+                        element={
+                            <AdminRoute>
+                                <JobApplication />
+                            </AdminRoute>
+                        }
+                    />
+                    <Route
+                        path="/register-candidate"
+                        element={
+                            <AdminRoute>
+                                <CandidateRegistration />
+                            </AdminRoute>
+                        }
+                    />
 
-                    {
-                        user && user.role==='superAdmin' ?
-                        <Route
+
+                    {/* Super Admin route */}
+                    <Route
                         path="/auth"
                         element={
-                            <ProtectedRoute>
+                            <SuperAdminRoute>
                                 <AuthenticationManagement />
-                            </ProtectedRoute>
+                            </SuperAdminRoute>
                         }
-                        />
-                        :
-                        null
-                    }
+                    />
                 </Routes>
             </div>
         </div>
