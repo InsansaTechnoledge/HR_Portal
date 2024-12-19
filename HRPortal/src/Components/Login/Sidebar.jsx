@@ -15,8 +15,28 @@ import { userContext } from "../../Context/userContext";
 // import useLogout from "../../Context/useLogout";
 import axios from 'axios';
 import API_BASE_URL from '../../config';
-const { setUser } = useContext(userContext);  
 
+const handleLogout = async (setUser) => {
+
+    try {
+        console.log("Logging out...");
+
+        const response = await axios.post(`${API_BASE_URL}/api/auth/logout`, null, {
+            withCredentials: true,
+        });
+
+        if (response.status === 201) {
+            setUser(null);
+        } else {
+            console.error("Logout failed:", response.data.message || response.statusText);
+            alert("Logout failed. Please try again");
+        }
+
+    } catch (error) {
+        console.error("Logout error:", error);
+        alert("An error occurred during logout.");
+    }
+};
 
 const Sidebar = () => {
 
@@ -26,7 +46,7 @@ const Sidebar = () => {
         apps: false,
         user: false,
     });
-    const { user } = useContext(userContext);
+    const { user,setUser } = useContext(userContext);
 
     const Name = user?.userName; // fetching the name of user
 
@@ -39,26 +59,6 @@ const Sidebar = () => {
 
     const navigate = useNavigate();
     // const { handleLogout } = useLogout();
-    const handleLogout = async () => {
-        try {
-            console.log("Logging out...");
-
-            const response = await axios.post(`${API_BASE_URL}/api/auth/logout`, null, {
-                withCredentials: true,
-            });
-
-            if (response.status === 201) {
-                setUser(null);
-            } else {
-                console.error("Logout failed:", response.data.message || response.statusText);
-                alert("Logout failed. Please try again");
-            }
-
-        } catch (error) {
-            console.error("Logout error:", error);
-            alert("An error occurred during logout.");
-        }
-    };
 
     useEffect(() => {
         if (user === null) {
@@ -189,3 +189,4 @@ const SidebarDropdown = ({ icon, label, isOpen, isExpanded, toggleDropdown, chil
 );
 
 export default Sidebar;
+export {handleLogout};

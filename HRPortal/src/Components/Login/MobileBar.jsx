@@ -1,4 +1,4 @@
-import React, { useState, memo } from 'react';
+import React, { useState, memo, useCallback, useContext } from 'react';
 import {
     IconHome,
     IconGridDots,
@@ -10,13 +10,15 @@ import {
 } from "@tabler/icons-react";
 import { NavLink } from "react-router-dom";
 // import useLogout from '../../Context/useLogout';
+import { handleLogout } from './Sidebar';
+import { userContext } from '../../Context/userContext';
 
 // Configuration for navigation items
 const NAV_ITEMS = [
     { icon: IconHome, label: 'Home', to: '/' },
     { icon: IconUser, label: 'Talent', to: '/register-candidate' },
     { icon: IconSettings, label: 'Auth', to: '/auth' },
-    { icon: IconLogout, label: 'Logout', to: '/' },
+    // { icon: IconLogout, label: 'Logout', to: '/' },
 ];
 
 const DROPDOWN_ITEMS = [
@@ -27,17 +29,13 @@ const DROPDOWN_ITEMS = [
 ];
 
 // const { handleLogout } = useLogout();
-const handleClick = (e) => {
-    alert("HH");
-    if (label === 'Logout') {
-        // handleLogout();
-        alert("DD")
-    }
+const handleClick = (setUser) => {
+    // alert("AAA"+typeof(setUser));
+    handleLogout(setUser);
 };
 // Memoized component to prevent unnecessary re-renders
 const BottomBarItem = memo(({ icon: Icon, label, to }) => (
     <NavLink
-    onClick={handleClick}
         // to={to}
         className={({ isActive }) => `
             flex flex-col items-center space-y-1 text-sm 
@@ -95,6 +93,7 @@ const BottomBar = () => {
         setIsAppsOpen(prev => !prev);
     }, []);
 
+    const {setUser} = useContext(userContext);
     return (
         <nav
             className="fixed bottom-0 left-0 w-full bg-gray-800 text-white shadow-lg z-50"
@@ -110,6 +109,13 @@ const BottomBar = () => {
                         to={item.to}
                     />
                 ))}
+                <div onClick={()=> (handleClick(setUser))}>
+                <BottomBarItem
+                    icon={IconLogout}
+                    label="Logout"
+                />
+                </div>
+
 
                 {/* Apps Dropdown */}
                 <BottomBarDropdown
