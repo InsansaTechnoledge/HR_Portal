@@ -36,7 +36,7 @@ const handleClick = (setUser) => {
 // Memoized component to prevent unnecessary re-renders
 const BottomBarItem = memo(({ icon: Icon, label, to }) => (
     <NavLink
-        // to={to}
+        to={to}
         className={({ isActive }) => `
             flex flex-col items-center space-y-1 text-sm 
             ${isActive ? "text-indigo-500" : "hover:text-gray-400"}
@@ -93,15 +93,15 @@ const BottomBar = () => {
         setIsAppsOpen(prev => !prev);
     }, []);
 
-    const {setUser} = useContext(userContext);
+    const { user,setUser } = useContext(userContext);
     return (
         <nav
             className="fixed bottom-0 left-0 w-full bg-gray-800 text-white shadow-lg z-50"
             aria-label="Bottom Navigation"
         >
-            <div className="flex justify-between items-center px-4 py-2">
+            {/* <div className="flex justify-between items-center px-4 py-2"> */}
                 {/* Regular Navigation Items */}
-                {NAV_ITEMS.map((item) => (
+                {/* {NAV_ITEMS.map((item) => (
                     <BottomBarItem
                         key={item.to}
                         icon={item.icon}
@@ -109,15 +109,7 @@ const BottomBar = () => {
                         to={item.to}
                     />
                 ))}
-                <div onClick={()=> (handleClick(setUser))}>
-                <BottomBarItem
-                    icon={IconLogout}
-                    label="Logout"
-                />
-                </div>
 
-
-                {/* Apps Dropdown */}
                 <BottomBarDropdown
                     icon={IconGridDots}
                     label="Apps"
@@ -131,7 +123,61 @@ const BottomBar = () => {
                             to={item.to}
                         />
                     ))}
+                </BottomBarDropdown> */}
+
+<div className="flex justify-between items-center px-4 py-2">
+                {/* Regular Navigation Items */}
+                {NAV_ITEMS.map((item) => {
+                    // Conditional rendering based on user role
+                    if (item.label === 'Talent' && user.role === 'user') {
+                        return null;  // Don't show Talent for regular users
+                    }
+                    if (item.label === 'Auth' && user.role !== 'superAdmin') {
+                        return null;  // Don't show Auth for users
+                    }
+                    return (
+                        <BottomBarItem
+                            key={item.to}
+                            icon={item.icon}
+                            label={item.label}
+                            to={item.to}
+                        />
+                    );
+                })}
+
+                {/* Apps Dropdown */}
+                <BottomBarDropdown
+                    icon={IconGridDots}
+                    label="Apps"
+                    isOpen={isAppsOpen}
+                    toggleDropdown={toggleAppsDropdown}
+                >
+                    {DROPDOWN_ITEMS.map((item) => {
+                        // Conditional rendering based on user role
+                        if (item.label === 'Post Job' || item.label === 'Job Applications') {
+                            if (user.role === 'user') return null;  // Hide for regular users
+                        }
+                        return (
+                            <BottomBarDropdownItem
+                                key={item.to}
+                                label={item.label}
+                                to={item.to}
+                            />
+                        );
+                    })}
                 </BottomBarDropdown>
+
+                <button
+                    onClick={() => handleClick(setUser)}
+                    className="flex flex-col items-center space-y-1 text-sm text-white hover:text-gray-400"
+                >
+                    <span className="text-xl"><IconLogout /></span>
+                    <span>Logout</span>
+                </button>
+
+
+                {/* Apps Dropdown */}
+
             </div>
         </nav>
     );
