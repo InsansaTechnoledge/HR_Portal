@@ -20,5 +20,4 @@ router.get("/all", getAllDocuments);
 router.get('/view/:id', viewDocument)
 router.get('/download/:id', downloadDocument)
 
-
 export default router;
