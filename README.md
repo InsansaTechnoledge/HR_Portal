@@ -17,7 +17,7 @@
 <h4>Requirements.txt</h4>
 
 <p>
-  > pip install -r requirements.txt
+  > <code>pip install -r requirements.txt</code>
 </p>
 <p>
   Run the above command in the terminal to install all libraries imported in the files.
