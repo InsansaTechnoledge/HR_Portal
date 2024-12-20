@@ -28,6 +28,7 @@ const AuthenticationManagement = () => {
     const [users, setUsers] = useState([]);
     const [modalOpen, setModalOpen] = useState(false);
     const [deleteConfirmation, setDeleteConfirmation] = useState(null);
+    const { user, setUser } = useContext(userContext)
 
     useEffect(() => {
         fetchUsers();
@@ -138,7 +139,7 @@ const AuthenticationManagement = () => {
     const getRoleColor = (role) => {
         switch (role) {
             case 'admin': return 'bg-red-100 text-red-800';
-            case 'editor': return 'bg-yellow-100 text-yellow-800';
+            case 'superAdmin': return 'bg-yellow-100 text-yellow-800';
             default: return 'bg-green-100 text-green-800';
         }
     };
@@ -178,39 +179,47 @@ const AuthenticationManagement = () => {
                                 </div>
                             ) : (
                                 users
-                                    .filter((user) => user && user.userId && user.userName && user.userEmail)
-                                    .map((user) => (
+                                    .filter((u) => u && u.userId && u.userName && u.userEmail)
+                                    .map((u) => (
                                         <motion.div
-                                            key={user.userId}
+                                            key={u.userId}
                                             initial={{ opacity: 0, x: -50 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             exit={{ opacity: 0, x: 50 }}
                                             className="flex justify-between items-center bg-gray-100 p-4 rounded-lg mb-4"
                                         >
                                             <div>
-                                                <div className="font-medium text-gray-800">{user.userName}</div>
+                                                <div className="font-medium text-gray-800">{u.userName}</div>
                                                 <div className="text-sm text-gray-500 flex items-center">
                                                     <Mail className="mr-2 text-blue-500" size={16} />
-                                                    {user.userEmail}
+                                                    {u.userEmail}
                                                 </div>
-                                                <div className={`text-xs px-2 py-1 rounded mt-2 ${getRoleColor(user.role)}`}>
-                                                    {user.role.toUpperCase()}
+                                                <div className={`text-xs px-2 py-1 rounded mt-2 ${getRoleColor(u.role)}`}>
+                                                    {u.role.toUpperCase()}
                                                 </div>
                                             </div>
-                                            <div className="flex space-x-2">
-                                                <button
-                                                    onClick={() => handleEditUser(user)}
-                                                    className="bg-gray-200 text-gray-700 p-2 rounded-md hover:bg-gray-300 transition"
-                                                >
-                                                    <Edit3 />
-                                                </button>
-                                                <button
-                                                    onClick={() => setDeleteConfirmation(user.userId)}
-                                                    className="bg-red-100 text-red-600 p-2 rounded-md hover:bg-red-200 transition"
-                                                >
-                                                    <Trash2 />
-                                                </button>
-                                            </div>
+                                            {
+                                                user && user.role == 'superAdmin'
+                                                    ?
+                                                    <div className="flex space-x-2">
+                                                        <button
+                                                            onClick={() => handleEditUser(user)}
+                                                            className="bg-gray-200 text-gray-700 p-2 rounded-md hover:bg-gray-300 transition"
+                                                        >
+                                                            <Edit3 />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setDeleteConfirmation(user.userId)}
+                                                            className="bg-red-100 text-red-600 p-2 rounded-md hover:bg-red-200 transition"
+                                                        >
+                                                            <Trash2 />
+                                                        </button>
+                                                    </div>
+                                                    :
+                                                    null
+
+                                            }
+
                                         </motion.div>
                                     ))
                             )}
@@ -335,7 +344,13 @@ const AuthenticationManagement = () => {
                                         >
                                             <option value="user">User</option>
                                             <option value="admin">Admin</option>
-                                            <option value="editor">Editor</option>
+                                            {
+                                                user && user.role == 'superAdmin'
+                                                    ?
+                                                    <option value="superAdmin">Super Admin</option>
+                                                    :
+                                                    null
+                                            }
                                         </select>
                                     </div>
                                 </div>
