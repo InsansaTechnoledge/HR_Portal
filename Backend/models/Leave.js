@@ -16,5 +16,4 @@ const LeaveSchema = new mongoose.Schema({
     }
 });
 
-// No need to create a model unless you're using `Leave` independently.
 export default LeaveSchema;

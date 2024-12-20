@@ -6,5 +6,4 @@ const router = express.Router()
 router.post('/add', addCandidate);
 router.get('/candidates', getAllCandidates);
 
-
 export default router

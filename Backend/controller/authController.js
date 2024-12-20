@@ -1,4 +1,3 @@
-import passport from 'passport';
 import User from "../models/User.js";
 import dotenv from 'dotenv';
 import generateAuthToken from '../utils/generateAuthToken.js';

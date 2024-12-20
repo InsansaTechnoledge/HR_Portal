@@ -8,6 +8,4 @@ router.post('/login', login);
 router.post('/logout', logout);
 router.get('/checkCookies',checkCookies, getUser);
 
-
-
 export default router;
