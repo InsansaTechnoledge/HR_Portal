@@ -34,17 +34,13 @@ export const login=async(req, res, next)=>{
 
 //logout route  
 export const logout = async (req, res) => {
-  req.logout((err) => {
-    if (err) {
-      return res.status(500).json({ message: 'Error logging out' });
-    }
     console.log('Logged out successfully');
     
     // Clear the jwtAuth cookie
     res.clearCookie('jwtAuth');
 
     res.status(201).json({ message: 'Logged out and cookie cleared successfully' });
-  });
+  
 };
 
 

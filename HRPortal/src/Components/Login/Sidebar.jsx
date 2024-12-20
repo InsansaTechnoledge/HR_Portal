@@ -126,14 +126,9 @@ const Sidebar = () => {
                             <SidebarItem icon={<IconUser />} label="Register Candidate" isOpen={isOpen} to="/register-candidate" />
                             <SidebarItem icon={<IconUser />} label="Candidate Roster" isOpen={isOpen} to="/candidate-detail" />
                         </SidebarDropdown>
-                    </>
-                        )}
 
-
-                        {/* Super Admin Page for SuperAdmin */}
-                        {user && user.role === 'superAdmin' && (
                         <SidebarItem icon={<IconSettings />} label="Authentication Management" isOpen={isOpen} to="/auth" />
-
+                    </>
                         )}
 
                     </ul>

@@ -129,11 +129,8 @@ const BottomBar = () => {
                 {/* Regular Navigation Items */}
                 {NAV_ITEMS.map((item) => {
                     // Conditional rendering based on user role
-                    if (item.label === 'Talent' && user.role === 'user') {
+                    if (item.label === 'Talent' && item.label === 'Auth' && user.role === 'user') {
                         return null;  // Don't show Talent for regular users
-                    }
-                    if (item.label === 'Auth' && user.role !== 'superAdmin') {
-                        return null;  // Don't show Auth for users
                     }
                     return (
                         <BottomBarItem
