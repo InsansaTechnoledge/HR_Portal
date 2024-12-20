@@ -19,11 +19,14 @@ const Login = () => {
                 userEmail,
                 password,
             }, { withCredentials: true });
-    
+            
+
             if(response.status===200){
                 setUser(response.data.user);
             }
-
+            else if(response.status===202){
+                alert(response.data.message);
+            }
             // Handle successful login
             // alert('Login successful!');
             navigate('/')

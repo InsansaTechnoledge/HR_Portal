@@ -1,5 +1,5 @@
 import User from "../models/User.js";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 
 //create user
@@ -87,10 +87,11 @@ export const editLoginInfo = async (req, res) => {
     }
 
     // Update password (if newPassword is provided)
+    console.log(newPassword);
     if (newPassword) {
       const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
-      user.password = hashedPassword;
+      const hashedPassword = await bcrypt.hash(newPassword,10);
+      user.password = newPassword;
     }
 
     // Save updated user info
@@ -102,3 +103,22 @@ export const editLoginInfo = async (req, res) => {
     res.status(500).json({ message: "Failed to update login information. Please try again." });
   }
 };
+
+
+export const changePassword = async (req,res) => {
+  try{
+
+    const {id} = req.params;
+    const newPassword = req.body.newPassword;
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    const updatedUser = await User.findOneAndUpdate({userId:id},{
+      password: hashedPassword
+    })
+    
+    res.status(200).json({message: "Password updated successfully!"});
+  }
+  catch(err){
+    console.log(err);
+  }
+}
