@@ -12,28 +12,9 @@ import axios from 'axios';
 import API_BASE_URL from '../config';
 import { userContext } from '../Context/userContext';
 
-const initialEmployees = [
-    {
-        id: 1,
-        name: 'John Doe',
-        department: 'Engineering',
-        leaveHistory: [
-            { type: 'Vacation', startDate: '2024-03-15', endDate: '2024-03-20' },
-            { type: 'Sick Leave', startDate: '2024-02-10', endDate: '2024-02-11' },
-            { type: 'Personal', startDate: '2024-04-05', endDate: '2024-04-07' }
-        ]
-    },
-    {
-        id: 2,
-        name: 'Jane Smith',
-        department: 'Marketing',
-        leaveHistory: [
-            { type: 'Personal', startDate: '2024-01-05', endDate: '2024-01-07' }
-        ]
-    }
-];
+const initialEmployees = [];
 
-const leaveTypes = ['Vacation', 'Sick Leave', 'Personal', 'Maternity', 'Unpaid Leave'];
+const leaveTypes = ['Vacation', 'Sick Leave', 'Personal', 'Maternity', 'Paternity','Unpaid Leave'];
 
 const LeaveTypeColors = {
     'Vacation': 'bg-blue-100 text-blue-800',
@@ -67,7 +48,8 @@ const LeaveTracker = () => {
                     setEmployees(filteredEmployees);
                 }
                 else{
-                    setEmployees(employees);
+                    const filteredEmployees = employees.filter(emp => emp.leaveHistory.length !== 0);
+                    setEmployees(filteredEmployees);
 
                 }
 

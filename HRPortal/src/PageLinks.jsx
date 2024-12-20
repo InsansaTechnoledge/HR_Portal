@@ -134,17 +134,17 @@ function AppLayout() {
                             </AdminRoute>
                         }
                     />
-
-
-                    {/* Super Admin route */}
                     <Route
                         path="/auth"
                         element={
-                            <SuperAdminRoute>
+                            <AdminRoute>
                                 <AuthenticationManagement />
-                            </SuperAdminRoute>
+                            </AdminRoute>
                         }
                     />
+
+
+                    {/* Super Admin route */}
 
                     <Route 
                         path='*'
