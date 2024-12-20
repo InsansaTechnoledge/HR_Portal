@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import {
     IconHome,
     IconGridDots,
@@ -7,20 +7,20 @@ import {
     IconLogout,
     IconChevronDown,
     IconChevronUp,
-    IconCrown,
+    IconBriefcase, 
+    IconUsers, 
+    IconFolder, 
+    IconCalendar, 
 } from "@tabler/icons-react";
-import { NavLink } from "react-router-dom";
-import { useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from "react-router-dom";
 import { userContext } from "../../Context/userContext";
-// import useLogout from "../../Context/useLogout";
 import axios from 'axios';
 import API_BASE_URL from '../../config';
 
+// Logout function to handle user logout
 const handleLogout = async (setUser) => {
-
     try {
         console.log("Logging out...");
-
         const response = await axios.post(`${API_BASE_URL}/api/auth/logout`, null, {
             withCredentials: true,
         });
@@ -31,25 +31,23 @@ const handleLogout = async (setUser) => {
             console.error("Logout failed:", response.data.message || response.statusText);
             alert("Logout failed. Please try again");
         }
-
     } catch (error) {
         console.error("Logout error:", error);
         alert("An error occurred during logout.");
     }
 };
 
+// Sidebar component
 const Sidebar = () => {
-
-
     const [isOpen, setIsOpen] = useState(true);
     const [dropdowns, setDropdowns] = useState({
         apps: false,
+        apps1: false,
+        apps2: false,
         user: false,
     });
-    const { user,setUser } = useContext(userContext);
-
+    const { user, setUser } = useContext(userContext);
     const Name = user?.userName; // fetching the name of user
-
 
     const toggleSidebar = () => setIsOpen(!isOpen);
 
@@ -58,7 +56,6 @@ const Sidebar = () => {
     };
 
     const navigate = useNavigate();
-    // const { handleLogout } = useLogout();
 
     useEffect(() => {
         if (user === null) {
@@ -73,75 +70,95 @@ const Sidebar = () => {
                 className={`bg-gray-800 overflow-auto text-white transition-width duration-300 ${isOpen ? "w-64" : "w-16"} flex flex-col`}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-4 py-4 border-b border-gray-700">
-                    {isOpen && <h1 className="text-lg font-bold">Hey, {Name}</h1>}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+                    {isOpen && <h1 className="text-sm font-semibold text-white">{`Hey, ${Name}`}</h1>}
                     <button className="text-gray-400 hover:text-white" onClick={toggleSidebar}>
                         ☰
                     </button>
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 mt-4">
-                    <ul className="space-y-2">
+                <nav className="flex-1 mt-6">
+                    <ul className="space-y-4">
                         <SidebarItem icon={<IconHome />} label="Home" isOpen={isOpen} to="/" />
 
                         {/* Apps Dropdown for User */}
                         {user && user.role === 'user' && (
                             <SidebarDropdown
                                 icon={<IconGridDots />}
-                                label="Apps"
+                                label="User Management"
                                 isOpen={isOpen}
-                                isExpanded={dropdowns.apps}
-                                toggleDropdown={() => toggleDropdown("apps")}
+                                isExpanded={dropdowns.apps1}
+                                toggleDropdown={() => toggleDropdown("apps1")}
                             >
-                                <SidebarItem icon={<IconGridDots />} label="Employee Docs Management" isOpen={isOpen} to="/docs" />
-                                <SidebarItem icon={<IconGridDots />} label="Leave Tracker" isOpen={isOpen} to="/leave-tracker" />
+                                <SidebarItem icon={<IconFolder />} label="Docs Management" isOpen={isOpen} to="/docs" />
+                                <SidebarItem icon={<IconCalendar />} label="Leave Tracker" isOpen={isOpen} to="/leave-tracker" />
                             </SidebarDropdown>
                         )}
 
                         {/* Apps Dropdown for Admin/SuperAdmin */}
                         {user && (user.role === 'admin' || user.role === 'superAdmin') && (
-                    <>
-                        <SidebarDropdown
-                            icon={<IconGridDots />}
-                            label="Apps"
-                            isOpen={isOpen}
-                            isExpanded={dropdowns.apps}
-                            toggleDropdown={() => toggleDropdown("apps")}
-                        >
-                            <SidebarItem icon={<IconGridDots />} label="Employee Docs Management" isOpen={isOpen} to="/docs" />
-                            <SidebarItem icon={<IconGridDots />} label="Post Current Job Openings" isOpen={isOpen} to="/post-job" />
-                            <SidebarItem icon={<IconGridDots />} label="Job Application Management" isOpen={isOpen} to="/application" />
-                            <SidebarItem icon={<IconGridDots />} label="Leave Tracker" isOpen={isOpen} to="/leave-tracker" />
-                            <SidebarItem icon={<IconGridDots />} label="Add Employee" isOpen={isOpen} to="/add-employee" />
-                        </SidebarDropdown>
+                            <>
+                                <SidebarDropdown
+                                    icon={<IconGridDots />}
+                                    label="Apps"
+                                    isOpen={isOpen}
+                                    isExpanded={dropdowns.apps}
+                                    toggleDropdown={() => toggleDropdown("apps")}
+                                >
+                                    {/* Employee Management Dropdown */}
+                                    <SidebarDropdown
+                                        icon={<IconUsers />}
+                                        label="Employee Management"
+                                        isOpen={isOpen}
+                                        isExpanded={dropdowns.apps1}
+                                        toggleDropdown={() => toggleDropdown("apps1")}
+                                    >
+                                        <SidebarItem icon={<IconFolder />} label="Employee Docs Management" isOpen={isOpen} to="/docs" />
+                                        <SidebarItem icon={<IconCalendar />} label="Leave Tracker" isOpen={isOpen} to="/leave-tracker" />
+                                        <SidebarItem icon={<IconUsers />} label="Add Employee" isOpen={isOpen} to="/add-employee" />
+                                    </SidebarDropdown>
 
-                        <SidebarDropdown
-                            icon={<IconUser />}
-                            label="Talent Management"
-                            isOpen={isOpen}
-                            isExpanded={dropdowns.user}
-                            toggleDropdown={() => toggleDropdown("user")}
-                        >
-                            <SidebarItem icon={<IconUser />} label="Register Candidate" isOpen={isOpen} to="/register-candidate" />
-                            <SidebarItem icon={<IconUser />} label="Candidate Roster" isOpen={isOpen} to="/candidate-detail" />
-                        </SidebarDropdown>
+                                    {/* Job Management Dropdown */}
+                                    <SidebarDropdown
+                                        icon={<IconBriefcase />}
+                                        label="Job Management"
+                                        isOpen={isOpen}
+                                        isExpanded={dropdowns.apps2}
+                                        toggleDropdown={() => toggleDropdown("apps2")}
+                                    >
+                                        <SidebarItem icon={<IconBriefcase />} label="Post Current Job Openings" isOpen={isOpen} to="/post-job" />
+                                        <SidebarItem icon={<IconBriefcase />} label="Job Application Management" isOpen={isOpen} to="/application" />
+                                    </SidebarDropdown>
+                                </SidebarDropdown>
 
-                        <SidebarItem icon={<IconSettings />} label="Authentication Management" isOpen={isOpen} to="/auth" />
-                    </>
+                                {/* Talent Management */}
+                                <SidebarDropdown
+                                    icon={<IconUser />}
+                                    label="Talent Management"
+                                    isOpen={isOpen}
+                                    isExpanded={dropdowns.user}
+                                    toggleDropdown={() => toggleDropdown("user")}
+                                >
+                                    <SidebarItem icon={<IconUser />} label="Register Candidate" isOpen={isOpen} to="/register-candidate" />
+                                    <SidebarItem icon={<IconUser />} label="Candidate Roster" isOpen={isOpen} to="/candidate-detail" />
+                                </SidebarDropdown>
+
+                                {/* Authentication Management */}
+                                <SidebarItem icon={<IconSettings />} label="Authentication Management" isOpen={isOpen} to="/auth" />
+                            </>
                         )}
-
                     </ul>
                 </nav>
 
                 {/* Logout Button */}
-                <div className="mt-auto px-4 py-4">
+                <div className="mt-auto px-6 py-4">
                     <button
-                        onClick={()=>handleLogout(setUser)}
-                        className="flex items-center w-full px-4 py-3 text-red-500 rounded-md hover:bg-red-700 hover:text-white"
+                        onClick={() => handleLogout(setUser)}
+                        className="flex items-center w-full px-4 py-2 text-red-500 rounded-md hover:bg-red-700 hover:text-white"
                     >
-                        <IconLogout className="text-xl" />
-                        {isOpen && <span className="ml-3">Logout</span>}
+                        <IconLogout className="text-lg" />
+                        {isOpen && <span className="ml-3 text-sm">Logout</span>}
                     </button>
                 </div>
             </aside>
@@ -149,39 +166,39 @@ const Sidebar = () => {
     );
 };
 
+// Sidebar item component
 const SidebarItem = ({ icon, label, isOpen, to }) => {
     return (
         <li>
             <NavLink
                 to={to}
                 className={({ isActive }) =>
-                    `flex items-center space-x-3 px-4 py-3 rounded-md ${isActive ? "bg-indigo-600 text-white" : "hover:bg-gray-700"}`
+                    `flex items-center space-x-4 px-6 py-2 rounded-md ${isActive ? "bg-indigo-600 text-white" : "hover:bg-gray-700"}`
                 }
             >
                 <span className="text-xl">{icon}</span>
-                <span className={`${isOpen ? "block" : "hidden"} duration-300`}>
-                    {label}
-                </span>
+                <span className={`${isOpen ? "block" : "hidden"} text-sm font-medium duration-300`}>{label}</span>
             </NavLink>
         </li>
     );
 };
 
+// Sidebar dropdown component
 const SidebarDropdown = ({ icon, label, isOpen, isExpanded, toggleDropdown, children }) => (
     <li>
         <button
             onClick={toggleDropdown}
-            className={`flex items-center justify-between w-full px-4 py-3 rounded-md ${isExpanded ? "bg-gray-700" : "hover:bg-gray-700"}`}
+            className={`flex items-center justify-between w-full px-6 py-2 rounded-md ${isExpanded ? "bg-gray-700" : "hover:bg-gray-700"}`}
         >
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-4">
                 {icon}
-                {isOpen && <span>{label}</span>}
+                {isOpen && <span className="text-sm font-medium">{label}</span>}
             </div>
             {isOpen && (isExpanded ? <IconChevronUp /> : <IconChevronDown />)}
         </button>
-        {isExpanded && <ul className="ml-8 mt-2 space-y-2">{children}</ul>}
+        {isExpanded && <ul className="ml-6 mt-2 space-y-2">{children}</ul>}
     </li>
 );
 
 export default Sidebar;
-export {handleLogout};
+export { handleLogout };
