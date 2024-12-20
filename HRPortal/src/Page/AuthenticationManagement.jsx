@@ -243,6 +243,12 @@ const AuthenticationManagement = () => {
                                     {users.filter(user => user.role === 'admin').length}
                                 </div>
                             </div>
+                            <div className="bg-red-50 p-4 rounded-lg">
+                                <div className="text-sm text-gray-600">Super Admin Users</div>
+                                <div className="text-2xl font-bold text-red-600">
+                                    {users.filter(user => user.role === 'superAdmin').length}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
