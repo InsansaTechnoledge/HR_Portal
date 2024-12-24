@@ -7,6 +7,7 @@ const CandidateRegistrationForm = () => {
     const technologies = ['SAP MM', 'SAP PP', 'SAP PPQM', 'SAP SD', 'SAP FICO', 'SAP FI', 'SAP CO', 'SAP ABAP', 'SAP EWM', 'SAP WM', 'SAP Vistex', 'SAP Planning', 'SAC Datasphere', 'SAP Security', 'SAP CRM Technical', 'SAP CRM Functional', 'SAP HCM', 'PowerBi', 'PowerApp', 'SAP Concur', 'Salesforce', 'Salesforce CPQ']
 
     const [fileName, setFileName] = useState("");
+    const [file,setFile] = useState();
 
     const fileChangeHandler = (event) => { 
         const file = event.target.files[0];
@@ -19,6 +20,7 @@ const CandidateRegistrationForm = () => {
         event.preventDefault();
         const file = event.dataTransfer.files[0];
         if (file) {
+            setFile(file);
           setFileName(file.name);
         }
     };
@@ -35,7 +37,7 @@ const CandidateRegistrationForm = () => {
         const contactno = document.getElementById("contact-no").value;
         const source = document.getElementById("source").value;
         const linkedin = document.getElementById("linkedin").value;
-        const resume = document.getElementById("resume").files[0];
+        const resume = document.getElementById("resume").files[0] || file;
 
         if (!resume) {
             alert("Please upload a resume.");

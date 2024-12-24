@@ -31,6 +31,11 @@ const DocumentManagement = () => {
         if (file) {
           setFileName(file.name);
         }
+        setFormData(prev => ({
+            ...prev,
+            name: file.name,
+            document: file
+        }));
     };
 
     const handleDragOver = (event) => {

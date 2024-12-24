@@ -12,7 +12,7 @@ export const addCandidate = [
         try {
             const { name, technology, client, email, contact_no, source, linkedIn } = req.body;
 
-            console.log(req.file)
+            // console.log(req.file)
             // Get the uploaded file
             const resumeBuffer = req.file?.buffer;
 

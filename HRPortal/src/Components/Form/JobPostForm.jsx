@@ -46,85 +46,87 @@ function JobPostForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     // Process skills into an array
     const processedSkills = formData.skills
-      ? formData.skills.split(',').map(skill => skill.trim())
+      ? formData.skills.split(',').map((skill) => skill.trim())
       : [];
 
     if (editingJob) {
-      // Update existing job
-      setJobs(prevJobs =>
-        prevJobs.map(job =>
-          job.jobId === editingJob.jobId
-            ? {
-              ...job,
-              title: formData.title,
-              location: formData.location,
-              description: formData.description,
-              skills: processedSkills,
-              salary: formData.salary
-            }
-            : job
-        )
-      );
-      setEditingJob(null);
-
+      // Update existing job in the backend
       const updateJob = {
-
-        jobTitle: formData.title,
-        jobLocation: formData.location,
-        jobDescription: formData.description,
-        skills: formData.skills,
-        salaryRange: formData.salary || "Not specified"
-      }
-
-      const response = await axios.put(`${API_BASE_URL}/api/job/update/${editingJob.jobId}`)
-      if (response.status === 200) {
-        alert(response.data.message);
-      }
-
-      console.log(updateJob)
-
-    } else {
-      const newJob = {
-
         jobTitle: formData.title,
         jobLocation: formData.location,
         jobDescription: formData.description,
         skills: processedSkills,
-        salaryRange: formData.salary || "Not specified"
+        salaryRange: formData.salary || "Not specified",
       };
 
       try {
+        const response = await axios.put(
+          `${API_BASE_URL}/api/job/update/${editingJob.jobId}`,
+          updateJob,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
+        if (response.status === 200) {
+          alert(response.data.message);
 
+          // Update the job in the local state
+          setJobs((prevJobs) =>
+            prevJobs.map((job) =>
+              job.jobId === editingJob.jobId ? { ...job, ...updateJob } : job
+            )
+          );
+        } else {
+          console.error("Error updating job:", response.data.message);
+        }
+      } catch (error) {
+        console.error("Error updating job:", error);
+      }
+
+      setEditingJob(null);
+    } else {
+      // Add new job
+      const newJob = {
+        jobTitle: formData.title,
+        jobLocation: formData.location,
+        jobDescription: formData.description,
+        skills: processedSkills,
+        salaryRange: formData.salary || "Not specified",
+      };
+
+      try {
         const response = await axios.post(`${API_BASE_URL}/api/job/post`, newJob, {
           headers: {
-            'content-type': 'application/json'
-          }
+            "Content-Type": "application/json",
+          },
         });
-        if (response.status == 200) {
-          alert('job Posted')
-        }
-        else {
-          console.log(response.data.message);
-        }
-      }
-      catch (err) {
-        console.log(err)
-      }
 
-      setJobs(prevJobs => [...prevJobs, newJob]);
+        if (response.status === 200) {
+          alert("Job Posted");
+          setJobs((prevJobs) => [...prevJobs, { ...newJob, jobId: response.data.jobId }]);
+        } else {
+          console.error("Error posting job:", response.data.message);
+        }
+      } catch (err) {
+        console.error("Error posting job:", err);
+      }
     }
 
     setFormData({
-      title: '',
-      location: '',
-      description: '',
-      skills: '',
-      salary: ''
+      title: "",
+      location: "",
+      description: "",
+      skills: "",
+      salary: "",
     });
   };
+
 
   const handleEdit = (job) => {
     setEditingJob(job);
