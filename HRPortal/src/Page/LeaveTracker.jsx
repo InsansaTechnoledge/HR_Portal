@@ -26,9 +26,11 @@ const LeaveTypeColors = {
 
 const LeaveTracker = () => {
     const [employees, setEmployees] = useState(initialEmployees);
-    const [selectedEmployeeId, setSelectedEmployeeId] = useState(initialEmployees[0]?.id || 1);
     const [selectedMonth, setSelectedMonth] = useState(null);
     const [showAddLeaveModal, setShowAddLeaveModal] = useState(false);
+    const [activeFilter, setActiveFilter] = useState(false);
+    const [filteredEmployees, setFilteredEmployees] = useState(employees);
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState();
     const [newLeave, setNewLeave] = useState({
         type: '',
         startDate: '',
@@ -46,13 +48,18 @@ const LeaveTracker = () => {
                 if(user && user.role==="user"){
                     const filteredEmployees = employees.filter(emp => emp.email === user.userEmail);
                     setEmployees(filteredEmployees);
+                    setFilteredEmployees(filteredEmployees);
+                    setSelectedEmployeeId(filteredEmployees[0].empId);
                 }
                 else{
-                    const filteredEmployees = employees.filter(emp => emp.leaveHistory.length !== 0);
+                    const filteredEmployees = employees;
                     setEmployees(filteredEmployees);
+                    setFilteredEmployees(filteredEmployees);
+                    setSelectedEmployeeId(filteredEmployees[0].empId);
 
                 }
-
+                console.log(filteredEmployees);
+                console.log(selectedEmployeeId);
             }
 
             
@@ -61,35 +68,53 @@ const LeaveTracker = () => {
         fetchEmployees();
     },[])
 
-    const selectedEmployee = employees.find((emp) => emp.empId === selectedEmployeeId);
+    const selectedEmployee = filteredEmployees.find((emp) => emp.empId === selectedEmployeeId);
 
     const handleAddLeave = async () => {
-        const updatedEmployees = employees.map((emp) => {
-            if (emp.empId === selectedEmployeeId) {
-                return {
-                    ...emp,
-                    leaveHistory: [...emp.leaveHistory, { ...newLeave }],
-                };
+        if(newLeave.type!=="")
+        {
+            const updatedEmployees = filteredEmployees.map((emp) => {
+                if (emp.empId === selectedEmployeeId) {
+                    return {
+                        ...emp,
+                        leaveHistory: [...emp.leaveHistory, { ...newLeave }],
+                    };
+                }
+                return emp;
+            });
+    
+            console.log(updatedEmployees);
+            console.log(selectedEmployeeId);
+    
+            const response = await axios.post(`${API_BASE_URL}/api/employee/addLeave/${selectedEmployeeId}`,newLeave,{
+                headers: {
+                    'content-type': 'application/json'
+                }
+            });
+    
+            if(response.status===201){
+                alert("Leave added");
             }
-            return emp;
-        });
+    
+            setFilteredEmployees(updatedEmployees);
+            setShowAddLeaveModal(false);
+            setNewLeave({ type: '', startDate: '', endDate: '' });
 
-        console.log(updatedEmployees);
-
-        const response = await axios.post(`${API_BASE_URL}/api/employee/addLeave/${selectedEmployeeId}`,newLeave,{
-            headers: {
-                'content-type': 'application/json'
-            }
-        });
-
-        if(response.status===201){
-            alert("Leave added");
         }
-
-        setEmployees(updatedEmployees);
-        setShowAddLeaveModal(false);
-        setNewLeave({ type: '', startDate: '', endDate: '' });
+        else{
+            alert("Please select leave type");
+        }
     };
+
+    const filterActiveLeaveEmployees = () => {
+        if(!activeFilter){
+            setFilteredEmployees(employees.filter(emp => emp.leaveHistory.length !== 0));
+        }
+        else{
+            setFilteredEmployees(employees);
+        }
+        setActiveFilter(!activeFilter);
+    }
 
     const getLeaveDatesForMonth = (month) => {
         if (!selectedEmployee || !month) return [];
@@ -149,18 +174,27 @@ const LeaveTracker = () => {
 
                 {/* Employee Selector */}
                 <div className="mb-6">
+                    {
+                    user && user.role!=="user"
+                    ?
+                        <div className='flex justify-start space-x-1 mb-3'>
+                        <input type='checkbox' id='activeLeave' className='hover:cursor-pointer' onChange={filterActiveLeaveEmployees}></input>
+                        <label htmlFor='activeLeave' className='text-sm hover:cursor-pointer'>Only applied leaves</label>
+                    </div>
+                    :
+                    null}
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                         Select Employee
                     </label>
                     <select
-                        value={selectedEmployeeId}
+                        
                         onChange={(e) => {
-                            setSelectedEmployeeId(parseInt(e.target.value));
+                            setSelectedEmployeeId(e.target.value);
                             setSelectedMonth(null);
                         }}
                         className="w-full rounded-md border-gray-300 shadow-sm"
                     >
-                        {employees.map((emp) => (
+                        {filteredEmployees.map((emp) => (
                             <option key={emp.empId} value={emp.empId}>
                                 {emp.name} - {emp.department}
                             </option>
@@ -221,6 +255,7 @@ const LeaveTracker = () => {
                                 }
                                 tileContent={({ date }) => {
                                     const leaveType = getLeaveTypeForDate(date);
+                                    
                                     return leaveType ? (
                                         <div className="text-[10px] text-center mt-1">
                                             <span className={`px-1 rounded ${LeaveTypeColors[leaveType]} text-[8px]`}>

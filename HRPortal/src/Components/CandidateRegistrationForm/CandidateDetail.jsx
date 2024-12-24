@@ -130,9 +130,10 @@ const CandidatesTable = () => {
             return (
                 <div className="flex items-center">
                     <Icon className="w-5 h-5 mr-2 text-blue-400" />
+                    {console.log("AAA",value)}
                     <a
                         href={href}
-                        download={`${value.name || "resume"}_Resume.pdf`}
+                        download={`${value.data.name || "resume"}_Resume.pdf`}
                         className="text-blue-600 hover:underline"
                     >
                         Download Resume
