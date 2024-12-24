@@ -114,37 +114,35 @@ const CandidatesTable = () => {
         }
 
         // Handle Resume Field
-        if (field === 'resume'){
-            console.log("rendering resume for", value)
-            if(value?.data) {
-                console.log(value?.data)
-            try {
+        if (field === 'resume') {
+            if (value?.data) {
+                try {
+                    const blob = new Blob([new Uint8Array(value.data)], {
+                        type: 'application/pdf',
+                    });
 
-            const blob = new Blob([new Uint8Array(value.data)], {
-                type: 'application/pdf', 
-            });
+                    // Generate a blob URL
+                    const href = URL.createObjectURL(blob);
 
-            // Generate a blob URL
-            const href = URL.createObjectURL(blob);
-
-            return (
-                <div className="flex items-center">
-                    <Icon className="w-5 h-5 mr-2 text-blue-400" />
-                    <a
-                        href={href}
-                        download={`${value.name || "resume"}_Resume.pdf`}
-                        className="text-blue-600 hover:underline"
-                    >
-                        Download Resume
-                    </a>
-                </div>
-            );
-            } catch (err) {
-                console.error('Error rendering resume:', err);
-                return null;
+                    return (
+                        <div className="flex items-center">
+                            <Icon className="w-5 h-5 mr-2 text-blue-400" />
+                            <a
+                                href={href}
+                                download={`${candidate.name}.pdf`} // Use candidate name only
+                                className="text-blue-600 hover:underline"
+                            >
+                                Download Resume
+                            </a>
+                        </div>
+                    );
+                } catch (err) {
+                    console.error('Error rendering resume:', err);
+                    return null;
+                }
             }
         }
-    }
+
         // Default Rendering for Other Fields
         if (typeof value === 'string' || typeof value === 'number') {
             return (
@@ -166,6 +164,7 @@ const CandidatesTable = () => {
         setSearchTerm('');
     };
 
+    // Show loader when data is loading
     if (loading) {
         return (
             <div className="flex justify-center items-center h-screen">

@@ -50,13 +50,21 @@ export const deleteJob = async (req, res) => {
 };
 
 //update job
-export const updateJob = async (req,res) => {
-    try{
-        const {id} = req.params;
-        await Job.findOneAndUpdate({'jobId': id});
-        res.status(200).json({message: "Job updated successfully!"});
+export const updateJob = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body; 
+    const updatedJob = await Job.findOneAndUpdate(
+      { jobId: id },
+      updates,
+      { new: true } 
+    );
+    if (!updatedJob) {
+      return res.status(404).json({ message: "Job not found" });
     }
-    catch(err){
-        res.status(500).json({"message":err});
-    }
-}
+    res.status(200).json({ message: "Job updated successfully!", job: updatedJob });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update job", error: err.message });
+  }
+};

@@ -8,7 +8,8 @@ import {
     Check,
     Shield,
     Mail,
-    Lock
+    Lock,
+    Search,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
@@ -26,6 +27,8 @@ const AuthenticationManagement = () => {
     });
 
     const [users, setUsers] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
+
     const [modalOpen, setModalOpen] = useState(false);
     const [deleteConfirmation, setDeleteConfirmation] = useState(null);
     const { user, setUser } = useContext(userContext)
@@ -159,6 +162,15 @@ const AuthenticationManagement = () => {
         }
     };
 
+    const handleSearchChange = (e) => {
+        setSearchQuery(e.target.value);
+    };
+
+    const filteredUsers = users.filter(user =>
+        user.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.userEmail.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     const getRoleColor = (role) => {
         switch (role) {
             case 'admin': return 'bg-red-100 text-red-800';
@@ -190,64 +202,74 @@ const AuthenticationManagement = () => {
                     </button>
                 </header>
 
+                {/* Search Bar */}
+                <div className="flex items-center bg-white shadow-md p-4 rounded-lg mb-6">
+                    <Search className="text-gray-400 mr-3" />
+                    <input
+                        type="text"
+                        placeholder="Search by username or email..."
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        className="w-full outline-none focus:ring-2 focus:ring-blue-500 border border-gray-300 rounded-md px-3 py-2"
+                    />
+                </div>
+
                 <div className="grid md:grid-cols-3 gap-6">
                     <div className="md:col-span-2 bg-white shadow-lg rounded-xl p-6">
                         <h2 className="text-xl font-semibold mb-4 flex items-center">
                             <Users className="mr-2 text-blue-600" /> Existing Users
                         </h2>
-                        <AnimatePresence>
-                            {users.length === 0 ? (
-                                <div className="text-center text-gray-500 py-8">
-                                    No users found
-                                </div>
-                            ) : (
-                                users
-                                    .filter((u) => u && u.userId && u.userName && u.userEmail)
-                                    .map((u) => (
-                                        <motion.div
-                                            key={u.userId}
-                                            initial={{ opacity: 0, x: -50 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            exit={{ opacity: 0, x: 50 }}
-                                            className="flex justify-between items-center bg-gray-100 p-4 rounded-lg mb-4"
-                                        >
-                                            <div>
-                                                <div className="font-medium text-gray-800">{u.userName}</div>
-                                                <div className="text-sm text-gray-500 flex items-center">
-                                                    <Mail className="mr-2 text-blue-500" size={16} />
-                                                    {u.userEmail}
+                        <div className="h-80 overflow-y-auto pr-2">
+                            <AnimatePresence>
+                                {filteredUsers.length === 0 ? (
+                                    <div className="text-center text-gray-500 py-8">
+                                        No users found
+                                    </div>
+                                ) : (
+                                    filteredUsers
+                                        .filter((u) => u && u.userId && u.userName && u.userEmail) // Additional safety check
+                                        .map((u) => (
+                                            <motion.div
+                                                key={u.userId}
+                                                initial={{ opacity: 0, x: -50 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                exit={{ opacity: 0, x: 50 }}
+                                                className="flex justify-between items-center bg-gray-100 p-4 rounded-lg mb-4"
+                                            >
+                                                <div>
+                                                    <div className="font-medium text-gray-800">{u.userName}</div>
+                                                    <div className="text-sm text-gray-500 flex items-center">
+                                                        <Mail className="mr-2 text-blue-500" size={16} />
+                                                        {u.userEmail}
+                                                    </div>
+                                                    <div className={`text-xs px-2 py-1 rounded mt-2 ${getRoleColor(u.role)}`}>
+                                                        {u.role.toUpperCase()}
+                                                    </div>
                                                 </div>
-                                                <div className={`text-xs px-2 py-1 rounded mt-2 ${getRoleColor(u.role)}`}>
-                                                    {u.role.toUpperCase()}
-                                                </div>
-                                            </div>
-                                            <div className="flex space-x-2">
-                                                <button
-                                                    onClick={() => handleEditUser(u)}
-                                                    className="bg-gray-200 text-gray-700 p-2 rounded-md hover:bg-gray-300 transition"
-                                                >
-                                                    <Edit3 />
-                                                </button>
-                                                {
-                                                    user && user.role == 'superAdmin'
-                                                        ?
+                                                <div className="flex space-x-2">
+                                                    <button
+                                                        onClick={() => handleEditUser(u)}
+                                                        className="bg-gray-200 text-gray-700 p-2 rounded-md hover:bg-gray-300 transition"
+                                                    >
+                                                        <Edit3 />
+                                                    </button>
+                                                    {user && user.role === 'superAdmin' && (
                                                         <button
                                                             onClick={() => setDeleteConfirmation(u.userId)}
                                                             className="bg-red-100 text-red-600 p-2 rounded-md hover:bg-red-200 transition"
                                                         >
                                                             <Trash2 />
                                                         </button>
-                                                        :
-                                                        null
-                                                }
-                                            </div>
+                                                    )}
+                                                </div>
+                                            </motion.div>
+                                        ))
+                                )}
+                            </AnimatePresence>
+                        </div>
 
-
-                                        </motion.div>
-                                    ))
-                            )}
-                        </AnimatePresence>
                     </div>
+
 
                     <div className="bg-white shadow-lg rounded-xl p-6">
                         <h2 className="text-xl font-semibold mb-4 flex items-center">

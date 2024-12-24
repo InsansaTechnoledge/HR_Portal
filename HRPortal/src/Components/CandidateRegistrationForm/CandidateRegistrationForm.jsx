@@ -8,7 +8,7 @@ const CandidateRegistrationForm = () => {
 
     const [fileName, setFileName] = useState("");
 
-    const fileChangeHandler = (event) => { 
+    const fileChangeHandler = (event) => {
         const file = event.target.files[0];
         if (file) {
             setFileName(file.name)
@@ -19,12 +19,12 @@ const CandidateRegistrationForm = () => {
         event.preventDefault();
         const file = event.dataTransfer.files[0];
         if (file) {
-          setFileName(file.name);
+            setFileName(file.name);
         }
     };
-    
+
     const handleDragOver = (event) => {
-    event.preventDefault();
+        event.preventDefault();
     };
 
     const onSubmitHandler = async () => {
@@ -103,9 +103,9 @@ const CandidateRegistrationForm = () => {
                                     </label>
                                 </div>
                                 <div className="mt-2">
-                                    <select 
-                                    id='technology'
-                                    className='block w-full rounded-md bg-white px-3 py-3.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6'>
+                                    <select
+                                        id='technology'
+                                        className='block w-full rounded-md bg-white px-3 py-3.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6'>
                                         <option value={"Select technology"}>Select technology</option>
                                         {
                                             technologies.map((tech, id) => {
@@ -223,8 +223,8 @@ const CandidateRegistrationForm = () => {
 
                                     <div className="flex items-center justify-center w-full">
                                         <label forName="resume" className="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
-                                         onDrop={handleDrop}
-                                         onDragOver={handleDragOver}>
+                                            onDrop={handleDrop}
+                                            onDragOver={handleDragOver}>
                                             <div className="flex items-center justify-center">
                                                 <svg className="w-8 h-8 text-gray-500 " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
                                                     <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2" />
