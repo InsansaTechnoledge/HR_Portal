@@ -49,9 +49,24 @@ const Sidebar = () => {
     const { user, setUser } = useContext(userContext);
     const Name = user?.userName; // fetching the name of user
 
-    const toggleSidebar = () => setIsOpen(!isOpen);
+    const toggleSidebar = () => {
+        setIsOpen((prevState) => {
+            const newIsOpen = !prevState;
+            if (!newIsOpen) {
+                // Close all dropdowns when sidebar is closed
+                setDropdowns({
+                    apps: false,
+                    apps1: false,
+                    apps2: false,
+                    user: false,
+                });
+            }
+            return newIsOpen;
+        });
+    };
 
     const toggleDropdown = (name) => {
+        setIsOpen(true);
         setDropdowns((prev) => ({ ...prev, [name]: !prev[name] }));
     };
 
@@ -71,7 +86,8 @@ const Sidebar = () => {
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
-                    {isOpen && <h1 className="text-sm font-semibold text-white">{`Hey, ${Name}`}</h1>}
+                    {isOpen && <h1 className="text-sm font-semibold text-white">{`Hey, ${Name}`}
+                        </h1>}
                     <button className="text-gray-400 hover:text-white" onClick={toggleSidebar}>
                         ☰
                     </button>
