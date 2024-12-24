@@ -8,7 +8,8 @@ import {
     Check,
     Shield,
     Mail,
-    Lock
+    Lock,
+    Search,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
@@ -26,6 +27,8 @@ const AuthenticationManagement = () => {
     });
 
     const [users, setUsers] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
+
     const [modalOpen, setModalOpen] = useState(false);
     const [deleteConfirmation, setDeleteConfirmation] = useState(null);
     const { user, setUser } = useContext(userContext)
@@ -159,6 +162,15 @@ const AuthenticationManagement = () => {
         }
     };
 
+    const handleSearchChange = (e) => {
+        setSearchQuery(e.target.value);
+    };
+
+    const filteredUsers = users.filter(user =>
+        user.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.userEmail.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     const getRoleColor = (role) => {
         switch (role) {
             case 'admin': return 'bg-red-100 text-red-800';
@@ -190,6 +202,18 @@ const AuthenticationManagement = () => {
                     </button>
                 </header>
 
+                {/* Search Bar */}
+                <div className="flex items-center bg-white shadow-md p-4 rounded-lg mb-6">
+                    <Search className="text-gray-400 mr-3" />
+                    <input
+                        type="text"
+                        placeholder="Search by username or email..."
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        className="w-full outline-none focus:ring-2 focus:ring-blue-500 border border-gray-300 rounded-md px-3 py-2"
+                    />
+                </div>
+
                 <div className="grid md:grid-cols-3 gap-6">
                     <div className="md:col-span-2 bg-white shadow-lg rounded-xl p-6">
                         <h2 className="text-xl font-semibold mb-4 flex items-center">
@@ -197,13 +221,13 @@ const AuthenticationManagement = () => {
                         </h2>
                         <div className="h-80 overflow-y-auto pr-2">
                             <AnimatePresence>
-                                {users.length === 0 ? (
+                                {filteredUsers.length === 0 ? (
                                     <div className="text-center text-gray-500 py-8">
                                         No users found
                                     </div>
                                 ) : (
-                                    users
-                                        .filter((u) => u && u.userId && u.userName && u.userEmail)
+                                    filteredUsers
+                                        .filter((u) => u && u.userId && u.userName && u.userEmail) // Additional safety check
                                         .map((u) => (
                                             <motion.div
                                                 key={u.userId}
@@ -243,6 +267,7 @@ const AuthenticationManagement = () => {
                                 )}
                             </AnimatePresence>
                         </div>
+
                     </div>
 
 
