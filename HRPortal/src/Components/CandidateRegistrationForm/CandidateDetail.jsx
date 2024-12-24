@@ -166,6 +166,7 @@ const CandidatesTable = () => {
         setSearchTerm('');
     };
 
+    // Show loader when data is loading
     if (loading) {
         return (
             <div className="flex justify-center items-center h-screen">

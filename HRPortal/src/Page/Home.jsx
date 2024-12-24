@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import {
     IconClipboardCopy,
     IconSignature,
@@ -16,13 +16,26 @@ import { userContext } from "../Context/userContext";
 
 // Grid Component
 const FeatureGrid = () => {
-
     const { user } = useContext(userContext);
- 
+    const [loading, setLoading] = useState(true); // Track loading state
     const Name = user?.userName; // fetching the name of user
+
+    useEffect(() => {
+        // Simulate a delay to show the loading indicator (e.g., fetch data)
+        setTimeout(() => {
+            setLoading(false); // Set loading to false after 2 seconds (simulated loading)
+        }, 2000);
+    }, []);
 
     return (
         <div className="max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            {/* Loading Indicator */}
+            {loading && (
+                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+            )}
+
             <div className="w-full bg-gradient-to-r from-green-400 via-green-500 to-green-600 py-16 text-white">
                 <div className="max-w-4xl mx-auto text-center">
                     <h2 className="text-4xl font-extrabold tracking-tight">
@@ -40,7 +53,7 @@ const FeatureGrid = () => {
             <h1 className="mt-10 font-extrabold text-3xl">APPLICATIONS</h1>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
                 {appItems.map((item, i) => (
-                    user.role==="user" && (i==1 || i==2) ? null :
+                    user.role === "user" && (i === 1 || i === 2) ? null :
                     <FeatureCard
                         key={i}
                         title={item.title}
@@ -51,13 +64,11 @@ const FeatureGrid = () => {
                         nav={item.nav}
                         img={item.img}
                     />
-                    
                 ))}
             </div>
 
             {
-                user.role === "user" ? null :
-
+                user.role === "user" ? null : (
                     <>
                         <h1 className="mt-10 font-extrabold text-3xl">TALENT MANAGEMENT</h1>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
@@ -76,7 +87,7 @@ const FeatureGrid = () => {
                         </div>
 
                         <h1 className="mt-10 font-extrabold text-3xl">AUTHENTICATION MANAGEMENT</h1>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
                             {authenticationItems.map((item, i) => (
                                 <FeatureCard
                                     key={i}
@@ -87,13 +98,14 @@ const FeatureGrid = () => {
                                     className={"md:col-span-3"}
                                     nav={item.nav}
                                     img={item.img}
-                                    />
-                                ))}
+                                />
+                            ))}
                         </div>
                     </>
+                )
             }
         </div>
-    )   
+    );
 };
 
 // Feature Card Component
@@ -110,11 +122,11 @@ const FeatureCard = ({ title, description, header, icon, className, nav }) => {
             <h3 className="text-xl font-semibold text-gray-900 mt-4">{title}</h3>
             <p className="text-gray-600 mt-2">{description}</p>
         </div>
-    )
+    );
 };
+
 // Skeleton Placeholder
 const Skeleton = (props) => (
-    // <div className="w-full h-24 rounded-lg bg-gradient-to-br from-gray-200 to-gray-300"></div>
     <img className="w-full rounded-lg" src={props.img}></img>
 );
 
@@ -164,9 +176,8 @@ const talentItems = [
         header: <Skeleton img={cand_ros} />,
         icon: <IconSignature className="h-6 w-6 text-indigo-500" />,
         nav: "/candidate-detail",
-        img: cand_ros
     },
-]
+];
 
 const authenticationItems = [
     {
@@ -184,11 +195,9 @@ const authenticationItems = [
     }
 ];
 
-
 // Home Page Component with Sidebar
 export function Home() {
     return (
-
         <div className="flex-1 overflow-y-auto">
             <FeatureGrid />
         </div>
