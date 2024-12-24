@@ -13,6 +13,7 @@ function JobPostForm() {
 
         if (response.status === 200 && response.data.jobs) {
           setJobs(response.data.jobs);
+          console.log(response.data.jobs);
         }
       } catch (error) {
         console.error("Error fetching jobs:", error);
@@ -128,11 +129,11 @@ function JobPostForm() {
   const handleEdit = (job) => {
     setEditingJob(job);
     setFormData({
-      title: job.title,
-      location: job.location,
-      description: job.description,
+      title: job.jobTitle,
+      location: job.jobLocation,
+      description: job.jobDescription,
       skills: job.skills.join(', '),
-      salary: job.salary
+      salary: job.salaryRange
     });
   };
 
@@ -298,15 +299,15 @@ function JobPostForm() {
                 <div className="md:col-span-2 space-y-6">
                   <div>
                     <h3 className="text-2xl font-bold text-indigo-700">
-                      {jobs[currentIndex].title}
+                      {jobs[currentIndex].jobTitle}
                     </h3>
                     <p className="text-gray-500 mt-2">
-                      {jobs[currentIndex].location}
+                      {jobs[currentIndex].jobLocation}
                     </p>
                   </div>
 
                   <p className="text-gray-600 leading-relaxed">
-                    {jobs[currentIndex].description}
+                    {jobs[currentIndex].jobDescription}
                   </p>
 
                   <div>
@@ -325,7 +326,7 @@ function JobPostForm() {
 
                   <div className="flex items-center space-x-4">
                     <span className="text-xl font-bold text-green-600">
-                      {jobs[currentIndex].salary}
+                      {jobs[currentIndex].salaryRange}
                     </span>
                     <div className="flex space-x-2">
                       <button
