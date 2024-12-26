@@ -75,9 +75,9 @@ const LeaveTracker = () => {
             try {
                 const response = await axios.get(`${API_BASE_URL}/api/employee/${selectedEmployeeId}`);
                 if (response.status === 201) {
-                    const updatedEmployee = response.data.employee;
+                    const updatedEmployee = response.data.employee[0];
                     setSelectedEmployee(updatedEmployee);
-
+                    console.log(updatedEmployee);
                     // Update the employee in the lists
                     setEmployees(prev =>
                         prev.map(emp => emp.empId === selectedEmployeeId ? updatedEmployee : emp)
