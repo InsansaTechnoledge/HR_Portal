@@ -32,7 +32,7 @@ const AuthenticationManagement = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [deleteConfirmation, setDeleteConfirmation] = useState(null);
     const { user, setUser } = useContext(userContext)
-    const [newUserList,setNewUserList] = useState();
+    const [newUserList,setNewUserList] = useState([]);
 
     useEffect(() => {
         fetchUsers();
@@ -47,12 +47,15 @@ const AuthenticationManagement = () => {
             setNewUserList(newUsers);
             console.log("newUser", newUsers);
 
-            setUserForm(prev => ({
-                ...prev,
-                userName: newUsers[0].name, 
-                userEmail: newUsers[0].email
-            }))
-            console.log(newUsers[0]);
+            if(newUsers.length!=0){
+                setUserForm(prev => ({
+                    ...prev,
+                    userName: newUsers[0].name, 
+                    userEmail: newUsers[0].email
+                }))
+                console.log(newUsers[0]);
+            }
+
         }
     }
 
@@ -426,7 +429,13 @@ const AuthenticationManagement = () => {
 
                                 <div className="space-y-4">
                                     <div>
+                                        
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                                        {
+                                            newUserList.length===0
+                                            ?
+                                            <input value="No employee left"></input>
+                                            :
                                         <select 
                                         name='userName'
                                         onChange={(event) => {
@@ -440,13 +449,8 @@ const AuthenticationManagement = () => {
                                                 return <option value={newUser.name}>{newUser.name}</option>
                                             })}
                                         </select>
-                                        {/* <input
-                                            name="userName"
-                                            value={userForm.userName}
-                                            onChange={handleInputChange}
-                                            placeholder="Enter username"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                                        /> */}
+                                        }
+                                        
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
@@ -494,8 +498,9 @@ const AuthenticationManagement = () => {
                                 }
                                 <div className="flex space-x-4 mt-6">
                                     <button
+                                        disabled={userForm.userId == null && newUserList.length === 0}
                                         onClick={handleSubmit}
-                                        className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
+                                        className={userForm.userId==null && newUserList.length===0 ? "flex-1 bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 transition" : "flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"}
                                     >
                                         {userForm.userId ? (user.role === 'admin' ? 'Change Password' : 'Update User') : 'Add User'}
                                     </button>
