@@ -38,6 +38,7 @@ const LeaveTracker = () => {
     });
     const {user,setUser} = useContext(userContext);
 
+
     useEffect(()=>{
         const fetchEmployees = async () => {
             const response = await axios.get(`${API_BASE_URL}/api/employee`);
@@ -68,7 +69,55 @@ const LeaveTracker = () => {
         fetchEmployees();
     },[])
 
-    const selectedEmployee = filteredEmployees.find((emp) => emp.empId === selectedEmployeeId);
+    const handleLeaveMonths = () => {
+        const selectedEmployee = filteredEmployees.find((emp) => emp.empId === selectedEmployeeId);
+        const availableLeaveMonths = Array.from(
+            new Set(
+                selectedEmployee?.leaveHistory.map((leave) => {
+                    const startDate = new Date(leave.startDate);
+                    return `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+                }) || []
+            )
+        );
+
+        const getLeaveDatesForMonth = (month) => {
+            if (!selectedEmployee || !month) return [];
+    
+            const [year, monthNum] = month.split('-');
+            const leaveDates = selectedEmployee.leaveHistory.flatMap((leave) => {
+                const start = new Date(leave.startDate);
+                const end = new Date(leave.endDate);
+                const dates = [];
+    
+                for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                    if (d.getFullYear() === parseInt(year) && d.getMonth() + 1 === parseInt(monthNum)) {
+                        dates.push({
+                            date: new Date(d),
+                            type: leave.type,
+                        });
+                    }
+                }
+                return dates;
+            });
+    
+            return leaveDates;
+        };
+    
+        const isLeaveDate = (date) => {
+            const leaveDates = getLeaveDatesForMonth(selectedMonth);
+            return leaveDates.some((leaveDate) =>
+                leaveDate.date.toDateString() === date.toDateString()
+            );
+        };
+    
+        const getLeaveTypeForDate = (date) => {
+            const leaveDates = getLeaveDatesForMonth(selectedMonth);
+            const leave = leaveDates.find((leaveDate) =>
+                leaveDate.date.toDateString() === date.toDateString()
+            );
+            return leave ? leave.type : null;
+        };
+    }
 
     const handleAddLeave = async () => {
         if(newLeave.type!=="")
@@ -116,53 +165,6 @@ const LeaveTracker = () => {
         setActiveFilter(!activeFilter);
     }
 
-    const getLeaveDatesForMonth = (month) => {
-        if (!selectedEmployee || !month) return [];
-
-        const [year, monthNum] = month.split('-');
-        const leaveDates = selectedEmployee.leaveHistory.flatMap((leave) => {
-            const start = new Date(leave.startDate);
-            const end = new Date(leave.endDate);
-            const dates = [];
-
-            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                if (d.getFullYear() === parseInt(year) && d.getMonth() + 1 === parseInt(monthNum)) {
-                    dates.push({
-                        date: new Date(d),
-                        type: leave.type,
-                    });
-                }
-            }
-            return dates;
-        });
-
-        return leaveDates;
-    };
-
-    const isLeaveDate = (date) => {
-        const leaveDates = getLeaveDatesForMonth(selectedMonth);
-        return leaveDates.some((leaveDate) =>
-            leaveDate.date.toDateString() === date.toDateString()
-        );
-    };
-
-    const getLeaveTypeForDate = (date) => {
-        const leaveDates = getLeaveDatesForMonth(selectedMonth);
-        const leave = leaveDates.find((leaveDate) =>
-            leaveDate.date.toDateString() === date.toDateString()
-        );
-        return leave ? leave.type : null;
-    };
-
-    const availableLeaveMonths = Array.from(
-        new Set(
-            selectedEmployee?.leaveHistory.map((leave) => {
-                const startDate = new Date(leave.startDate);
-                return `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
-            }) || []
-        )
-    );
-
     return (
         <div className="flex min-h-screen bg-gray-50">
             {/* Sidebar */}
@@ -189,6 +191,7 @@ const LeaveTracker = () => {
                     <select
                         
                         onChange={(e) => {
+                            handleLeaveMonths();
                             setSelectedEmployeeId(e.target.value);
                             setSelectedMonth(null);
                         }}

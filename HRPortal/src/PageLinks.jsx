@@ -15,7 +15,6 @@ import CandidateRegistration from './Page/CandidateRegistration';
 import DocumentManagement from './Page/DocumentManagement';
 import Sidebar from './Components/Login/Sidebar';
 import MobileBar from './Components/Login/MobileBar';
-import TalentManagement from './Page/TalentManagement';
 import JobApplication from './Page/JobApplication';
 import AuthenticationManagement from './Page/AuthenticationManagement';
 import LeaveTracker from './Page/LeaveTracker';
@@ -99,14 +98,6 @@ function AppLayout() {
                         element={
                             <AdminRoute>
                                 <AddEmployeePage />
-                            </AdminRoute>
-                        }
-                    />
-                    <Route
-                        path="/talent"
-                        element={
-                            <AdminRoute>
-                                <TalentManagement />
                             </AdminRoute>
                         }
                     />
