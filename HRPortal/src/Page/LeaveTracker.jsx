@@ -100,12 +100,25 @@ const LeaveTracker = () => {
 
         const availableLeaveMonths = Array.from(
             new Set(
-                selectedEmployee.leaveHistory.map((leave) => {
-                    const startDate = new Date(leave.startDate);
-                    return `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
-                })
+                selectedEmployee?.leaveHistory.flatMap((leave) => {
+                    const start = new Date(leave.startDate);
+                    const end = new Date(leave.endDate);
+                    const months = [];
+        
+                    // Generate all months between start and end
+                    for (
+                        let date = new Date(start.getFullYear(), start.getMonth(), 1);
+                        date <= new Date(end.getFullYear(), end.getMonth(), 1);
+                        date.setMonth(date.getMonth() + 1)
+                    ) {
+                        months.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+                    }
+        
+                    return months;
+                }) || []
             )
         );
+        
 
         return availableLeaveMonths;
     };
@@ -149,6 +162,7 @@ const LeaveTracker = () => {
     };
 
     const handleAddLeave = async () => {
+        console.log(newLeave);
         if (newLeave.type !== "" && newLeave.startDate!=="" && newLeave.endDate!=="") {
             if(new Date(newLeave.startDate) <= new Date(newLeave.endDate)){
 
@@ -190,6 +204,7 @@ const LeaveTracker = () => {
 
             setShowAddLeaveModal(false);
             setNewLeave({ type: '', startDate: '', endDate: '' });
+            setOneDayLeave(false);
             }
             else{
                 alert("end date can't be before start date");
@@ -210,6 +225,13 @@ const LeaveTracker = () => {
 
     const filterOneDayLeave = () => {
         setOneDayLeave(!oneDayLeave);
+        setNewLeave(prev => ({
+            ...prev,
+            startDate: '',
+            endDate: ''
+        }))
+        // document.getElementById("startDate").value=null;
+        // document.getElementById("endDate").value=null;
     };
 
     const availableLeaveMonths = handleLeaveMonths();
@@ -248,7 +270,10 @@ const LeaveTracker = () => {
 
                 {/* Add Leave Button */}
                 <button
-                    onClick={() => setShowAddLeaveModal(true)}
+                    onClick={() => {
+                        setOneDayLeave(false);
+                        setShowAddLeaveModal(true)
+                    }}
                     className="w-full flex items-center justify-center bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition"
                 >
                     <Plus className="mr-2" /> Add Leave
@@ -393,6 +418,7 @@ const LeaveTracker = () => {
                                     }
                                 </label>
                                 <input
+                                    id='startDate'
                                     type="date"
                                     value={newLeave.startDate}
                                     onChange={(e) => setNewLeave(oneDayLeave ? { ...newLeave, startDate: e.target.value, endDate: e.target.value } : { ...newLeave, startDate: e.target.value })}
@@ -406,6 +432,7 @@ const LeaveTracker = () => {
                                             End Date
                                         </label>
                                         <input
+                                            id='endDate'
                                             type="date"
                                             value={newLeave.endDate}
                                             onChange={(e) => setNewLeave({ ...newLeave, endDate: e.target.value })}
@@ -417,7 +444,9 @@ const LeaveTracker = () => {
                             }
                             <div className="flex justify-end space-x-2">
                                 <button
-                                    onClick={() => setShowAddLeaveModal(false)}
+                                    onClick={() => {
+                                        setShowAddLeaveModal(false)
+                                    }}
                                     className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
                                 >
                                     Cancel

@@ -32,10 +32,29 @@ const AuthenticationManagement = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [deleteConfirmation, setDeleteConfirmation] = useState(null);
     const { user, setUser } = useContext(userContext)
+    const [newUserList,setNewUserList] = useState();
 
     useEffect(() => {
         fetchUsers();
     }, []);
+
+
+    const fetchEmployees = async () => {
+        const response = await axios.get(`${API_BASE_URL}/api/employee/`);
+        if(response.status===201){
+            const userEmailSet = new Set(users.map(user => user.userEmail));
+            const newUsers = response.data.employees.filter(emp => !userEmailSet.has(emp.email));
+            setNewUserList(newUsers);
+            console.log("newUser", newUsers);
+
+            setUserForm(prev => ({
+                ...prev,
+                userName: newUsers[0].name, 
+                userEmail: newUsers[0].email
+            }))
+            console.log(newUsers[0]);
+        }
+    }
 
     const fetchUsers = async () => {
         try {
@@ -59,6 +78,7 @@ const AuthenticationManagement = () => {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setUserForm((prev) => ({ ...prev, [name]: value }));
+        console.log(name,value);
     };
 
     const handleSubmit = async () => {
@@ -137,15 +157,16 @@ const AuthenticationManagement = () => {
         });
     };
 
-    const handleEditUser = (user) => {
+    const handleEditUser = (u) => {
         setUserForm({
-            userId: user.userId,
-            userName: user.userName,
-            userEmail: user.userEmail,
+            userId: u.userId,
+            userName: u.userName,
+            userEmail: u.userEmail,
             password: '',
-            role: user.role,
-            currentEmail: user.userEmail,
+            role: u.role,
+            currentEmail: u.userEmail,
         });
+
         setModalOpen(true);
     };
 
@@ -179,6 +200,14 @@ const AuthenticationManagement = () => {
         }
     };
 
+    const setEmailHandler = (newUser) => {
+        setUserForm(prev => ({
+            ...prev,
+            userEmail:newUser.email
+        }));
+        
+    }
+
     return (
         <div className="min-h-screen bg-gray-50 p-8">
             <motion.div
@@ -195,7 +224,10 @@ const AuthenticationManagement = () => {
                         <p className="text-gray-600 mt-2">Manage user access, roles, and authentication</p>
                     </div>
                     <button
-                        onClick={() => setModalOpen(true)}
+                        onClick={() => {
+                            setModalOpen(true)
+                            fetchEmployees();
+                        }}
                         className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
                     >
                         <UserPlus className="mr-2" /> Add User
@@ -365,9 +397,12 @@ const AuthenticationManagement = () => {
                                 exit={{ scale: 0.8, opacity: 0 }}
                                 className="bg-white p-8 rounded-xl shadow-2xl w-96"
                             >
-                                <h2 className="text-xl font-bold mb-6 text-center">
-                                    {userForm.userId ? (user.role === 'admin' ? 'Set New Password' : 'Edit User') : 'Add New User'}
+                                <h2 className="text-xl font-bold mb-3 text-center">
+                                    {userForm.userId ? (user.role==='admin' ? 'Set New Password' : 'Edit User') : 'Add New User'}
                                 </h2>
+                                {
+                                    !userForm.userId ? <h3 className='mb-5 text-red-500'>Add Employee before registering it as user</h3> : null
+                                }
                                 {
                                     userForm.userId && user && user.role === 'admin'
                                         ?
@@ -398,60 +433,73 @@ const AuthenticationManagement = () => {
                                         </div>
                                         :
 
-                                        <div className="space-y-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                                                <input
-                                                    name="userName"
-                                                    value={userForm.userName}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter username"
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                                                <p className="block text-xs font-medium text-red-500 mb-2">*User email should be same as employee email</p>
-                                                <input
-                                                    name="userEmail"
-                                                    type="email"
-                                                    value={userForm.userEmail}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter email"
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                                                <input
-                                                    name="password"
-                                                    type="password"
-                                                    value={userForm.password}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter password"
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-                                                <select
-                                                    name="role"
-                                                    value={userForm.role}
-                                                    onChange={handleInputChange}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                                                >
-                                                    <option value="user">User</option>
-                                                    <option value="admin">Admin</option>
-                                                    {
-                                                        user && user.role == 'superAdmin'
-                                                            ?
-                                                            <option value="superAdmin">Super Admin</option>
-                                                            :
-                                                            null
-                                                    }
-                                                </select>
-                                            </div>
-                                        </div>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                                        <select 
+                                        name='userName'
+                                        onChange={(event) => {
+                                            const newUser = newUserList.filter(newU => newU.name==event.target.value);
+                                            setEmailHandler(newUser[0])
+                                            handleInputChange(event)
+                                        }}
+                                        value={userForm.userName}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                                            {newUserList && newUserList.map((newUser) => {
+                                                return <option value={newUser.name}>{newUser.name}</option>
+                                            })}
+                                        </select>
+                                        {/* <input
+                                            name="userName"
+                                            value={userForm.userName}
+                                            onChange={handleInputChange}
+                                            placeholder="Enter username"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                                        /> */}
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                                        <input
+                                            name="userEmail"
+                                            type="email"
+                                            disabled
+                                            value={userForm.userEmail}
+                                            onChange={handleInputChange}
+                                            placeholder="Enter email"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                                        <input
+                                            name="password"
+                                            type="password"
+                                            value={userForm.password}
+                                            onChange={handleInputChange}
+                                            placeholder="Enter password"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                                        <select
+                                            name="role"
+                                            value={userForm.role}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                                        >
+                                            <option value="user">User</option>
+                                            <option value="admin">Admin</option>
+                                            {
+                                                user && user.role == 'superAdmin'
+                                                    ?
+                                                    <option value="superAdmin">Super Admin</option>
+                                                    :
+                                                    null
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
                                 }
                                 <div className="flex space-x-4 mt-6">
                                     <button

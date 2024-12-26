@@ -127,10 +127,9 @@ const DocumentManagement = () => {
         // Check if all fields are filled
         if (!formData.document || !formData.employee || !formData.type) {
             setError("Please fill in all required fields");
-            console.log(formData);
             return;
         }
-
+        setError("");
         const uploadData = new FormData();
         uploadData.append('document', formData.document);
         uploadData.append('name', formData.name);
