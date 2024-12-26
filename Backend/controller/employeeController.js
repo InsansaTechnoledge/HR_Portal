@@ -21,6 +21,18 @@ export const addEmployee = async (req, res) => {
     }
 } 
 
+export const fetchEmployeeById = async (req,res) => {
+    try{
+        const {id} = req.params;
+        const employee = await Employee.find({empId:id});
+
+        res.status(201).json({message: "employee fetched",employee:employee});
+    }
+    catch(err){
+        console.log(err);
+    }
+}
+
 export const fetchEmployee = async (req,res) => {
     try{
 

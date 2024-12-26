@@ -100,7 +100,7 @@ const LeaveTracker = () => {
     const handleLeaveMonths = () => {
         const availableLeaveMonths = Array.from(
             new Set(
-                selectedEmployee?.leaveHistory.map((leave) => {
+                selectedEmployee && selectedEmployee?.leaveHistory.map((leave) => {
                     const startDate = new Date(leave.startDate);
                     return `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
                 }) || []
