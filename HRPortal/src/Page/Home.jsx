@@ -17,24 +17,18 @@ import { userContext } from "../Context/userContext";
 // Grid Component
 const FeatureGrid = () => {
     const { user } = useContext(userContext);
-    const [loading, setLoading] = useState(true); // Track loading state
     const Name = user?.userName; // fetching the name of user
 
-    useEffect(() => {
-        // Simulate a delay to show the loading indicator (e.g., fetch data)
-        setTimeout(() => {
-            setLoading(false); // Set loading to false after 2 seconds (simulated loading)
-        }, 2000);
-    }, []);
+    // useEffect(() => {
+    //     // Simulate a delay to show the loading indicator (e.g., fetch data)
+    //     setTimeout(() => {
+    //         setLoading(false); // Set loading to false after 2 seconds (simulated loading)
+    //     }, 2000);
+    // }, []);
 
     return (
         <div className="max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-            {/* Loading Indicator */}
-            {loading && (
-                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
-                </div>
-            )}
+           
 
             <div className="w-full bg-gradient-to-r from-green-400 via-green-500 to-green-600 py-16 text-white">
                 <div className="max-w-4xl mx-auto text-center">
