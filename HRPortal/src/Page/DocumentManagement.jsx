@@ -15,6 +15,18 @@ const DocumentManagement = () => {
     const [error, setError] = useState(null);
     const [fileName, setFileName] = useState("No file choosen")
     const {user} = useContext(userContext);
+    const [employees,setEmployees] = useState([]);
+
+    useEffect(() => {
+        const fetchEmployees = async () => {
+            const response = await axios.get(`${API_BASE_URL}/api/employee`);
+            if(response.status===201){
+                setEmployees(response.data.employees);
+            }
+        }
+
+        user && user.role!=="user" ? fetchEmployees() : null;
+    },[]);
 
     // Upload form state
     const [formData, setFormData] = useState({
@@ -54,7 +66,6 @@ const DocumentManagement = () => {
             const response = await axios.get(`${API_BASE_URL}/api/documents/all`);
             const data = Array.isArray(response.data.data) ? response.data.data : [];
             
-            console.log(data);
 
             if (user && user.role === "user") {
                 const filteredData = data.filter(doc => doc.employee.toLowerCase() === user.userName.toLowerCase());
@@ -77,6 +88,7 @@ const DocumentManagement = () => {
             ...prev,
             [name]: value
         }));
+
     };
 
     // Handle file selection
@@ -282,6 +294,7 @@ const DocumentManagement = () => {
                             </div>
                             <div>
                                 <label className="block text-gray-700 mb-2">Uploaded By</label>
+                                
                                 <input
                                     type="text"
                                     name="uploadedBy"
@@ -292,15 +305,20 @@ const DocumentManagement = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-gray-700 mb-2">Employee Username</label>
-                                <input
+                                <label className="block text-gray-700 mb-2">Employee Name</label>
+                                <select name="employee" onChange={handleInputChange} value={formData.employee} className="w-full p-2 border rounded-lg">
+                                    {employees.map(emp => {
+                                        return <option value={emp.name}>{emp.name}</option>
+                                    })}
+                                </select>
+                                {/* <input
                                     type="text"
                                     name="employee"
                                     value={formData.employee}
                                     onChange={handleInputChange}
                                     placeholder="Employee Name"
                                     className="w-full p-2 border rounded-lg"
-                                />
+                                /> */}
                             </div>
                         </div>
                         <div className="mt-4 flex justify-end">
