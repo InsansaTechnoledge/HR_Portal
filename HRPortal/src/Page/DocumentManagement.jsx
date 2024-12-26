@@ -16,26 +16,31 @@ const DocumentManagement = () => {
     const [fileName, setFileName] = useState("No file choosen")
     const {user} = useContext(userContext);
     const [employees,setEmployees] = useState([]);
+    // Upload form state
+    const [formData, setFormData] = useState({
+        name: '',
+        type: '',
+        uploadedBy: user.userName,
+        employee: '',
+        document: null
+    });
 
     useEffect(() => {
         const fetchEmployees = async () => {
             const response = await axios.get(`${API_BASE_URL}/api/employee`);
             if(response.status===201){
                 setEmployees(response.data.employees);
+                setFormData(prev =>({
+                    ...prev,
+                    employee: response.data.employees[0].name
+                })
+            ); 
             }
         }
 
         user && user.role!=="user" ? fetchEmployees() : null;
     },[]);
 
-    // Upload form state
-    const [formData, setFormData] = useState({
-        name: '',
-        type: '',
-        uploadedBy: user?.userName || '',
-        employee: '',
-        document: null
-    });
 
     const handleDrop = (event) => {
         event.preventDefault();
@@ -79,7 +84,7 @@ const DocumentManagement = () => {
             
 
             if (user && user.role === "user") {
-                const filteredData = data.filter(doc => doc.employee.toLowerCase() === user.userName.toLowerCase());
+                const filteredData = data.filter(doc => doc.employee.toLowerCase().trim() === user.userName.toLowerCase().trim());
                 setDocuments(filteredData);
             } else {
                 setDocuments(data);
@@ -122,6 +127,7 @@ const DocumentManagement = () => {
         // Check if all fields are filled
         if (!formData.document || !formData.employee || !formData.type) {
             setError("Please fill in all required fields");
+            console.log(formData);
             return;
         }
 
@@ -141,7 +147,7 @@ const DocumentManagement = () => {
                 }
             });
 
-            setFormData({ name: '', type: '', uploadedBy: user?.userName || '', employee: '', document: null });
+            setFormData({ name: '', type: '', uploadedBy: user.userName, employee: employees[0], document: null });
             setShowUploadForm(false);
             fetchDocuments();
             setLoading(false);
@@ -310,8 +316,8 @@ const DocumentManagement = () => {
                                 <input
                                     type="text"
                                     name="uploadedBy"
-                                    value={formData.uploadedBy}
-                                    readOnly 
+                                    value={user.userName}
+                                    disabled
                                     placeholder="Your Name"
                                     className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
                                 />
