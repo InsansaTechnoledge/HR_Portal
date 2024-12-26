@@ -32,7 +32,7 @@ const DocumentManagement = () => {
     const [formData, setFormData] = useState({
         name: '',
         type: '',
-        uploadedBy: '',
+        uploadedBy: user?.userName || '',
         employee: '',
         document: null
     });
@@ -57,6 +57,17 @@ const DocumentManagement = () => {
     useEffect(() => {
         fetchDocuments();
     }, []);
+
+    useEffect(() => {
+        if (user) {
+            setFormData((prev) => ({
+                ...prev,
+                uploadedBy: user.userName
+            }));
+        }
+    }, [user]);
+
+
 
 
     // Fetch all documents
@@ -108,7 +119,8 @@ const DocumentManagement = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!formData.document || !formData.uploadedBy || !formData.employee || !formData.type) {
+        // Check if all fields are filled
+        if (!formData.document || !formData.employee || !formData.type) {
             setError("Please fill in all required fields");
             return;
         }
@@ -129,7 +141,7 @@ const DocumentManagement = () => {
                 }
             });
 
-            setFormData({ name: '', type: '', uploadedBy: '', employee: '', document: null });
+            setFormData({ name: '', type: '', uploadedBy: user?.userName || '', employee: '', document: null });
             setShowUploadForm(false);
             fetchDocuments();
             setLoading(false);
@@ -138,6 +150,7 @@ const DocumentManagement = () => {
             setLoading(false);
         }
     };
+
 
     // Handle document deletion
     const handleDeleteDocument = async (id) => {
@@ -294,16 +307,16 @@ const DocumentManagement = () => {
                             </div>
                             <div>
                                 <label className="block text-gray-700 mb-2">Uploaded By</label>
-                                
                                 <input
                                     type="text"
                                     name="uploadedBy"
                                     value={formData.uploadedBy}
-                                    onChange={handleInputChange}
+                                    readOnly 
                                     placeholder="Your Name"
-                                    className="w-full p-2 border rounded-lg"
+                                    className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
                                 />
                             </div>
+
                             <div>
                                 <label className="block text-gray-700 mb-2">Employee Name</label>
                                 <select name="employee" onChange={handleInputChange} value={formData.employee} className="w-full p-2 border rounded-lg">
