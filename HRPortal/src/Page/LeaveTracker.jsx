@@ -14,7 +14,7 @@ import { userContext } from '../Context/userContext';
 
 const initialEmployees = [];
 
-const leaveTypes = ['Vacation', 'Sick Leave', 'Personal', 'Maternity', 'Paternity','Unpaid Leave'];
+const leaveTypes = ['Vacation', 'Sick Leave', 'Personal', 'Maternity', 'Paternity', 'Unpaid Leave'];
 
 const LeaveTypeColors = {
     'Vacation': 'bg-blue-100 text-blue-800',
@@ -36,23 +36,25 @@ const LeaveTracker = () => {
         startDate: '',
         endDate: '',
     });
-    const {user,setUser} = useContext(userContext);
+    const [selectedEmployee, setSelectedEmployee] = useState();
+    const { user, setUser } = useContext(userContext);
+    const [leaveDate, setLeaveDate] = useState();
+    const [leaveTypeForDate, setLeaveTypeForDate] = useState();
 
-
-    useEffect(()=>{
+    useEffect(() => {
         const fetchEmployees = async () => {
             const response = await axios.get(`${API_BASE_URL}/api/employee`);
 
-            if(response.status===201){
+            if (response.status === 201) {
                 const employees = response.data.employees;
 
-                if(user && user.role==="user"){
+                if (user && user.role === "user") {
                     const filteredEmployees = employees.filter(emp => emp.email === user.userEmail);
                     setEmployees(filteredEmployees);
                     setFilteredEmployees(filteredEmployees);
                     setSelectedEmployeeId(filteredEmployees[0].empId);
                 }
-                else{
+                else {
                     const filteredEmployees = employees;
                     setEmployees(filteredEmployees);
                     setFilteredEmployees(filteredEmployees);
@@ -63,65 +65,73 @@ const LeaveTracker = () => {
                 console.log(selectedEmployeeId);
             }
 
-            
+
         }
 
         fetchEmployees();
-    },[])
+    }, [])
+
+    const [key1, setKey1] = useState();
+    useEffect(() => {
+        // setLeaveDate(isLeaveDate(date));
+        // setLeaveTypeForDate(getLeaveTypeForDate(date));
+        setKey1(key1 + 1);
+
+    }, [selectedEmployee]);
 
     const handleLeaveMonths = () => {
-        const selectedEmployee = filteredEmployees.find((emp) => emp.empId === selectedEmployeeId);
-        const availableLeaveMonths = Array.from(
-            new Set(
-                selectedEmployee?.leaveHistory.map((leave) => {
-                    const startDate = new Date(leave.startDate);
-                    return `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
-                }) || []
-            )
-        );
+        setSelectedEmployee(filteredEmployees.find((emp) => emp.empId === selectedEmployeeId));
 
-        const getLeaveDatesForMonth = (month) => {
-            if (!selectedEmployee || !month) return [];
-    
-            const [year, monthNum] = month.split('-');
-            const leaveDates = selectedEmployee.leaveHistory.flatMap((leave) => {
-                const start = new Date(leave.startDate);
-                const end = new Date(leave.endDate);
-                const dates = [];
-    
-                for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                    if (d.getFullYear() === parseInt(year) && d.getMonth() + 1 === parseInt(monthNum)) {
-                        dates.push({
-                            date: new Date(d),
-                            type: leave.type,
-                        });
-                    }
-                }
-                return dates;
-            });
-    
-            return leaveDates;
-        };
-    
-        const isLeaveDate = (date) => {
-            const leaveDates = getLeaveDatesForMonth(selectedMonth);
-            return leaveDates.some((leaveDate) =>
-                leaveDate.date.toDateString() === date.toDateString()
-            );
-        };
-    
-        const getLeaveTypeForDate = (date) => {
-            const leaveDates = getLeaveDatesForMonth(selectedMonth);
-            const leave = leaveDates.find((leaveDate) =>
-                leaveDate.date.toDateString() === date.toDateString()
-            );
-            return leave ? leave.type : null;
-        };
     }
+    const availableLeaveMonths = Array.from(
+        new Set(
+            selectedEmployee?.leaveHistory.map((leave) => {
+                const startDate = new Date(leave.startDate);
+                return `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+            }) || []
+        )
+    );
+
+    const getLeaveDatesForMonth = (month) => {
+        if (!selectedEmployee || !month) return [];
+
+        const [year, monthNum] = month.split('-');
+        const leaveDates = selectedEmployee.leaveHistory.flatMap((leave) => {
+            const start = new Date(leave.startDate);
+            const end = new Date(leave.endDate);
+            const dates = [];
+
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                if (d.getFullYear() === parseInt(year) && d.getMonth() + 1 === parseInt(monthNum)) {
+                    dates.push({
+                        date: new Date(d),
+                        type: leave.type,
+                    });
+                }
+            }
+            return dates;
+        });
+
+        return leaveDates;
+    };
+
+    const isLeaveDate = (date) => {
+        const leaveDates = getLeaveDatesForMonth(selectedMonth);
+        return leaveDates.some((leaveDate) =>
+            leaveDate.date.toDateString() === date.toDateString()
+        );
+    };
+
+    const getLeaveTypeForDate = (date) => {
+        const leaveDates = getLeaveDatesForMonth(selectedMonth);
+        const leave = leaveDates.find((leaveDate) =>
+            leaveDate.date.toDateString() === date.toDateString()
+        );
+        return leave ? leave.type : null;
+    };
 
     const handleAddLeave = async () => {
-        if(newLeave.type!=="")
-        {
+        if (newLeave.type !== "") {
             const updatedEmployees = filteredEmployees.map((emp) => {
                 if (emp.empId === selectedEmployeeId) {
                     return {
@@ -131,35 +141,35 @@ const LeaveTracker = () => {
                 }
                 return emp;
             });
-    
+
             console.log(updatedEmployees);
             console.log(selectedEmployeeId);
-    
-            const response = await axios.post(`${API_BASE_URL}/api/employee/addLeave/${selectedEmployeeId}`,newLeave,{
+
+            const response = await axios.post(`${API_BASE_URL}/api/employee/addLeave/${selectedEmployeeId}`, newLeave, {
                 headers: {
                     'content-type': 'application/json'
                 }
             });
-    
-            if(response.status===201){
+
+            if (response.status === 201) {
                 alert("Leave added");
             }
-    
+
             setFilteredEmployees(updatedEmployees);
             setShowAddLeaveModal(false);
             setNewLeave({ type: '', startDate: '', endDate: '' });
 
         }
-        else{
+        else {
             alert("Please select leave type");
         }
     };
 
     const filterActiveLeaveEmployees = () => {
-        if(!activeFilter){
+        if (!activeFilter) {
             setFilteredEmployees(employees.filter(emp => emp.leaveHistory.length !== 0));
         }
-        else{
+        else {
             setFilteredEmployees(employees);
         }
         setActiveFilter(!activeFilter);
@@ -177,19 +187,19 @@ const LeaveTracker = () => {
                 {/* Employee Selector */}
                 <div className="mb-6">
                     {
-                    user && user.role!=="user"
-                    ?
-                        <div className='flex justify-start space-x-1 mb-3'>
-                        <input type='checkbox' id='activeLeave' className='hover:cursor-pointer' onChange={filterActiveLeaveEmployees}></input>
-                        <label htmlFor='activeLeave' className='text-sm hover:cursor-pointer'>Only applied leaves</label>
-                    </div>
-                    :
-                    null}
+                        user && user.role !== "user"
+                            ?
+                            <div className='flex justify-start space-x-1 mb-3'>
+                                <input type='checkbox' id='activeLeave' className='hover:cursor-pointer' onChange={filterActiveLeaveEmployees}></input>
+                                <label htmlFor='activeLeave' className='text-sm hover:cursor-pointer'>Only applied leaves</label>
+                            </div>
+                            :
+                            null}
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                         Select Employee
                     </label>
                     <select
-                        
+
                         onChange={(e) => {
                             handleLeaveMonths();
                             setSelectedEmployeeId(e.target.value);
@@ -249,6 +259,8 @@ const LeaveTracker = () => {
 
                         {/* Calendar */}
                         <div className="bg-white rounded-lg shadow-md p-6">
+
+
                             <Calendar
                                 value={new Date(selectedMonth)}
                                 tileClassName={({ date }) =>
@@ -258,7 +270,7 @@ const LeaveTracker = () => {
                                 }
                                 tileContent={({ date }) => {
                                     const leaveType = getLeaveTypeForDate(date);
-                                    
+
                                     return leaveType ? (
                                         <div className="text-[10px] text-center mt-1">
                                             <span className={`px-1 rounded ${LeaveTypeColors[leaveType]} text-[8px]`}>
@@ -268,6 +280,8 @@ const LeaveTracker = () => {
                                     ) : null;
                                 }}
                             />
+
+
                         </div>
 
                         {/* Leave Details */}
