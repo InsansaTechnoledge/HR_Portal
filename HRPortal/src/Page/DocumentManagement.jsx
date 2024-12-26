@@ -32,7 +32,7 @@ const DocumentManagement = () => {
     const [formData, setFormData] = useState({
         name: '',
         type: '',
-        uploadedBy: '',
+        uploadedBy: user.userName,
         employee: '',
         document: null
     });
@@ -68,7 +68,7 @@ const DocumentManagement = () => {
             
 
             if (user && user.role === "user") {
-                const filteredData = data.filter(doc => doc.employee.toLowerCase() === user.userName.toLowerCase());
+                const filteredData = data.filter(doc => doc.employee.toLowerCase().trim() === user.userName.toLowerCase().trim());
                 setDocuments(filteredData);
             } else {
                 setDocuments(data);
@@ -298,8 +298,8 @@ const DocumentManagement = () => {
                                 <input
                                     type="text"
                                     name="uploadedBy"
-                                    value={formData.uploadedBy}
-                                    onChange={handleInputChange}
+                                    value={user.userName}
+                                    disabled
                                     placeholder="Your Name"
                                     className="w-full p-2 border rounded-lg"
                                 />

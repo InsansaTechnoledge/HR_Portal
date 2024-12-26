@@ -149,7 +149,7 @@ const LeaveTracker = () => {
     };
 
     const handleAddLeave = async () => {
-        if (newLeave.type !== "") {
+        if (newLeave.type !== "" && newLeave.startDate!=="" && newLeave.endDate!=="") {
             try {
                 const response = await axios.post(
                     `${API_BASE_URL}/api/employee/addLeave/${selectedEmployeeId}`,
@@ -166,8 +166,10 @@ const LeaveTracker = () => {
 
                     const updatedEmployeeResponse = await axios.get(`${API_BASE_URL}/api/employee/${selectedEmployeeId}`);
                     if (updatedEmployeeResponse.status === 201) {
-                        const updatedEmployee = updatedEmployeeResponse.data.employee;
+                        const updatedEmployee = updatedEmployeeResponse.data.employee[0];
+
                         setSelectedEmployee(updatedEmployee);
+                        setSelectedEmployeeId(updatedEmployee.empId);
 
                         setEmployees(prev =>
                             prev.map(emp => emp.empId === selectedEmployeeId ? updatedEmployee : emp)
@@ -185,7 +187,7 @@ const LeaveTracker = () => {
             setShowAddLeaveModal(false);
             setNewLeave({ type: '', startDate: '', endDate: '' });
         } else {
-            alert("Please select leave type");
+            alert("Please fill all details");
         }
     };
 
