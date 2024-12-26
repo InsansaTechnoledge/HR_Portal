@@ -63,6 +63,17 @@ const DocumentManagement = () => {
         fetchDocuments();
     }, []);
 
+    useEffect(() => {
+        if (user) {
+            setFormData((prev) => ({
+                ...prev,
+                uploadedBy: user.userName
+            }));
+        }
+    }, [user]);
+
+
+
 
     // Fetch all documents
     const fetchDocuments = async () => {
@@ -113,7 +124,8 @@ const DocumentManagement = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!formData.document || !formData.uploadedBy || !formData.employee || !formData.type) {
+        // Check if all fields are filled
+        if (!formData.document || !formData.employee || !formData.type) {
             setError("Please fill in all required fields");
             return;
         }
@@ -144,6 +156,7 @@ const DocumentManagement = () => {
             setLoading(false);
         }
     };
+
 
     // Handle document deletion
     const handleDeleteDocument = async (id) => {
@@ -300,16 +313,16 @@ const DocumentManagement = () => {
                             </div>
                             <div>
                                 <label className="block text-gray-700 mb-2">Uploaded By</label>
-                                
                                 <input
                                     type="text"
                                     name="uploadedBy"
                                     value={user.userName}
                                     disabled
                                     placeholder="Your Name"
-                                    className="w-full p-2 border rounded-lg"
+                                    className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
                                 />
                             </div>
+
                             <div>
                                 <label className="block text-gray-700 mb-2">Employee Name</label>
                                 <select name="employee" onChange={handleInputChange} value={formData.employee} className="w-full p-2 border rounded-lg">

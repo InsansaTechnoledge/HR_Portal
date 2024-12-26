@@ -25,6 +25,9 @@ import API_BASE_URL from './config';
 import AddEmployeePage from './Page/AddEmployee';
 import SuperAdminRoute from './Route/SuperAdminRoute';
 import AdminRoute from './Route/AdminRoute';
+import PayslipGenerator from './Page/PaySlip';
+import EmployeeManagementForm from './Page/PayslipInformation';
+import EmployeeList from './Page/InformationDisplay';
 
 function AppLayout() {
     // const location = useLocation();
@@ -55,7 +58,13 @@ function AppLayout() {
     }, []);
 
     if (loading) {
-        return <div>Loading...</div>; // You can replace this with a proper loading spinner or component
+        return (
+            
+            <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+                <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+            
+        ); // You can replace this with a proper loading spinner or component
     }
 
     return (
@@ -134,6 +143,34 @@ function AppLayout() {
                         }
                     />
 
+                    <Route
+                        path="/payslip"
+                        element={
+                            <AdminRoute>
+                                <PayslipGenerator />
+                            </AdminRoute>
+                        }
+                    />
+
+
+                    <Route
+                        path="/emp-management"
+                        element={
+                            <AdminRoute>
+                                <EmployeeManagementForm />
+                            </AdminRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/emp-list"
+                        element={
+                            <AdminRoute>
+                                <EmployeeList />
+                            </AdminRoute>
+                        }
+                    />
+
 
                     {/* Super Admin route */}
 
@@ -141,6 +178,8 @@ function AppLayout() {
                         path='*'
                         element={<Navigate to='/' replace />} 
                     />
+
+                    
                 </Routes>
             </div>
         </div>

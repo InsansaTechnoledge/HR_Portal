@@ -19,16 +19,11 @@ const FeatureGrid = () => {
     const { user } = useContext(userContext);
     const Name = user?.userName; // fetching the name of user
 
-    // useEffect(() => {
-    //     // Simulate a delay to show the loading indicator (e.g., fetch data)
-    //     setTimeout(() => {
-    //         setLoading(false); // Set loading to false after 2 seconds (simulated loading)
-    //     }, 2000);
-    // }, []);
 
     return (
         <div className="max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-           
+            {/* Loading Indicator */}
+            
 
             <div className="w-full bg-gradient-to-r from-green-400 via-green-500 to-green-600 py-16 text-white">
                 <div className="max-w-4xl mx-auto text-center">
