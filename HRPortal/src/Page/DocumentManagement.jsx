@@ -139,6 +139,7 @@ const DocumentManagement = () => {
             setShowUploadForm(false);
             fetchDocuments();
             setLoading(false);
+            setFileName("");
         } catch (err) {
             setError("Failed to upload document");
             setLoading(false);
