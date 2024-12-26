@@ -16,18 +16,6 @@ const DocumentManagement = () => {
     const [fileName, setFileName] = useState("No file choosen")
     const {user} = useContext(userContext);
     const [employees,setEmployees] = useState([]);
-
-    useEffect(() => {
-        const fetchEmployees = async () => {
-            const response = await axios.get(`${API_BASE_URL}/api/employee`);
-            if(response.status===201){
-                setEmployees(response.data.employees);
-            }
-        }
-
-        user && user.role!=="user" ? fetchEmployees() : null;
-    },[]);
-
     // Upload form state
     const [formData, setFormData] = useState({
         name: '',
@@ -36,6 +24,23 @@ const DocumentManagement = () => {
         employee: '',
         document: null
     });
+
+    useEffect(() => {
+        const fetchEmployees = async () => {
+            const response = await axios.get(`${API_BASE_URL}/api/employee`);
+            if(response.status===201){
+                setEmployees(response.data.employees);
+                setFormData(prev =>({
+                    ...prev,
+                    employee: response.data.employees[0].name
+                })
+            ); 
+            }
+        }
+
+        user && user.role!=="user" ? fetchEmployees() : null;
+    },[]);
+
 
     const handleDrop = (event) => {
         event.preventDefault();
@@ -110,6 +115,7 @@ const DocumentManagement = () => {
 
         if (!formData.document || !formData.uploadedBy || !formData.employee || !formData.type) {
             setError("Please fill in all required fields");
+            console.log(formData);
             return;
         }
 
@@ -129,7 +135,7 @@ const DocumentManagement = () => {
                 }
             });
 
-            setFormData({ name: '', type: '', uploadedBy: '', employee: '', document: null });
+            setFormData({ name: '', type: '', uploadedBy: user.userName, employee: employees[0], document: null });
             setShowUploadForm(false);
             fetchDocuments();
             setLoading(false);
