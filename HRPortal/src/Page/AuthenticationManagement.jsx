@@ -261,12 +261,21 @@ const AuthenticationManagement = () => {
                                                     }
 
                                                     {user && user.role === 'superAdmin' && (
+                                                        <>
+                                                        <button
+                                                        onClick={() => handleEditUser(u)}
+                                                        className="bg-gray-200 text-gray-700 p-2 rounded-md hover:bg-gray-300 transition"
+                                                    >
+
+                                                        <Edit3 />
+                                                      </button>
                                                         <button
                                                             onClick={() => setDeleteConfirmation(u.userId)}
                                                             className="bg-red-100 text-red-600 p-2 rounded-md hover:bg-red-200 transition"
                                                         >
                                                             <Trash2 />
                                                         </button>
+                                                        </>
                                                     )}
                                                 </div>
                                             </motion.div>
