@@ -150,6 +150,9 @@ const LeaveTracker = () => {
 
     const handleAddLeave = async () => {
         if (newLeave.type !== "" && newLeave.startDate!=="" && newLeave.endDate!=="") {
+            if(new Date(newLeave.startDate) <= new Date(newLeave.endDate)){
+
+            
             try {
                 const response = await axios.post(
                     `${API_BASE_URL}/api/employee/addLeave/${selectedEmployeeId}`,
@@ -184,8 +187,13 @@ const LeaveTracker = () => {
                 alert("Error adding leave. Please try again.");
             }
 
+
             setShowAddLeaveModal(false);
             setNewLeave({ type: '', startDate: '', endDate: '' });
+            }
+            else{
+                alert("end date can't be before start date");
+            }
         } else {
             alert("Please fill all details");
         }
