@@ -69,20 +69,20 @@ const AuthenticationManagement = () => {
 
         try {
             if (userForm.userId) {
-                    if(user.role==='superAdmin'){
+                if (user.role === 'superAdmin') {
                     const payload = {
                         userEmail: userForm.currentEmail || userForm.userEmail,
                         currentPassword: prompt('Enter current password to confirm changes:'),
                         newEmail: userForm.userEmail,
                         newPassword: userForm.password,
                     };
-                    
-                    
+
+
                     const response = await axios.put(
                         `${API_BASE_URL}/api/user/edit-login-info`,
                         payload
                     );
-    
+
                     if (response.status === 200) {
                         alert(response.data.message);
                         setUsers((prev) =>
@@ -94,31 +94,31 @@ const AuthenticationManagement = () => {
                         );
                     }
                 }
-                else{
-                    if(!userForm.password){
+                else {
+                    if (!userForm.password) {
                         alert("Password is required!");
                     }
-                    else{
-                        const response = await axios.put(`${API_BASE_URL}/api/user/changePassword/${userForm.userId}`,{
-                            newPassword:userForm.password
+                    else {
+                        const response = await axios.put(`${API_BASE_URL}/api/user/changePassword/${userForm.userId}`, {
+                            newPassword: userForm.password
                         }
                         );
-    
-                        if(response.status===200){
+
+                        if (response.status === 200) {
                             alert(response.data.message);
-    
+
                         }
-    
+
                     }
                 }
             } else {
-                    const response = await axios.post(`${API_BASE_URL}/api/user/createUser`, userForm);
-                    alert(response.data.message);
-                    setUsers((prev) => [...prev, response.data.new_user]);
-                }
-            
-            
-            
+                const response = await axios.post(`${API_BASE_URL}/api/user/createUser`, userForm);
+                alert(response.data.message);
+                setUsers((prev) => [...prev, response.data.new_user]);
+            }
+
+
+
 
             resetForm();
             setModalOpen(false);
@@ -247,12 +247,19 @@ const AuthenticationManagement = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex space-x-2">
-                                                    <button
-                                                        onClick={() => handleEditUser(u)}
-                                                        className="bg-gray-200 text-gray-700 p-2 rounded-md hover:bg-gray-300 transition"
-                                                    >
-                                                        <Edit3 />
-                                                    </button>
+                                                    {
+                                                        user.role === 'admin' && u.role !== 'superAdmin'
+                                                            ?
+                                                            <button
+                                                                onClick={() => handleEditUser(u)}
+                                                                className="bg-gray-200 text-gray-700 p-2 rounded-md hover:bg-gray-300 transition"
+                                                            >
+
+                                                                <Edit3 />
+                                                            </button>
+                                                            : null
+                                                    }
+
                                                     {user && user.role === 'superAdmin' && (
                                                         <button
                                                             onClick={() => setDeleteConfirmation(u.userId)}
@@ -350,99 +357,99 @@ const AuthenticationManagement = () => {
                                 className="bg-white p-8 rounded-xl shadow-2xl w-96"
                             >
                                 <h2 className="text-xl font-bold mb-6 text-center">
-                                    {userForm.userId ? (user.role==='admin' ? 'Set New Password' : 'Edit User') : 'Add New User'}
+                                    {userForm.userId ? (user.role === 'admin' ? 'Set New Password' : 'Edit User') : 'Add New User'}
                                 </h2>
                                 {
                                     userForm.userId && user && user.role === 'admin'
-                                    ?
-                                    <div className="space-y-4">
-                                        <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                                        <input
-                                            disabled
-                                            name="userName"
-                                            value={userForm.userName}
-                                            onChange={handleInputChange}
-                                            placeholder="Enter username"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
-                                            <input
-                                                name="password"
-                                                type="password"
-                                                required
-                                                value={userForm.password}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter password"
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                                            />
+                                        ?
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                                                <input
+                                                    disabled
+                                                    name="userName"
+                                                    value={userForm.userName}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter username"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                                                <input
+                                                    name="password"
+                                                    type="password"
+                                                    required
+                                                    value={userForm.password}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter password"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
-                                    :
+                                        :
 
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                                        <input
-                                            name="userName"
-                                            value={userForm.userName}
-                                            onChange={handleInputChange}
-                                            placeholder="Enter username"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                                        <p className="block text-xs font-medium text-red-500 mb-2">*User email should be same as employee email</p>
-                                        <input
-                                            name="userEmail"
-                                            type="email"
-                                            value={userForm.userEmail}
-                                            onChange={handleInputChange}
-                                            placeholder="Enter email"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                                        <input
-                                            name="password"
-                                            type="password"
-                                            value={userForm.password}
-                                            onChange={handleInputChange}
-                                            placeholder="Enter password"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-                                        <select
-                                            name="role"
-                                            value={userForm.role}
-                                            onChange={handleInputChange}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                                        >
-                                            <option value="user">User</option>
-                                            <option value="admin">Admin</option>
-                                            {
-                                                user && user.role == 'superAdmin'
-                                                    ?
-                                                    <option value="superAdmin">Super Admin</option>
-                                                    :
-                                                    null
-                                            }
-                                        </select>
-                                    </div>
-                                </div>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                                                <input
+                                                    name="userName"
+                                                    value={userForm.userName}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter username"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                                                <p className="block text-xs font-medium text-red-500 mb-2">*User email should be same as employee email</p>
+                                                <input
+                                                    name="userEmail"
+                                                    type="email"
+                                                    value={userForm.userEmail}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter email"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                                                <input
+                                                    name="password"
+                                                    type="password"
+                                                    value={userForm.password}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter password"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                                                <select
+                                                    name="role"
+                                                    value={userForm.role}
+                                                    onChange={handleInputChange}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="user">User</option>
+                                                    <option value="admin">Admin</option>
+                                                    {
+                                                        user && user.role == 'superAdmin'
+                                                            ?
+                                                            <option value="superAdmin">Super Admin</option>
+                                                            :
+                                                            null
+                                                    }
+                                                </select>
+                                            </div>
+                                        </div>
                                 }
                                 <div className="flex space-x-4 mt-6">
                                     <button
                                         onClick={handleSubmit}
                                         className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
                                     >
-                                        {userForm.userId ? (user.role==='admin' ? 'Change Password' : 'Update User') : 'Add User'}
+                                        {userForm.userId ? (user.role === 'admin' ? 'Change Password' : 'Update User') : 'Add User'}
                                     </button>
                                     <button
                                         onClick={() => {
