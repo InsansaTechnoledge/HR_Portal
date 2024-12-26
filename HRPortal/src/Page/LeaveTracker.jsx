@@ -37,8 +37,8 @@ const LeaveTracker = () => {
         startDate: '',
         endDate: '',
     });
-    const { user, setUser } = useContext(userContext);
-    const [oneDayLeave,setOneDayLeave] = useState(false);
+    const { user } = useContext(userContext);
+    const [oneDayLeave, setOneDayLeave] = useState(false);
 
     const fetchEmployeeData = async () => {
         try {
@@ -65,12 +65,10 @@ const LeaveTracker = () => {
         }
     };
 
-    // Initial data fetch
     useEffect(() => {
         fetchEmployeeData();
     }, [user]);
 
-    // Update selected employee when ID changes
     useEffect(() => {
         const updateSelectedEmployee = async () => {
             try {
@@ -78,8 +76,7 @@ const LeaveTracker = () => {
                 if (response.status === 201) {
                     const updatedEmployee = response.data.employee[0];
                     setSelectedEmployee(updatedEmployee);
-                    console.log(updatedEmployee);
-                    // Update the employee in the lists
+
                     setEmployees(prev =>
                         prev.map(emp => emp.empId === selectedEmployeeId ? updatedEmployee : emp)
                     );
@@ -94,17 +91,19 @@ const LeaveTracker = () => {
 
         if (selectedEmployeeId) {
             updateSelectedEmployee();
-            setSelectedMonth(null); // Reset selected month
+            setSelectedMonth(null);
         }
     }, [selectedEmployeeId]);
 
     const handleLeaveMonths = () => {
+        if (!selectedEmployee || !selectedEmployee.leaveHistory) return [];
+
         const availableLeaveMonths = Array.from(
             new Set(
-                selectedEmployee && selectedEmployee?.leaveHistory.map((leave) => {
+                selectedEmployee.leaveHistory.map((leave) => {
                     const startDate = new Date(leave.startDate);
                     return `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
-                }) || []
+                })
             )
         );
 
@@ -112,7 +111,7 @@ const LeaveTracker = () => {
     };
 
     const getLeaveDatesForMonth = (month) => {
-        if (!selectedEmployee || !month) return [];
+        if (!selectedEmployee || !month || !selectedEmployee.leaveHistory) return [];
 
         const [year, monthNum] = month.split('-');
         const leaveDates = selectedEmployee.leaveHistory.flatMap((leave) => {
@@ -164,13 +163,12 @@ const LeaveTracker = () => {
 
                 if (response.status === 201) {
                     alert("Leave added successfully!");
-                    // Fetch updated employee data
+
                     const updatedEmployeeResponse = await axios.get(`${API_BASE_URL}/api/employee/${selectedEmployeeId}`);
                     if (updatedEmployeeResponse.status === 201) {
                         const updatedEmployee = updatedEmployeeResponse.data.employee;
                         setSelectedEmployee(updatedEmployee);
 
-                        // Update the employee in both lists
                         setEmployees(prev =>
                             prev.map(emp => emp.empId === selectedEmployeeId ? updatedEmployee : emp)
                         );
@@ -193,7 +191,7 @@ const LeaveTracker = () => {
 
     const filterActiveLeaveEmployees = () => {
         if (!activeFilter) {
-            setFilteredEmployees(employees.filter(emp => emp.leaveHistory.length !== 0));
+            setFilteredEmployees(employees.filter(emp => emp.leaveHistory && emp.leaveHistory.length !== 0));
         } else {
             setFilteredEmployees(employees);
         }
@@ -202,7 +200,7 @@ const LeaveTracker = () => {
 
     const filterOneDayLeave = () => {
         setOneDayLeave(!oneDayLeave);
-    }
+    };
 
     const availableLeaveMonths = handleLeaveMonths();
     return (
@@ -283,7 +281,6 @@ const LeaveTracker = () => {
                         {/* Calendar */}
                         <div className="bg-white rounded-lg shadow-md p-6">
 
-
                             <Calendar
                                 value={new Date(selectedMonth)}
                                 tileClassName={({ date }) =>
@@ -304,13 +301,12 @@ const LeaveTracker = () => {
                                 }}
                             />
 
-
                         </div>
 
                         {/* Leave Details */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                            {selectedEmployee.leaveHistory
-                                .filter(leave => {
+                            {selectedEmployee?.leaveHistory
+                                ?.filter(leave => {
                                     const start = new Date(leave.startDate);
                                     const [year, month] = selectedMonth.split('-');
                                     return start.getFullYear() === parseInt(year) &&
@@ -380,34 +376,34 @@ const LeaveTracker = () => {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     {
                                         oneDayLeave
-                                        ?
-                                        "Leave Date"
-                                        :
-                                        "Start Date"
+                                            ?
+                                            "Leave Date"
+                                            :
+                                            "Start Date"
                                     }
                                 </label>
                                 <input
                                     type="date"
                                     value={newLeave.startDate}
-                                    onChange={(e) => setNewLeave(oneDayLeave ? {...newLeave, startDate: e.target.value, endDate: e.target.value} : { ...newLeave, startDate: e.target.value })}
+                                    onChange={(e) => setNewLeave(oneDayLeave ? { ...newLeave, startDate: e.target.value, endDate: e.target.value } : { ...newLeave, startDate: e.target.value })}
                                     className="w-full rounded-md border-gray-300"
                                 />
                             </div>
                             {
-                                !oneDayLeave ? 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        End Date
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={newLeave.endDate}
-                                        onChange={(e) => setNewLeave({ ...newLeave, endDate: e.target.value })}
-                                        className="w-full rounded-md border-gray-300"
-                                    />
-                                </div>
-                                :
-                                null
+                                !oneDayLeave ?
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            End Date
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={newLeave.endDate}
+                                            onChange={(e) => setNewLeave({ ...newLeave, endDate: e.target.value })}
+                                            className="w-full rounded-md border-gray-300"
+                                        />
+                                    </div>
+                                    :
+                                    null
                             }
                             <div className="flex justify-end space-x-2">
                                 <button
