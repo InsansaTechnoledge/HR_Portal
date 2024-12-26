@@ -89,20 +89,20 @@ const AuthenticationManagement = () => {
 
         try {
             if (userForm.userId) {
-                    if(user.role==='superAdmin'){
+                if (user.role === 'superAdmin') {
                     const payload = {
                         userEmail: userForm.currentEmail || userForm.userEmail,
                         currentPassword: prompt('Enter current password to confirm changes:'),
                         newEmail: userForm.userEmail,
                         newPassword: userForm.password,
                     };
-                    
-                    
+
+
                     const response = await axios.put(
                         `${API_BASE_URL}/api/user/edit-login-info`,
                         payload
                     );
-    
+
                     if (response.status === 200) {
                         alert(response.data.message);
                         setUsers((prev) =>
@@ -114,31 +114,31 @@ const AuthenticationManagement = () => {
                         );
                     }
                 }
-                else{
-                    if(!userForm.password){
+                else {
+                    if (!userForm.password) {
                         alert("Password is required!");
                     }
-                    else{
-                        const response = await axios.put(`${API_BASE_URL}/api/user/changePassword/${userForm.userId}`,{
-                            newPassword:userForm.password
+                    else {
+                        const response = await axios.put(`${API_BASE_URL}/api/user/changePassword/${userForm.userId}`, {
+                            newPassword: userForm.password
                         }
                         );
-    
-                        if(response.status===200){
+
+                        if (response.status === 200) {
                             alert(response.data.message);
-    
+
                         }
-    
+
                     }
                 }
             } else {
-                    const response = await axios.post(`${API_BASE_URL}/api/user/createUser`, userForm);
-                    alert(response.data.message);
-                    setUsers((prev) => [...prev, response.data.new_user]);
-                }
-            
-            
-            
+                const response = await axios.post(`${API_BASE_URL}/api/user/createUser`, userForm);
+                alert(response.data.message);
+                setUsers((prev) => [...prev, response.data.new_user]);
+            }
+
+
+
 
             resetForm();
             setModalOpen(false);
@@ -279,12 +279,19 @@ const AuthenticationManagement = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex space-x-2">
-                                                    <button
-                                                        onClick={() => handleEditUser(u)}
-                                                        className="bg-gray-200 text-gray-700 p-2 rounded-md hover:bg-gray-300 transition"
-                                                    >
-                                                        <Edit3 />
-                                                    </button>
+                                                    {
+                                                        user.role === 'admin' && u.role !== 'superAdmin'
+                                                            ?
+                                                            <button
+                                                                onClick={() => handleEditUser(u)}
+                                                                className="bg-gray-200 text-gray-700 p-2 rounded-md hover:bg-gray-300 transition"
+                                                            >
+
+                                                                <Edit3 />
+                                                            </button>
+                                                            : null
+                                                    }
+
                                                     {user && user.role === 'superAdmin' && (
                                                         <button
                                                             onClick={() => setDeleteConfirmation(u.userId)}
@@ -389,35 +396,33 @@ const AuthenticationManagement = () => {
                                 }
                                 {
                                     userForm.userId && user && user.role === 'admin'
-                                    ?
-                                    <div className="space-y-4">
-                                        <div>
-                                        
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                                        
-                                        <input
-                                            disabled
-                                            name="userName"
-                                            value={userForm.userName}
-                                            onChange={handleInputChange}
-                                            placeholder="Enter username"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
-                                            <input
-                                                name="password"
-                                                type="password"
-                                                required
-                                                value={userForm.password}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter password"
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                                            />
+                                        ?
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                                                <input
+                                                    disabled
+                                                    name="userName"
+                                                    value={userForm.userName}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter username"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                                                <input
+                                                    name="password"
+                                                    type="password"
+                                                    required
+                                                    value={userForm.password}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter password"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
-                                    :
+                                        :
 
                                 <div className="space-y-4">
                                     <div>
@@ -492,7 +497,7 @@ const AuthenticationManagement = () => {
                                         onClick={handleSubmit}
                                         className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
                                     >
-                                        {userForm.userId ? (user.role==='admin' ? 'Change Password' : 'Update User') : 'Add User'}
+                                        {userForm.userId ? (user.role === 'admin' ? 'Change Password' : 'Update User') : 'Add User'}
                                     </button>
                                     <button
                                         onClick={() => {
