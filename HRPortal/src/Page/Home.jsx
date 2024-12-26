@@ -24,7 +24,7 @@ const FeatureGrid = () => {
         // Simulate a delay to show the loading indicator (e.g., fetch data)
         setTimeout(() => {
             setLoading(false); // Set loading to false after 2 seconds (simulated loading)
-        }, 2000);
+        }, " ");
     }, []);
 
     return (

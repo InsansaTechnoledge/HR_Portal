@@ -25,6 +25,9 @@ import API_BASE_URL from './config';
 import AddEmployeePage from './Page/AddEmployee';
 import SuperAdminRoute from './Route/SuperAdminRoute';
 import AdminRoute from './Route/AdminRoute';
+import PayslipGenerator from './Page/PaySlip';
+import EmployeeManagementForm from './Page/PayslipInformation';
+import EmployeeList from './Page/InformationDisplay';
 
 function AppLayout() {
     // const location = useLocation();
@@ -134,6 +137,34 @@ function AppLayout() {
                         }
                     />
 
+                    <Route
+                        path="/payslip"
+                        element={
+                            <AdminRoute>
+                                <PayslipGenerator />
+                            </AdminRoute>
+                        }
+                    />
+
+
+                    <Route
+                        path="/emp-management"
+                        element={
+                            <AdminRoute>
+                                <EmployeeManagementForm />
+                            </AdminRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/emp-list"
+                        element={
+                            <AdminRoute>
+                                <EmployeeList />
+                            </AdminRoute>
+                        }
+                    />
+
 
                     {/* Super Admin route */}
 
@@ -141,6 +172,8 @@ function AppLayout() {
                         path='*'
                         element={<Navigate to='/' replace />} 
                     />
+
+                    
                 </Routes>
             </div>
         </div>
