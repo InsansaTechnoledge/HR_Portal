@@ -38,6 +38,7 @@ const LeaveTracker = () => {
         endDate: '',
     });
     const { user, setUser } = useContext(userContext);
+    const [oneDayLeave,setOneDayLeave] = useState(false);
 
     const fetchEmployeeData = async () => {
         try {
@@ -198,6 +199,10 @@ const LeaveTracker = () => {
         }
         setActiveFilter(!activeFilter);
     };
+
+    const filterOneDayLeave = () => {
+        setOneDayLeave(!oneDayLeave);
+    }
 
     const availableLeaveMonths = handleLeaveMonths();
     return (
@@ -366,27 +371,44 @@ const LeaveTracker = () => {
                                 </select>
                             </div>
                             <div>
+                                <div className='flex justify-start space-x-1 mb-3'>
+                                    <input type='checkbox' id='oneDayLeave' className='hover:cursor-pointer' onChange={filterOneDayLeave}></input>
+                                    <label htmlFor='oneDayLeave' className='text-sm hover:cursor-pointer'>One day leave</label>
+                                </div>
+                            </div>
+                            <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Start Date
+                                    {
+                                        oneDayLeave
+                                        ?
+                                        "Leave Date"
+                                        :
+                                        "Start Date"
+                                    }
                                 </label>
                                 <input
                                     type="date"
                                     value={newLeave.startDate}
-                                    onChange={(e) => setNewLeave({ ...newLeave, startDate: e.target.value })}
+                                    onChange={(e) => setNewLeave(oneDayLeave ? {...newLeave, startDate: e.target.value, endDate: e.target.value} : { ...newLeave, startDate: e.target.value })}
                                     className="w-full rounded-md border-gray-300"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    End Date
-                                </label>
-                                <input
-                                    type="date"
-                                    value={newLeave.endDate}
-                                    onChange={(e) => setNewLeave({ ...newLeave, endDate: e.target.value })}
-                                    className="w-full rounded-md border-gray-300"
-                                />
-                            </div>
+                            {
+                                !oneDayLeave ? 
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        End Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={newLeave.endDate}
+                                        onChange={(e) => setNewLeave({ ...newLeave, endDate: e.target.value })}
+                                        className="w-full rounded-md border-gray-300"
+                                    />
+                                </div>
+                                :
+                                null
+                            }
                             <div className="flex justify-end space-x-2">
                                 <button
                                     onClick={() => setShowAddLeaveModal(false)}
