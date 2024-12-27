@@ -32,7 +32,7 @@ const EmployeeDetailSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    currentAddres: {
+    currentAddress: {
         type: String,
         required: true
     },

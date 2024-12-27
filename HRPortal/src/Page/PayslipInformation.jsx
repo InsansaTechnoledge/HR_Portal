@@ -56,10 +56,33 @@ const EmployeeManagementForm = () => {
         setEmployees((prev) => [...prev, { ...newEmployee, id: Date.now() }]);
         
         console.log(newEmployee);
+
+        const empResponse = await axios.get(`${API_BASE_URL}/api/employee/fetchEmployeeByEmail/${user.userEmail}`);
+
+        if(empResponse.status===201){
+            const empEmail = empResponse.data.email;
+            console.log(empResponse.data.email);
         
-        const response = await axios.post(`${API_BASE_URL}/api/employee/uploadDetails`, newEmployee, {
+            const formData = new FormData();
+            formData.append("empEmail", empEmail);
+            formData.append("newEmployee", newEmployee);
+            if (newEmployee.documentsPanCard) {
+                formData.append("documentsPanCard", newEmployee.documentsPanCard);
+            }
+            if (newEmployee.documentsAadhar) {
+                formData.append("documentsAadhar", newEmployee.documentsAadhar);
+            }
+            if (newEmployee.documentsDegree) {
+                formData.append("documentsDegree", newEmployee.documentsDegree);
+            }
+            if (newEmployee.documentsExperience) {
+                formData.append("documentsExperience", newEmployee.documentsExperience);
+            }
+
+        const response = await axios.post(`${API_BASE_URL}/api/employee/uploadDetails`, 
+            formData, {
             headers: {
-                'content-type': 'application/json'
+                'content-type': 'multipart/form-data'
             }
         });
 
@@ -100,6 +123,7 @@ const EmployeeManagementForm = () => {
         //     documentsDegree: "",
         //     documentsExperience: "",
         // });
+    }
     };
 
     const removeEmployee = (id) => {

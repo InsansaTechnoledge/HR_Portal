@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { addEmployee, addLeave, fetchEmployee, fetchEmployeeById, uploadDetails } from '../controller/employeeController.js';
+import { addEmployee, addLeave, fetchEmployee, fetchEmployeeByEmail, fetchEmployeeById, uploadDetails } from '../controller/employeeController.js';
 
 const router = express.Router();
 
@@ -10,6 +10,7 @@ const upload = multer({ storage: storage, limits: {fileSize: 10*1024*1024} });
 
 router.post('/add', addEmployee);
 router.get('/', fetchEmployee);
+router.get('/fetchEmployeeByEmail/:email', fetchEmployeeByEmail);
 router.get('/:id',fetchEmployeeById)
 router.post('/addLeave/:id',addLeave);
 router.post('/uploadDetails', upload.fields([
