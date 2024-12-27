@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { addEmployee, addLeave, downloadDocument, fetchEmployee, fetchEmployeeByEmail, fetchEmployeeById, uploadDetails } from '../controller/employeeController.js';
+import { addEmployee, addLeave, fetchEmployee, fetchEmployeeByEmail, fetchEmployeeById, uploadDetails } from '../controller/employeeController.js';
 
 const router = express.Router();
 
@@ -19,6 +19,5 @@ router.post('/uploadDetails', upload.fields([
     { name: "documentsDegree", maxCount: 1 },
     { name: "documentsExperience", maxCount: 1 },
 ]) , uploadDetails) ;
-router.get('/downloadDoc/:doc/:id',downloadDocument);
 
 export default router;

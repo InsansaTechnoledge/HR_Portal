@@ -54,48 +54,66 @@ const EmployeeList = () => {
     const handleDownload = (employee,doc) => {
         'PAN Card', 'Aadhar Card', 'Degree Certificate', 'Experience Certificate'
         if(doc==='PAN Card'){
-            console.log(employee.details.documentsPanCard.data);
-            downloadDocument(employee.name, doc , employee.details.documentsPanCard.data);
+            downloadDocument(employee.name, doc , employee.details.documentsPanCard);
         }
         else if(doc==='Aadhar Card'){
-            alert("adhaar");
+            downloadDocument(employee.name, doc , employee.details.documentsAadhar);
             
         }
         else if(doc==='Degree Certificate'){
-            alert("deg");
+            downloadDocument(employee.name, doc , employee.details.documentsDegree);
 
         }
         else if(doc==='Experience Certificate'){
-            alert("exp");
+            downloadDocument(employee.name, doc , employee.details.documentsExperience);
+
 
         }
     }
 
-    function downloadDocument(name,doc,arrayBuffer) {
-        // Convert the ArrayBuffer to a Blob (you might know the MIME type, e.g., 'application/pdf')
-        const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
-      
-        // Create a link element to download the Blob
-        const link = document.createElement('a');
-        
-        // Create an Object URL for the Blob
-        const url = window.URL.createObjectURL(blob);
-        
-        // Set the download attribute with the desired filename
-        link.href = url;
-        link.download = `${name}-${doc}.pdf`; // Set the desired file name
-        
-        // Append the link to the DOM and trigger a click to start the download
-        document.body.appendChild(link);
-        link.click();
-        
-        // Cleanup by removing the link from the DOM
-        document.body.removeChild(link);
-      
-        // Optional: Release the Object URL after download to avoid memory leaks
-        window.URL.revokeObjectURL(url);
-      }
-
+    function downloadDocument(name, doc, buffer) {
+        // Check if we have a valid Buffer and convert it to ArrayBuffer
+        if (buffer && buffer.data instanceof Array) {
+            // Convert Buffer (Node.js) to ArrayBuffer
+            const arrayBuffer = new Uint8Array(buffer.data).buffer; // Create an ArrayBuffer from Buffer data
+    
+            // Convert the ArrayBuffer to a Blob (ensure MIME type is correct for the document)
+            const blob = new Blob([arrayBuffer], { type: 'application/pdf' }); // Adjust MIME type as needed (e.g., 'application/pdf')
+    
+            // Ensure Blob is created correctly
+            if (!blob.size) {
+                console.error('Failed to create Blob from ArrayBuffer.');
+                return;
+            }
+    
+            // Create a link element to download the Blob
+            const link = document.createElement('a');
+            const url = window.URL.createObjectURL(blob);
+    
+            // Ensure URL is created successfully
+            if (!url) {
+                console.error('Failed to create Object URL for the Blob.');
+                return;
+            }
+    
+            // Set the download attribute to define the file name
+            link.href = url;
+            link.download = `${name}-${doc}.pdf`; // You can adjust file extension based on the document type
+    
+            // Append the link to the DOM, trigger the download, and remove the link afterward
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+    
+            // Release the Object URL to free up memory
+            window.URL.revokeObjectURL(url);
+        } else {
+            console.error('Received data is not a valid Buffer or Array.');
+        }
+    }
+    
+    
+    
     return (
         <div className="max-w-7xl mx-auto p-6">
             <div className="bg-white shadow-lg rounded-lg overflow-hidden">
