@@ -60,11 +60,11 @@ function AppLayout() {
 
     if (loading) {
         return (
-            
+
             <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
                 <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
             </div>
-            
+
         ); // You can replace this with a proper loading spinner or component
     }
 
@@ -163,14 +163,7 @@ function AppLayout() {
                         }
                     />
 
-                    <Route
-                        path="/emp-list"
-                        element={
-                            <AdminRoute>
-                                <EmployeeList />
-                            </AdminRoute>
-                        }
-                    />
+
 
 
 
@@ -179,17 +172,26 @@ function AppLayout() {
                         path='/emp-info'
                         element={
                             <NoSuperAdminRoute>
-                                <EmployeeManagementForm/>
+                                <EmployeeManagementForm />
                             </NoSuperAdminRoute>
-                        }/>
+                        } />
 
-                    {/* Any other route */}
-                    <Route 
-                        path='*'
-                        element={<Navigate to='/' replace />} 
+                    <Route
+                        path="/emp-list"
+                        element={
+                            <SuperAdminRoute>
+                                <EmployeeList />
+                            </SuperAdminRoute>
+                        }
                     />
 
-                    
+                    {/* Any other route */}
+                    <Route
+                        path='*'
+                        element={<Navigate to='/' replace />}
+                    />
+
+
                 </Routes>
             </div>
         </div>

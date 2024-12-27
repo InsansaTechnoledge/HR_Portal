@@ -173,6 +173,14 @@ const Sidebar = () => {
                             :
                             null
                         }
+                        {
+                            user && user.role==="superAdmin"
+                            ?
+                            <SidebarItem icon={<IconId />} label="User Details" isOpen={isOpen} to="/emp-list" />
+                            :
+                            null
+
+                        }
                     </ul>
                 </nav>
 
