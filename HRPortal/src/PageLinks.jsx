@@ -173,6 +173,7 @@ function AppLayout() {
                     />
 
 
+
                     {/* No Super Admin route */}
                     <Route
                         path='/emp-info'

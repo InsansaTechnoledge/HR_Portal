@@ -118,3 +118,23 @@ export const fetchEmployeeByEmail = async (req,res) => {
         console.log(err);
     }
 }
+
+
+export const downloadDocument = async (req, res) => {
+    try {
+        const { doc,id } = req.params;
+    
+        const employee = await Employee.findById(id);
+    
+        if (!employee) {
+        return res.status(404).json({ message: "Document not found" });
+        }
+    
+        res.setHeader("Content-Type", "application/octet-stream");
+        res.setHeader("Content-Disposition", `attachment; filename="PAN"`);
+    
+        res.send(employee.details.documentsPanCard);
+    } catch (err) {
+        res.status(500).json({ message: "Server Error", error: err.message });
+    }
+};
