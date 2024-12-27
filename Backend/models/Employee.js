@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import mongooseSequence from 'mongoose-sequence'
 import LeaveSchema from './Leave.js';
+import EmployeeDetailSchema from './EmployeeDetail.js';
  
 const EmployeeSchema = new mongoose.Schema({
     empId: {
@@ -37,6 +38,9 @@ const EmployeeSchema = new mongoose.Schema({
             type: Number,
             default: 5
         }
+    },
+    details: {
+        type: EmployeeDetailSchema
     }
 }, {
     timestamps: true

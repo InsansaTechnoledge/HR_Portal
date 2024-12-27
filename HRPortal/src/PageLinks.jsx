@@ -28,6 +28,7 @@ import AdminRoute from './Route/AdminRoute';
 import PayslipGenerator from './Page/PaySlip';
 import EmployeeManagementForm from './Page/PayslipInformation';
 import EmployeeList from './Page/InformationDisplay';
+import NoSuperAdminRoute from './Route/NoSuperAdminRoute';
 
 function AppLayout() {
     // const location = useLocation();
@@ -172,8 +173,16 @@ function AppLayout() {
                     />
 
 
-                    {/* Super Admin route */}
+                    {/* No Super Admin route */}
+                    <Route
+                        path='/emp-info'
+                        element={
+                            <NoSuperAdminRoute>
+                                <EmployeeManagementForm/>
+                            </NoSuperAdminRoute>
+                        }/>
 
+                    {/* Any other route */}
                     <Route 
                         path='*'
                         element={<Navigate to='/' replace />} 

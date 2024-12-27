@@ -1,6 +1,7 @@
 import React, { useState, useContext } from "react";
 import { userContext } from "../Context/userContext";
-
+import axios from 'axios';
+import API_BASE_URL from "../config";
 
 const EmployeeManagementForm = () => {
     const { user } = useContext(userContext);
@@ -9,9 +10,10 @@ const EmployeeManagementForm = () => {
 
 
     const [employees, setEmployees] = useState([]);
+    const [file, setFile] = useState();
+    // const [file, setFile] = useState();
     const [newEmployee, setNewEmployee] = useState({
         name: "",
-        employeeId: "",
         email: "",
         phone: "",
         dateOfBirth: "",
@@ -46,47 +48,83 @@ const EmployeeManagementForm = () => {
 
     const handleInputChange = (field, value) => {
         setNewEmployee((prev) => ({ ...prev, [field]: value }));
+        console.log(field, value)
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setEmployees((prev) => [...prev, { ...newEmployee, id: Date.now() }]);
-        setNewEmployee({
-            name: "",
-            employeeId: "",
-            email: "",
-            phone: "",
-            dateOfBirth: "",
-            gender: "",
-            maritalStatus: "",
-            nationality: "",
-            currentAddress: "",
-            permanentAddress: "",
-            city: "",
-            state: "",
-            pincode: "",
-            dateOfJoining: "",
-            department: "",
-            designation: "",
-            reportingManager: "",
-            bankName: "",
-            accountNumber: "",
-            ifscCode: "",
-            panNumber: "",
-            aadharNumber: "",
-            uanNumber: "",
-            emergencyContactName: "",
-            emergencyContactRelation: "",
-            emergencyContactPhone: "",
-            documentsPanCard: "",
-            documentsAadhar: "",
-            documentsDegree: "",
-            documentsExperience: "",
+        
+        console.log(newEmployee);
+        
+        const response = await axios.post(`${API_BASE_URL}/api/employee/uploadDetails`, newEmployee, {
+            headers: {
+                'content-type': 'application/json'
+            }
         });
+
+        if(response.status===201){
+            console.log(response.details);
+        }
+
+
+
+        // setNewEmployee({
+        //     name: "",
+        //     email: "",
+        //     phone: "",
+        //     dateOfBirth: "",
+        //     gender: "",
+        //     maritalStatus: "",
+        //     nationality: "",
+        //     currentAddress: "",
+        //     permanentAddress: "",
+        //     city: "",
+        //     state: "",
+        //     pincode: "",
+        //     dateOfJoining: "",
+        //     department: "",
+        //     designation: "",
+        //     reportingManager: "",
+        //     bankName: "",
+        //     accountNumber: "",
+        //     ifscCode: "",
+        //     panNumber: "",
+        //     aadharNumber: "",
+        //     uanNumber: "",
+        //     emergencyContactName: "",
+        //     emergencyContactRelation: "",
+        //     emergencyContactPhone: "",
+        //     documentsPanCard: "",
+        //     documentsAadhar: "",
+        //     documentsDegree: "",
+        //     documentsExperience: "",
+        // });
     };
 
     const removeEmployee = (id) => {
         setEmployees((prev) => prev.filter((emp) => emp.id !== id));
+    };
+
+    const fileChangeHandler = (field, event) => {
+        const file = event.target.files[0];
+        if (file) {
+            setFile(file)
+            handleInputChange(field, file);
+        }
+    }
+
+    const handleDrop = (field, event) => {
+        event.preventDefault();
+        const file = event.dataTransfer.files[0];
+        if (file) {
+            setFile(file);
+            handleInputChange(field, file);
+        }
+    };
+
+    const handleDragOver = (field, event) => {
+        event.preventDefault();
     };
 
     return (
@@ -128,18 +166,7 @@ const EmployeeManagementForm = () => {
                                 required
                             />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Employee ID*
-                            </label>
-                            <input
-                                type="text"
-                                value={newEmployee.employeeId}
-                                onChange={(e) => handleInputChange("employeeId", e.target.value)}
-                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                required
-                            />
-                        </div>
+                        
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
                                 Email*
@@ -281,7 +308,7 @@ const EmployeeManagementForm = () => {
                                 Pincode*
                             </label>
                             <input
-                                type="text"
+                                type="number"
                                 value={newEmployee.pincode}
                                 onChange={(e) => handleInputChange("pincode", e.target.value)}
                                 className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -446,6 +473,34 @@ const EmployeeManagementForm = () => {
                             </label>
                             <input
                                 type="text"
+                                value={newEmployee.emergencyContactName}
+                                onChange={(e) =>
+                                    handleInputChange("emergencyContactName", e.target.value)
+                                }
+                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Emergency Contact Relation*
+                            </label>
+                            <input
+                                type="text"
+                                value={newEmployee.emergencyContactRelation}
+                                onChange={(e) =>
+                                    handleInputChange("emergencyContactRelation", e.target.value)
+                                }
+                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Emergency Contact Phone*
+                            </label>
+                            <input
+                                type="tel"
                                 value={newEmployee.emergencyContactPhone}
                                 onChange={(e) =>
                                     handleInputChange("emergencyContactPhone", e.target.value)
@@ -467,51 +522,109 @@ const EmployeeManagementForm = () => {
                             <label className="block text-sm font-medium text-gray-700">
                                 PAN Card*
                             </label>
-                            <input
-                                type="file"
-                                onChange={(e) =>
-                                    handleInputChange("documentsPanCard", e.target.files[0])
-                                }
-                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                required
-                            />
+                            <div className="flex items-center justify-center w-full">
+                                <label forName="documentsPanCard" className="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
+                                    onDrop={(e) => handleDrop("documentsPanCard", e)}
+                                    onDragOver={(e) => handleDragOver("documentsPanCard", e)}>
+                                    <div className="flex items-center justify-center">
+                                        <svg className="w-8 h-8 text-gray-500 " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                                            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2" />
+                                        </svg>
+                                        {newEmployee && newEmployee.documentsPanCard ?
+                                            (
+                                                <p className="ml-3 text-sm text-gray-500">
+                                                    Selected file: <span className="font-medium">{newEmployee.documentsPanCard.name}</span>
+                                                </p>
+                                            )
+                                            :
+                                            (<p className="ml-3 text-sm text-gray-500 "><span className="font-semibold">Click to upload</span> or drag and drop</p>)
+                                        }
+                                    </div>
+                                    <input id="documentsPanCard" type="file" className="hidden" onChange={(e) => fileChangeHandler("documentsPanCard", e)} />
+                                </label>
+
+                            </div>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
                                 Aadhar Card*
                             </label>
-                            <input
-                                type="file"
-                                onChange={(e) =>
-                                    handleInputChange("documentsAadhar", e.target.files[0])
-                                }
-                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                required
-                            />
+                            <div className="flex items-center justify-center w-full">
+                                <label forName="documentsAadhar" className="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
+                                    onDrop={(e) => handleDrop("documentsAadhar", e)}
+                                    onDragOver={(e) => handleDragOver("documentsAadhar", e)}>
+                                    <div className="flex items-center justify-center">
+                                        <svg className="w-8 h-8 text-gray-500 " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                                            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2" />
+                                        </svg>
+                                        {newEmployee.documentsAadhar ?
+                                            (
+                                                <p className="ml-3 text-sm text-gray-500">
+                                                    Selected file: <span className="font-medium">{newEmployee.documentsAadhar.name}</span>
+                                                </p>
+                                            )
+                                            :
+                                            (<p className="ml-3 text-sm text-gray-500 "><span className="font-semibold">Click to upload</span> or drag and drop</p>)
+                                        }
+                                    </div>
+                                    <input id="documentsAadhar" type="file" className="hidden" onChange={(e) => fileChangeHandler("documentsAadhar", e)} />
+                                </label>
+
+                            </div>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
                                 Degree Certificate
                             </label>
-                            <input
-                                type="file"
-                                onChange={(e) =>
-                                    handleInputChange("documentsDegree", e.target.files[0])
-                                }
-                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                            />
+                            <div className="flex items-center justify-center w-full">
+                                <label forName="documentsDegree" className="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
+                                    onDrop={(e) => handleDrop("documentsDegree", e)}
+                                    onDragOver={(e) => handleDragOver("documentsDegree", e)}>
+                                    <div className="flex items-center justify-center">
+                                        <svg className="w-8 h-8 text-gray-500 " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                                            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2" />
+                                        </svg>
+                                        {newEmployee.documentsDegree ?
+                                            (
+                                                <p className="ml-3 text-sm text-gray-500">
+                                                    Selected file: <span className="font-medium">{newEmployee.documentsDegree.name}</span>
+                                                </p>
+                                            )
+                                            :
+                                            (<p className="ml-3 text-sm text-gray-500 "><span className="font-semibold">Click to upload</span> or drag and drop</p>)
+                                        }
+                                    </div>
+                                    <input id="documentsDegree" type="file" className="hidden" onChange={(e) => fileChangeHandler("documentsDegree", e)} />
+                                </label>
+
+                            </div>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
                                 Experience Certificate
                             </label>
-                            <input
-                                type="file"
-                                onChange={(e) =>
-                                    handleInputChange("documentsExperience", e.target.files[0])
-                                }
-                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                            />
+                            <div className="flex items-center justify-center w-full">
+                                <label forName="documentsExperience" className="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
+                                    onDrop={(e) => handleDrop("documentsExperience", e)}
+                                    onDragOver={(e) => handleDragOver("documentsExperience", e)}>
+                                    <div className="flex items-center justify-center">
+                                        <svg className="w-8 h-8 text-gray-500 " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                                            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2" />
+                                        </svg>
+                                        {newEmployee.documentsExperience ?
+                                            (
+                                                <p className="ml-3 text-sm text-gray-500">
+                                                    Selected file: <span className="font-medium">{newEmployee.documentsExperience.name}</span>
+                                                </p>
+                                            )
+                                            :
+                                            (<p className="ml-3 text-sm text-gray-500 "><span className="font-semibold">Click to upload</span> or drag and drop</p>)
+                                        }
+                                    </div>
+                                    <input id="documentsExperience" type="file" className="hidden" onChange={(e) => fileChangeHandler("documentsExperience", e)} />
+                                </label>
+
+                            </div>
                         </div>
                     </div>
                 </div>

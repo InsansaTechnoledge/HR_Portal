@@ -70,3 +70,8 @@ export const addLeave = async (req,res) => {
     }
 }
 
+export const uploadDetails = async (req,res) => {
+    const details = req.body;
+
+    console.log(req.files);
+}
