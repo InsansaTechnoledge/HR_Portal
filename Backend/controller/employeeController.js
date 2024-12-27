@@ -1,5 +1,6 @@
 import Employee from "../models/Employee.js"
 import bcrypt from 'bcryptjs';
+import stringTo6DigitNumber from "../utils/stringTo6digitNumber.js";
 
 export const addEmployee = async (req, res) => {
     try{
@@ -72,34 +73,34 @@ export const addLeave = async (req,res) => {
 }
 
 export const uploadDetails = async (req,res) => {
-    const details = req.body.newEmployee;
+    const details = JSON.parse(req.body.newEmployee);
     const email = req.body.empEmail;
-    console.log(JSON.stringify(details, null, 2));
-    console.log(details.name);
 
     const documents = {
-        documentsPancard: req.files.documentsPanCard ? req.files.documentsPanCard[0].buffer : null,
+        documentsPanCard: req.files.documentsPanCard ? req.files.documentsPanCard[0].buffer : null,
         documentsAadhar: req.files.documentsAadhar ? req.files.documentsAadhar[0].buffer : null,
         documentsDegree: req.files.documentsDegree ? req.files.documentsDegree[0].buffer : null,
         documentsExperience: req.files.documentsExperience ? req.files.documentsExperience[0].buffer : null,
     };
 
-    const hashedEmail = await bcrypt.hash(email, 6);
-    console.log(hashedEmail);
+    const empId = stringTo6DigitNumber(email);
+    // console.log(hashedEmail);
 
     const newDetails = {
-        empId:hashedEmail,
+        employeeDetailId:empId,
         ...details,
         ...documents
     }
 
-    // console.log(newDetails);
+    
 
-    // const updatedEmp = await Employee.findOneAndUpdate({email: email},
-    //     {details: newDetails},
-    //     {new: true}
-    // )
+    const updatedEmp = await Employee.findOneAndUpdate({email: email},
+        {details: newDetails},
+        {new: true}
+    )
 
+    console.log(updatedEmp);
+    res.status(201).json({message: "Details uploaded", updatedEmp});
 }
 
 export const fetchEmployeeByEmail = async (req,res) => {

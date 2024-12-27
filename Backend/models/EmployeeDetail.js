@@ -5,8 +5,9 @@ const EmployeeDetailSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    employeeId: {
+    employeeDetailId: {
         type: String,
+        required: true
     },
     email: {
         type: String,
@@ -104,7 +105,7 @@ const EmployeeDetailSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    documentsPancard: {
+    documentsPanCard: {
         type: Buffer,
         required: true
     },

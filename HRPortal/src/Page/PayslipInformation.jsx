@@ -65,7 +65,7 @@ const EmployeeManagementForm = () => {
         
             const formData = new FormData();
             formData.append("empEmail", empEmail);
-            formData.append("newEmployee", newEmployee);
+            formData.append("newEmployee", JSON.stringify(newEmployee));
             if (newEmployee.documentsPanCard) {
                 formData.append("documentsPanCard", newEmployee.documentsPanCard);
             }
@@ -87,7 +87,8 @@ const EmployeeManagementForm = () => {
         });
 
         if(response.status===201){
-            console.log(response.details);
+            console.log(response.data.updatedEmp);
+            alert("Details uploaded!");
         }
 
 

@@ -11,6 +11,7 @@ import {
     IconUsers, 
     IconFolder, 
     IconCalendar, 
+    IconId
 } from "@tabler/icons-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { userContext } from "../../Context/userContext";
@@ -97,6 +98,7 @@ const Sidebar = () => {
                 <nav className="flex-1 mt-6">
                     <ul className="space-y-4">
                         <SidebarItem icon={<IconHome />} label="Home" isOpen={isOpen} to="/" />
+                        
 
                         {/* Apps Dropdown for User */}
                         {user && user.role === 'user' && (
@@ -164,6 +166,13 @@ const Sidebar = () => {
                                 <SidebarItem icon={<IconSettings />} label="Authentication Management" isOpen={isOpen} to="/auth" />
                             </>
                         )}
+                        {
+                            user && (user.role==="admin" || user.role==="user")
+                            ?
+                            <SidebarItem icon={<IconId />} label="User Registration" isOpen={isOpen} to="/emp-info" />
+                            :
+                            null
+                        }
                     </ul>
                 </nav>
 

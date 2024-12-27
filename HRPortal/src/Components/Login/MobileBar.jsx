@@ -25,6 +25,7 @@ const DROPDOWN_ITEMS = [
     { label: 'Job Applications', to: '/application' },
     { label: 'Leave Tracker', to: '/leave-tracker' },
     { label: 'Add Employee', to: '/add-employee' },
+    { label: 'User Registration', to: '/emp-info'}
 ];
 
 // Handle Logout function
@@ -126,9 +127,22 @@ const BottomBar = () => {
                     toggleDropdown={toggleAppsDropdown}
                 >
                     {DROPDOWN_ITEMS.map((item) => {
-                        if (
-                            (item.label === 'Post Job' || item.label === 'Job Applications' || item.label === 'Add Employee') &&
-                            user.role === 'user'
+                        if(user.role !== 'superAdmin' && item.label==='User Registration'){
+                            return (
+                                <BottomBarDropdownItem
+                                    key={item.to}
+                                    label={item.label}
+                                    to={item.to}
+                                    onClick={handleDropdownItemClick}  // Close the dropdown on click
+                                />
+                            );
+                        }
+                        else if(item.label==='User Registration'){
+                            return null;
+                        }
+                        else if (
+                            ((item.label === 'Post Job' || item.label === 'Job Applications' || item.label === 'Add Employee') &&
+                            user.role === 'user')
                         ) {
                             return null;  // Hide for regular users
                         }
