@@ -1,32 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Briefcase, MapPin, Award, Edit2, Trash2, Search } from 'lucide-react';
 import API_BASE_URL from "../../config";
 
-function JobPostForm() {
-  const [jobs, setJobs] = useState([])
-
-  useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        const response = await axios.get(`${API_BASE_URL}/api/job/list`);
-
-        if (response.status === 200 && response.data.jobs) {
-          setJobs(response.data.jobs);
-          console.log(response.data.jobs);
-        }
-      } catch (error) {
-        console.error("Error fetching jobs:", error);
-      }
-    };
-
-    fetchJobs();
-
-  }, [])
-
-
-
-  const [currentIndex, setCurrentIndex] = useState(0);
+const JobPostingManager = () => {
+  const [jobs, setJobs] = useState([]);
+  const [currentJob, setCurrentJob] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     title: '',
     location: '',
@@ -34,406 +14,273 @@ function JobPostForm() {
     skills: '',
     salary: ''
   });
-  const [editingJob, setEditingJob] = useState(null);
+
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
+  const fetchJobs = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/job/list`);
+      if (response.status === 200 && response.data.jobs) {
+        setJobs(response.data.jobs);
+      }
+    } catch (error) {
+      console.error("Error fetching jobs:", error);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const processedSkills = formData.skills.split(',').map(skill => skill.trim()).filter(Boolean);
 
-    // Process skills into an array
-    const processedSkills = formData.skills
-      ? formData.skills.split(',').map((skill) => skill.trim())
-      : [];
+    const jobData = {
+      jobTitle: formData.title,
+      jobLocation: formData.location,
+      jobDescription: formData.description,
+      skills: processedSkills,
+      salaryRange: formData.salary ? `${formData.salary}` : "Not specified"
+    };
 
-    if (editingJob) {
-      // Update existing job in the backend
-      const updateJob = {
-        jobTitle: formData.title,
-        jobLocation: formData.location,
-        jobDescription: formData.description,
-        skills: processedSkills,
-        salaryRange: formData.salary || "Not specified",
-      };
-
-      try {
-        const response = await axios.put(
-          `${API_BASE_URL}/api/job/update/${editingJob.jobId}`,
-          updateJob,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (response.status === 200) {
-          alert(response.data.message);
-
-          // Update the job in the local state
-          setJobs((prevJobs) =>
-            prevJobs.map((job) =>
-              job.jobId === editingJob.jobId ? { ...job, ...updateJob } : job
-            )
-          );
-        } else {
-          console.error("Error updating job:", response.data.message);
-        }
-      } catch (error) {
-        console.error("Error updating job:", error);
+    try {
+      if (currentJob) {
+        await axios.put(`${API_BASE_URL}/api/job/update/${currentJob.jobId}`, jobData);
+      } else {
+        await axios.post(`${API_BASE_URL}/api/job/post`, jobData);
       }
-
-      setEditingJob(null);
-    } else {
-      // Add new job
-      const newJob = {
-        jobTitle: formData.title,
-        jobLocation: formData.location,
-        jobDescription: formData.description,
-        skills: processedSkills,
-        salaryRange: formData.salary || "Not specified",
-      };
-
-      try {
-        const response = await axios.post(`${API_BASE_URL}/api/job/post`, newJob, {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (response.status === 200) {
-          alert("Job Posted");
-          setJobs((prevJobs) => [...prevJobs, { ...newJob, jobId: response.data.jobId }]);
-        } else {
-          console.error("Error posting job:", response.data.message);
-        }
-      } catch (err) {
-        console.error("Error posting job:", err);
-      }
+      fetchJobs();
+      resetForm();
+    } catch (error) {
+      console.error("Error saving job:", error);
     }
-
-    setFormData({
-      title: "",
-      location: "",
-      description: "",
-      skills: "",
-      salary: "",
-    });
   };
 
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      location: '',
+      description: '',
+      skills: '',
+      salary: ''
+    });
+    setCurrentJob(null);
+  };
 
   const handleEdit = (job) => {
-    setEditingJob(job);
+    setCurrentJob(job);
     setFormData({
       title: job.jobTitle,
       location: job.jobLocation,
       description: job.jobDescription,
       skills: job.skills.join(', '),
-      salary: job.salaryRange
+      salary: job.salaryRange.replace('₹', '')
     });
   };
 
   const handleDelete = async (jobId) => {
-    setJobs(jobs.filter(job => job.jobId !== jobId));
-
-    const response = await axios.delete(`${API_BASE_URL}/api/job/delete/${jobId}`);
-    alert(response.data.message);
-
-    // Reset index if needed
-    if (currentIndex >= jobs.length - 1) {
-      setCurrentIndex(Math.max(0, jobs.length - 2));
+    if (window.confirm('Are you sure you want to delete this job posting?')) {
+      try {
+        await axios.delete(`${API_BASE_URL}/api/job/delete/${jobId}`);
+        fetchJobs();
+      } catch (error) {
+        console.error("Error deleting job:", error);
+      }
     }
   };
 
-  const handlePrev = () => {
-    setCurrentIndex((prevIndex) =>
-      prevIndex === 0 ? jobs.length - 1 : prevIndex - 1
-    );
-  };
-
-  const handleNext = () => {
-    setCurrentIndex((prevIndex) =>
-      prevIndex === jobs.length - 1 ? 0 : prevIndex + 1
-    );
-  };
-
-  // Optional: Auto-advance carousel
-  // useEffect(() => {
-  //   const interval = setInterval(handleNext, 10000);
-  //   return () => clearInterval(interval);
-  // }, [currentIndex]);
+  const filteredJobs = jobs.filter(job =>
+    job.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    job.jobLocation.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="bg-gradient-to-br from-indigo-50 to-white min-h-screen py-12 px-4 sm:px-6 lg:px-8">
-      {/* Job Posting Form */}
-      <div className="max-w-md mx-auto bg-white shadow-xl rounded-2xl p-8 mb-12">
-        <h1 className="text-center text-3xl font-bold text-gray-900 mb-6">
-          {editingJob ? "Edit Job" : "Post New Job"}
-        </h1>
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-xl shadow-sm p-8 mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Job Posting Management</h1>
+          <p className="mt-2 text-gray-600">Manage Insansa's job opportunities</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Job Form */}
+          <div className="bg-white rounded-xl shadow-sm p-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              {currentJob ? "Edit Job Posting" : "Create New Job Posting"}
+            </h2>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Job Title</label>
+                <div className="relative">
+                  <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    className="pl-10 w-full h-11 rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Location</label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    name="location"
+                    value={formData.location}
+                    onChange={handleInputChange}
+                    className="pl-10 w-full h-11 rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  rows={4}
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent p-3"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Required Skills</label>
+                <div className="relative">
+                  <Award className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    name="skills"
+                    value={formData.skills}
+                    onChange={handleInputChange}
+                    placeholder="e.g., React, Node.js, Python"
+                    className="pl-10 w-full h-11 rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Salary Range (₹)</label>
+                <div className="relative">
+                  <input
+                    name="salary"
+                    value={formData.salary}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 5-7 LPA"
+                    className="pl-10 w-full h-11 rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-4 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 h-11 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  {currentJob ? "Update Job Posting" : "Create Job Posting"}
+                </button>
+                {currentJob && (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="px-6 h-11 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+
+          {/* Job Listings */}
           <div>
-            <label
-              htmlFor="job-title"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Job Title
-            </label>
-            <input
-              id="job-title"
-              name="title"
-              type="text"
-              value={formData.title}
-              onChange={handleInputChange}
-              required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            />
-          </div>
+            <div className="bg-white rounded-xl shadow-sm p-8 mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">Current Openings</h2>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by title or location..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full h-11 rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
 
-          <div>
-            <label
-              htmlFor="job-location"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Job Location
-            </label>
-            <input
-              id="job-location"
-              name="location"
-              type="text"
-              value={formData.location}
-              onChange={handleInputChange}
-              required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            />
-          </div>
+            {/* Scrollable Job Listings */}
+            <div className="space-y-4 h-[400px] overflow-y-auto bg-gray-50 rounded-xl shadow-inner p-4">
+              {filteredJobs.map(job => (
+                <div key={job.jobId} className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">{job.jobTitle}</h3>
+                      <p className="text-gray-500 flex items-center mt-1">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        {job.jobLocation}
+                      </p>
+                    </div>
+                    <div className="flex space-x-1">
+                      <button
+                        onClick={() => handleEdit(job)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Edit job posting"
+                      >
+                        <Edit2 className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(job.jobId)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete job posting"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
 
-          <div>
-            <label
-              htmlFor="job-description"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Job Description
-            </label>
-            <textarea
-              id="job-description"
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              required
-              rows={4}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            ></textarea>
-          </div>
+                  <p className="mt-3 text-gray-600 line-clamp-2">{job.jobDescription}</p>
 
-          <div>
-            <label
-              htmlFor="job-skills"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Key Skills (comma-separated)
-            </label>
-            <input
-              id="job-skills"
-              name="skills"
-              type="text"
-              value={formData.skills}
-              onChange={handleInputChange}
-              placeholder="e.g. React, Node.js, TypeScript"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            />
-          </div>
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {job.skills.map((skill, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm font-medium"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
 
-          <div>
-            <label
-              htmlFor="job-salary"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Salary Range
-            </label>
-            <input
-              id="job-salary"
-              name="salary"
-              type="text"
-              value={formData.salary}
-              onChange={handleInputChange}
-              placeholder="e.g. $120,000 - $150,000"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            {editingJob ? "Update Job" : "Post Job"}
-          </button>
-        </form>
-      </div>
-
-      {/* Modern Job Carousel */}
-      <div className="max-w-4xl mx-auto">
-        <h2 className="text-center text-3xl font-extrabold text-gray-900 mb-12">
-          Current Job Openings
-        </h2>
-
-        {jobs.length === 0 ? (
-          <div className="text-center text-gray-500">
-            No job openings available
-          </div>
-        ) : (
-          <div className="relative">
-            <AnimatePresence>
-              <motion.div
-                key={currentIndex}
-                initial={{ opacity: 0, x: 300 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -300 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="bg-white shadow-2xl rounded-2xl overflow-hidden grid md:grid-cols-3 gap-8 p-8"
-              >
-                {/* Job Details Column */}
-                <div className="md:col-span-2 space-y-6">
-                  <div>
-                    <h3 className="text-2xl font-bold text-indigo-700">
-                      {jobs[currentIndex].jobTitle}
-                    </h3>
-                    <p className="text-gray-500 mt-2">
-                      {jobs[currentIndex].jobLocation}
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <p className="text-green-600 font-medium flex items-center">
+                      ₹ {job.salaryRange}
                     </p>
                   </div>
-
-                  <p className="text-gray-600 leading-relaxed">
-                    {jobs[currentIndex].jobDescription}
-                  </p>
-
-                  <div>
-                    <h4 className="font-semibold text-gray-700 mb-2">Key Skills</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {jobs[currentIndex].skills.map((skill) => (
-                        <span
-                          key={skill}
-                          className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-medium"
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-4">
-                    <span className="text-xl font-bold text-green-600">
-                      {jobs[currentIndex].salaryRange}
-                    </span>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleEdit(jobs[currentIndex])}
-                        className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(jobs[currentIndex].jobId)}
-                        className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
                 </div>
+              ))}
 
-                {/* Job Image/Icon Column */}
-                <div className="hidden md:flex items-center justify-center">
-                  <div className="bg-indigo-100 rounded-full p-8">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-24 w-24 text-indigo-600"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1}
-                        d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                      />
-                    </svg>
-                  </div>
+              {filteredJobs.length === 0 && (
+                <div className="text-center py-12 bg-white rounded-xl shadow-sm">
+                  <p className="text-gray-500">No job postings found</p>
                 </div>
-              </motion.div>
-            </AnimatePresence>
-
-            {/* Navigation Buttons */}
-            <div className="absolute inset-y-0 left-0 flex items-center">
-              <button
-                onClick={handlePrev}
-                className="bg-white/50 hover:bg-white/75 backdrop-blur-sm rounded-full p-3 shadow-md transition"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6 text-indigo-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <div className="absolute inset-y-0 right-0 flex items-center">
-              <button
-                onClick={handleNext}
-                className="bg-white/50 hover:bg-white/75 backdrop-blur-sm rounded-full p-3 shadow-md transition"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6 text-indigo-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
+              )}
             </div>
           </div>
-        )}
 
-        {/* Pagination Dots */}
-        {jobs.length > 0 && (
-          <div className="flex justify-center mt-6 space-x-2">
-            {jobs.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentIndex(index)}
-                className={`h-3 w-3 rounded-full transition-all ${index === currentIndex
-                  ? 'bg-indigo-600 w-6'
-                  : 'bg-gray-300 hover:bg-gray-400'
-                  }`}
-              />
-            ))}
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
-}
+};
 
-export default JobPostForm;
+export default JobPostingManager;
