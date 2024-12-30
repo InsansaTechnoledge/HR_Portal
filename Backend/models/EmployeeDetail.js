@@ -93,6 +93,9 @@ const EmployeeDetailSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    salary: {
+        type: String
+    },
     emergencyContactName: {
         type: String,
         required: true
