@@ -52,6 +52,10 @@ const PayslipSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        TDS: {
+            type: Number,
+            default: 0
+        },
         incomeTax: {
             type: Number,
             default: 0,
@@ -82,6 +86,14 @@ const PayslipSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
+        generatedBy: {
+            type: String,
+            required: true
+        },
+        taxType: {
+            type: String,
+            required: true
+        }
     },
 
 );
