@@ -2,10 +2,17 @@ import React, { useState, useRef } from 'react';
 import { Building2, Mail, Phone, Download } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import API_BASE_URL from '../config';
+import axios from 'axios';
 
 const PayslipGenerator = () => {
     const payslipRef = useRef();
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+    const [payslip, setPayslip] = useState();
+    const professionalTax = 200;
+    var totalEarnings = 0;
+    var netSalary = 0;
+    var totalDeductions = 0;
 
     // Company Details (Static)
     const companyDetails = {
@@ -46,15 +53,27 @@ const PayslipGenerator = () => {
         }));
     };
 
+    // const calculateDeductions = () => {
+    //     const basicSalary = parseFloat(employeeData.basicSalary) || 0;
+    //     const pf = basicSalary * 0.12;
+    //     const professionalTax = 200;
+    //     const incomeTax = basicSalary * 0.1;
+    //     return { pf, professionalTax, incomeTax };
+    // };
     const calculateDeductions = () => {
         const basicSalary = parseFloat(employeeData.basicSalary) || 0;
-        const pf = basicSalary * 0.12;
-        const professionalTax = 200;
         const incomeTax = basicSalary * 0.1;
-        return { pf, professionalTax, incomeTax };
+        totalDeductions = ( (professionalTax+incomeTax).toFixed(2) );
+        return { professionalTax, incomeTax };
     };
 
     const calculateTotalEarnings = () => {
+        totalEarnings = ((parseFloat(employeeData.basicSalary) || 0) +
+            (parseFloat(employeeData.hra) || 0) +
+            (parseFloat(employeeData.conveyanceAllowance) || 0) +
+            (parseFloat(employeeData.medicalAllowance) || 0) +
+            (parseFloat(employeeData.specialAllowance) || 0));
+
         return (
             (parseFloat(employeeData.basicSalary) || 0) +
             (parseFloat(employeeData.hra) || 0) +
@@ -64,14 +83,51 @@ const PayslipGenerator = () => {
         );
     };
 
+    // const calculateNetSalary = () => {
+    //     const totalEarnings = calculateTotalEarnings();
+    //     const { pf, professionalTax, incomeTax } = calculateDeductions();
+    //     return totalEarnings - (pf + professionalTax + incomeTax);
+    // };
+
     const calculateNetSalary = () => {
         const totalEarnings = calculateTotalEarnings();
-        const { pf, professionalTax, incomeTax } = calculateDeductions();
-        return totalEarnings - (pf + professionalTax + incomeTax);
+        const { professionalTax, incomeTax } = calculateDeductions();
+        netSalary = (totalEarnings - (professionalTax + incomeTax));
+        return totalEarnings - (professionalTax + incomeTax);
     };
 
-    const handleGeneratePayslip = (e) => {
+    const handleGeneratePayslip = async (e) => {
         e.preventDefault();
+        setPayslip({
+            name: employeeData.name,
+            employeeId: employeeData.employeeId,
+            department: employeeData.department,
+            designation: employeeData.designation,
+            month: employeeData.month,
+            basicSalary: employeeData.basicSalary,
+            hra: employeeData.hra,
+            conveyanceAllowance: employeeData.conveyanceAllowance,
+            medicalAllowance: employeeData.medicalAllowance,
+            specialAllowance: employeeData.specialAllowance,
+            bankAccount: employeeData.bankAccount,
+            panNumber: employeeData.panNumber,
+            uanNumber: employeeData.uanNumber,
+            professionalTax: professionalTax,
+            incomeTax: employeeData.basicSalary * 0.1,
+            totalEarnings: calculateTotalEarnings().toFixed(2),
+            netSalary: calculateNetSalary().toFixed(2),
+            totalDeductions: Object.values(calculateDeductions())
+                .reduce((acc, cur) => acc + cur, 0)
+                .toFixed(2)
+            }
+        );
+
+        const response = await axios.post(`${API_BASE_URL}/api/payslip/generate`,payslip);
+
+        if(response.status===201){
+            console.log("Payslip saved");
+        }
+
         setShowPayslip(true);
     };
 

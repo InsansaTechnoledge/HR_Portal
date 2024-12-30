@@ -4,6 +4,7 @@ import candidate from "./candidate.js";
 import documentupload from "./documentupload.js"; 
 import user from "./user.js"
 import employee from "./employee.js"
+import payslip from "./paySlip.js";
 
 const routes = (app) => {
     app.use("/api/auth", auth);
@@ -12,6 +13,8 @@ const routes = (app) => {
     app.use("/api/documents", documentupload); 
     app.use("/api/user", user); 
     app.use("/api/employee",employee);
+    app.use("/api/payslip", payslip);
+
 };
 
 export default routes;

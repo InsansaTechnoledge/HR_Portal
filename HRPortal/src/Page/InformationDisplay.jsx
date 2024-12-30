@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { ChevronDown, ChevronUp, Download, Pencil } from 'lucide-react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
 
@@ -10,16 +10,16 @@ const EmployeeList = () => {
     useEffect(() => {
         const fetchEmployees = async () => {
             const response = await axios.get(`${API_BASE_URL}/api/employee`);
-            if(response.status===201){
+            if (response.status === 201) {
                 const allEmployees = response.data.employees;
-                const filteredEmployees = allEmployees.filter(emp => emp.details!==undefined);
+                const filteredEmployees = allEmployees.filter(emp => emp.details !== undefined);
                 setEmployees(filteredEmployees);
                 console.log(filteredEmployees);
             }
         }
 
         fetchEmployees();
-    },[]);
+    }, []);
 
     const toggleRow = (id) => {
         const newExpanded = new Set(expandedRows);
@@ -31,7 +31,23 @@ const EmployeeList = () => {
         setExpandedRows(newExpanded);
     };
 
-    const renderDetailSection = (title, data) => (
+    const updateSalary = async (emp) => {
+        const updatedSalary = document.getElementById("salary").value;
+
+        setEmployees((prevEmployees) =>
+            prevEmployees.map((employee) =>
+                employee.id === emp.id
+                    ? {
+                          ...employee,
+                          details: { ...employee.details, salary: updatedSalary },
+                      }
+                    : employee
+            )
+        );
+        
+    }
+
+    const renderDetailSection = (title, data, employee) => (
         <div className="mb-4">
             <h3 className="text-lg font-semibold text-blue-600 mb-2">{title}</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -43,6 +59,23 @@ const EmployeeList = () => {
                         <p className="text-sm text-gray-900">{value || 'N/A'}</p>
                     </div>
                 ))}
+                {
+                    title === "Financial Information" && employee
+                        ?
+                        <div className="space-y-1">
+                            <p className="text-sm font-medium text-gray-600">
+                                basic salary
+                            </p>
+                            <div className='flex items-center'>
+                                <input type='text' id='salary' className='w-1/3 border-gray-400 border-2 rounded p-1' placeholder='enter salary'/>
+                                <Pencil className='inline w-4 ml-2 hover:cursor-pointer' onClick={() => updateSalary(employee)}/>
+                            </div>
+                            <p className="text-sm text-gray-900">{employee.details.salary || 'N/A'}</p>
+                        </div>
+                        :
+                        null
+                }
+
             </div>
         </div>
     );
@@ -51,21 +84,21 @@ const EmployeeList = () => {
         return <p className="text-center text-gray-500 py-6">No employees found.</p>;
     }
 
-    const handleDownload = (employee,doc) => {
+    const handleDownload = (employee, doc) => {
         'PAN Card', 'Aadhar Card', 'Degree Certificate', 'Experience Certificate'
-        if(doc==='PAN Card'){
-            downloadDocument(employee.name, doc , employee.details.documentsPanCard);
+        if (doc === 'PAN Card') {
+            downloadDocument(employee.name, doc, employee.details.documentsPanCard);
         }
-        else if(doc==='Aadhar Card'){
-            downloadDocument(employee.name, doc , employee.details.documentsAadhar);
-            
-        }
-        else if(doc==='Degree Certificate'){
-            downloadDocument(employee.name, doc , employee.details.documentsDegree);
+        else if (doc === 'Aadhar Card') {
+            downloadDocument(employee.name, doc, employee.details.documentsAadhar);
 
         }
-        else if(doc==='Experience Certificate'){
-            downloadDocument(employee.name, doc , employee.details.documentsExperience);
+        else if (doc === 'Degree Certificate') {
+            downloadDocument(employee.name, doc, employee.details.documentsDegree);
+
+        }
+        else if (doc === 'Experience Certificate') {
+            downloadDocument(employee.name, doc, employee.details.documentsExperience);
 
 
         }
@@ -76,44 +109,44 @@ const EmployeeList = () => {
         if (buffer && buffer.data instanceof Array) {
             // Convert Buffer (Node.js) to ArrayBuffer
             const arrayBuffer = new Uint8Array(buffer.data).buffer; // Create an ArrayBuffer from Buffer data
-    
+
             // Convert the ArrayBuffer to a Blob (ensure MIME type is correct for the document)
             const blob = new Blob([arrayBuffer], { type: 'application/pdf' }); // Adjust MIME type as needed (e.g., 'application/pdf')
-    
+
             // Ensure Blob is created correctly
             if (!blob.size) {
                 console.error('Failed to create Blob from ArrayBuffer.');
                 return;
             }
-    
+
             // Create a link element to download the Blob
             const link = document.createElement('a');
             const url = window.URL.createObjectURL(blob);
-    
+
             // Ensure URL is created successfully
             if (!url) {
                 console.error('Failed to create Object URL for the Blob.');
                 return;
             }
-    
+
             // Set the download attribute to define the file name
             link.href = url;
             link.download = `${name}-${doc}.pdf`; // You can adjust file extension based on the document type
-    
+
             // Append the link to the DOM, trigger the download, and remove the link afterward
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-    
+
             // Release the Object URL to free up memory
             window.URL.revokeObjectURL(url);
         } else {
             console.error('Received data is not a valid Buffer or Array.');
         }
     }
-    
-    
-    
+
+
+
     return (
         <div className="max-w-7xl mx-auto p-6">
             <div className="bg-white shadow-lg rounded-lg overflow-hidden">
@@ -217,7 +250,7 @@ const EmployeeList = () => {
                                                         'PAN Number': employee.details.panNumber,
                                                         'Aadhar Number': employee.details.aadharNumber,
                                                         'UAN Number': employee.details.uanNumber
-                                                    })}
+                                                    },employee)}
 
                                                     {renderDetailSection('Emergency Contact', {
                                                         'Contact Name': employee.details.emergencyContactName,
@@ -232,7 +265,7 @@ const EmployeeList = () => {
                                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                                             {['PAN Card', 'Aadhar Card', 'Degree Certificate', 'Experience Certificate'].map((doc) => (
                                                                 <button
-                                                                    onClick={() => handleDownload(employee,doc)}
+                                                                    onClick={() => handleDownload(employee, doc)}
                                                                     key={doc}
                                                                     className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                                                                 >
