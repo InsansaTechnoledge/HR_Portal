@@ -132,10 +132,6 @@ const PayslipGenerator = () => {
 
         const response = await axios.post(`${API_BASE_URL}/api/payslip/generate`,payslip);
 
-        if (response.status === 201) {
-            console.log("Payslip saved");
-        }
-
         setShowPayslip(true);
     };
 

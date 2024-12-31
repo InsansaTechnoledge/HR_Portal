@@ -30,11 +30,13 @@ const DocumentManagement = () => {
             const response = await axios.get(`${API_BASE_URL}/api/employee`);
             if(response.status===201){
                 setEmployees(response.data.employees);
-                setFormData(prev =>({
-                    ...prev,
-                    employee: response.data.employees[0].name
-                })
-            ); 
+                if(response.data.employees.length>0){
+                    setFormData(prev =>({
+                        ...prev,
+                        employee: response.data.employees[0].name
+                    })
+                ); 
+            }
             }
         }
 

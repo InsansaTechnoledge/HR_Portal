@@ -33,7 +33,6 @@ const PayslipTracker = () => {
                 if(empResponse.status===201){
     
                     const employee = empResponse.data;
-                    console.log(employee);
 
                     if(!employee.details){
                         setLoading(false);
@@ -70,19 +69,19 @@ const PayslipTracker = () => {
 
     if(noEmployeeDetail){
         return(
-                <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6">
-                    <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-                        <div className="mb-6 text-gray-800 text-xl font-semibold">
-                            Please register yourself first through Employee Registration form
-                        </div>
-                        <button
-                            onClick={() => navigate('/emp-info')}
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-                        >
-                            Register Yourself
-                        </button>
+            <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6">
+                <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
+                    <div className="mb-6 text-gray-800 text-xl font-semibold">
+                        Please register yourself through Employee Registration form
                     </div>
+                    <button
+                        onClick={() => navigate('/emp-info')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                    >
+                        Register Yourself
+                    </button>
                 </div>
+            </div>
         )
     }
 

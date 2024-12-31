@@ -49,20 +49,17 @@ function EmployeeDetailsForm(props) {
 
     const handleInputChange = (field, value) => {
         setNewEmployee((prev) => ({ ...prev, [field]: value }));
-        console.log(field, value)
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setEmployees((prev) => [...prev, { ...newEmployee, id: Date.now() }]);
 
-        console.log(newEmployee);
 
         const empResponse = await axios.get(`${API_BASE_URL}/api/employee/fetchEmployeeByEmail/${user.userEmail}`);
 
         if (empResponse.status === 201) {
             const empEmail = empResponse.data.email;
-            console.log(empResponse.data.email);
 
             const formData = new FormData();
             formData.append("empEmail", empEmail);
@@ -88,7 +85,6 @@ function EmployeeDetailsForm(props) {
             });
 
             if (response.status === 201) {
-                console.log(response.data.updatedEmp);
                 alert("Details uploaded!");
 
                 props.setEmployee(response.data.updatedEmp);

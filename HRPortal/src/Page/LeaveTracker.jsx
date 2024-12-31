@@ -167,7 +167,6 @@ const LeaveTracker = () => {
     };
 
     const handleAddLeave = async () => {
-        console.log(newLeave);
         if (newLeave.type !== "" && newLeave.startDate!=="" && newLeave.endDate!=="") {
             if(new Date(newLeave.startDate) <= new Date(newLeave.endDate)){
 

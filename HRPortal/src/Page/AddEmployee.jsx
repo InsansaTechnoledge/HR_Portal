@@ -68,10 +68,6 @@ const AddEmployeePage = () => {
                 employeeData
             );
 
-            if(response.status!==201){
-                console.log(response.data.message,response.data.updatedEmp);
-            }
-
             // Success handling
             setSubmitStatus({
                 loading: false,
