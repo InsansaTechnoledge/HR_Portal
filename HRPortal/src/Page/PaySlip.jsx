@@ -186,6 +186,7 @@ const PayslipGenerator = () => {
             }
         );
 
+        axios.defaults.withCredentials = true;
 
         const response = await axios.post(`${API_BASE_URL}/api/payslip/generate`,{
             name: employeeData.name,
