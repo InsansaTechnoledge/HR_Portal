@@ -28,7 +28,7 @@ const EmployeeManagementForm = () => {
         dateOfJoining: "",
         department: "",
         designation: "",
-        reportingManager: "",
+        nameAsPerBank: "",
         bankName: "",
         accountNumber: "",
         ifscCode: "",
@@ -109,7 +109,7 @@ const EmployeeManagementForm = () => {
         //     dateOfJoining: "",
         //     department: "",
         //     designation: "",
-        //     reportingManager: "",
+        //     nameAsPerBank: "",
         //     bankName: "",
         //     accountNumber: "",
         //     ifscCode: "",
@@ -391,18 +391,7 @@ const EmployeeManagementForm = () => {
                                 required
                             />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Reporting Manager*
-                            </label>
-                            <input
-                                type="text"
-                                value={newEmployee.reportingManager}
-                                onChange={(e) => handleInputChange("reportingManager", e.target.value)}
-                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                required
-                            />
-                        </div>
+                        
                     </div>
                 </div>
 
@@ -412,6 +401,18 @@ const EmployeeManagementForm = () => {
                         Financial Information
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Name as per Bank Account*
+                            </label>
+                            <input
+                                type="text"
+                                value={newEmployee.nameAsPerBank}
+                                onChange={(e) => handleInputChange("nameAsPerBank", e.target.value)}
+                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                required
+                            />
+                        </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
                                 Bank Name*
@@ -525,7 +526,7 @@ const EmployeeManagementForm = () => {
                                 Emergency Contact Phone*
                             </label>
                             <input
-                                type="tel"
+                                type="number"
                                 value={newEmployee.emergencyContactPhone}
                                 onChange={(e) =>
                                     handleInputChange("emergencyContactPhone", e.target.value)

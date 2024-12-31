@@ -30,6 +30,7 @@ import EmployeeManagementForm from './Page/PayslipInformation';
 import EmployeeList from './Page/InformationDisplay';
 import NoSuperAdminRoute from './Route/NoSuperAdminRoute';
 import PayslipTracker from './Page/PayslipTracker';
+import AccountantSuperAdminRoute from './Route/AccountantSuperAdminRoute';
 
 function AppLayout() {
     // const location = useLocation();
@@ -94,6 +95,14 @@ function AppLayout() {
                         }
                     />
 
+                    <Route
+                        path="/payslip-tracker"
+                        element={
+                            <ProtectedRoute>
+                                <PayslipTracker />
+                            </ProtectedRoute>
+                        }
+                    />
                     {/* Admin-Only Routes */}
 
                     <Route
@@ -164,14 +173,7 @@ function AppLayout() {
                         }
                     />
 
-                    <Route
-                        path="/payslip-tracker"
-                        element={
-                            <AdminRoute>
-                                <PayslipTracker />
-                            </AdminRoute>
-                        }
-                    />
+                    
 
 
                     {/* No Super Admin route */}
@@ -191,6 +193,8 @@ function AppLayout() {
                             </SuperAdminRoute>
                         }
                     />
+
+                    {/* Accountant and Super admin */}
 
                     {/* Any other route */}
                     <Route

@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, Download, Pencil } from 'lucide-react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+import { userContext } from '../Context/userContext';
 
 const EmployeeList = () => {
     const [expandedRows, setExpandedRows] = useState(new Set());
     const [employees, setEmployees] = useState([]);
+    const [toggleEditsalary, setToggleEditSalary] = useState(false);
+    const {user} = useContext(userContext);
 
     useEffect(() => {
         const fetchEmployees = async () => {
@@ -32,19 +35,46 @@ const EmployeeList = () => {
     };
 
     const updateSalary = async (emp) => {
-        const updatedSalary = document.getElementById("salary").value;
+        if (toggleEditsalary) {
 
-        setEmployees((prevEmployees) =>
-            prevEmployees.map((employee) =>
-                employee.id === emp.id
-                    ? {
-                          ...employee,
-                          details: { ...employee.details, salary: updatedSalary },
-                      }
-                    : employee
-            )
-        );
-        
+            const updatedSalary = document.getElementById("salary").value;
+
+
+            if (updatedSalary) {
+                setEmployees((prevEmployees) =>
+                    prevEmployees.map((employee) =>
+                        employee.id === emp.id
+                            ? {
+                                ...employee,
+                                details: { ...employee.details, salary: updatedSalary },
+                            }
+                            : employee
+                    )
+                );
+
+                const sal = {
+                    "salary": updatedSalary
+                }
+
+                const response = await axios.post(`${API_BASE_URL}/api/employee/updateSalary/${emp._id}`, sal,
+                    {
+                        headers: {
+                            'content-type': 'application/json'
+                        }
+                    });
+
+                if (response.status === 201) {
+                    alert(response.data.message);
+                }
+            }
+        }
+        else{
+            setTimeout(()=>{
+                document.getElementById("salary").value=emp.details.salary || "Enter salary";   
+
+            },1);
+        }
+
     }
 
     const renderDetailSection = (title, data, employee) => (
@@ -67,10 +97,26 @@ const EmployeeList = () => {
                                 basic salary
                             </p>
                             <div className='flex items-center'>
-                                <input type='text' id='salary' className='w-1/3 border-gray-400 border-2 rounded p-1' placeholder='enter salary'/>
-                                <Pencil className='inline w-4 ml-2 hover:cursor-pointer' onClick={() => updateSalary(employee)}/>
+                                {
+                                    toggleEditsalary
+                                        ?
+                                        <input
+                                            type='text' id='salary' className='w-1/3 border-gray-400 border-2 rounded p-1' placeholder={'Enter salary'} />
+                                        :
+                                        <p className="text-sm text-gray-900">{employee.details.salary || 'N/A'}</p>
+                                }
+                                {
+                                    user && user.role==='superAdmin' || user.role==='accountant'
+                                    ?
+                                    <Pencil className='inline w-4 ml-2 hover:cursor-pointer' onClick={() => {
+                                        updateSalary(employee)
+                                        setToggleEditSalary(!toggleEditsalary);
+                                    }} />
+                                    
+                                    :
+                                    null
+                                }
                             </div>
-                            <p className="text-sm text-gray-900">{employee.details.salary || 'N/A'}</p>
                         </div>
                         :
                         null
@@ -240,17 +286,17 @@ const EmployeeList = () => {
 
                                                     {renderDetailSection('Employment Details', {
                                                         'Date of Joining': employee.details.dateOfJoining,
-                                                        'Reporting Manager': employee.details.reportingManager
                                                     })}
 
                                                     {renderDetailSection('Financial Information', {
+                                                        'Name as per Bank Account': employee.details.nameAsPerBank,
                                                         'Bank Name': employee.details.bankName,
                                                         'Account Number': employee.details.accountNumber,
                                                         'IFSC Code': employee.details.ifscCode,
                                                         'PAN Number': employee.details.panNumber,
                                                         'Aadhar Number': employee.details.aadharNumber,
                                                         'UAN Number': employee.details.uanNumber
-                                                    },employee)}
+                                                    }, employee)}
 
                                                     {renderDetailSection('Emergency Contact', {
                                                         'Contact Name': employee.details.emergencyContactName,

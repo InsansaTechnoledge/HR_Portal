@@ -6,7 +6,6 @@ const ProtectedRoute = ({ children }) => {
     const location = useLocation();
     const {user, setUser} = useContext(userContext);
 
-    console.log("PROT",user);
     return (user ? children : <Navigate to='/' replace state={{ from: location }}/>)
 
 }
