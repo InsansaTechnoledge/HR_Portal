@@ -7,48 +7,34 @@ if (process.env.NODE_ENV !== 'production') {
   import('dotenv').then((dotenv) => dotenv.config());
 }
 
-const configureApp = (app) => {
+const configureApp = async (app) => {
   app.set('trust proxy', 1);
 
-  app.use(
-    cors({
-      origin: process.env.CLIENT_ORIGIN || 'https://hr-portal-5d6l.vercel.app' ||  'https://hr-portal-mu.vercel.app' , 
-      credentials: true, 
-      allowedHeaders: [
-        'Content-Type',
-        'Authorization',
-        'X-Requested-With',
-        'Accept',
-        'Origin',
-        'X-Custom-Header',
-        'Content-Disposition', 
-        'Content-Length', 
-      ], 
-      exposedHeaders: [
-        'Content-Type',
-        'Authorization',
-        'X-Requested-With',
-        'Accept',
-        'Origin',
-        'X-Custom-Header',
-      ], 
-    })
-  );
+// CORS middleware
+app.use(
+  cors({
+    origin: ['https://hr-portal-5d6l.vercel.app', 'https://hr-portal-mu.vercel.app'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    exposedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  })
+);
 
-  // Handle preflight requests explicitly
-app.options('/api/payslip/generate', cors());
-
-
- app.use(function (req, res, next) {
-  response.header("Access-Control-Allow-Origin", "*");
-  response.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  next();
+// Preflight request handling
+app.options('*', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || 'https://hr-portal-5d6l.vercel.app');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.status(204).send();
 });
 
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
-  app.use(cookieParser());
-  app.use(helmet());
+// Additional middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(helmet());
+
 };
 
 export default configureApp;
