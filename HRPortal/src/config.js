@@ -2,7 +2,7 @@
 
 // const API_BASE_URL = 'http://localhost:3000'; 
 
-const API_BASE_URL = 'https://hr-portal-mu.vercel.app/'; 
+const API_BASE_URL = 'https://hr-portal-mu.vercel.app'; 
 
 
 
