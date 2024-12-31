@@ -87,7 +87,6 @@ export const editLoginInfo = async (req, res) => {
     }
 
     // Update password (if newPassword is provided)
-    console.log(newPassword);
     if (newPassword) {
       const saltRounds = 10;
       const hashedPassword = await bcrypt.hash(newPassword,10);

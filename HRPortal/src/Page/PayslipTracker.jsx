@@ -33,7 +33,6 @@ const PayslipTracker = () => {
                 if(empResponse.status===201){
     
                     const employee = empResponse.data;
-                    console.log(employee);
 
                     if(!employee.details){
                         setLoading(false);

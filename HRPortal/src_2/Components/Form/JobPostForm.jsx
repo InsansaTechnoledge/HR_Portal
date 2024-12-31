@@ -82,7 +82,6 @@ function JobPostForm() {
         alert(response.data.message);
       }
 
-      console.log(updateJob)
 
     } else {
       const newJob = {
@@ -105,9 +104,7 @@ function JobPostForm() {
         if (response.status == 200) {
           alert('job Posted')
         }
-        else {
-          console.log(response.data.message);
-        }
+        
       }
       catch (err) {
         console.log(err)
