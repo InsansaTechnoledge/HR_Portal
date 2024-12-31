@@ -25,6 +25,8 @@ const configureApp = (app) => {
         'Access-Control-Allow-Credentials',
         'Access-Control-Expose-Headers',
         'X-Custom-Header',
+         'Content-Disposition', 
+        'Content-Length', 
       ], 
       exposedHeaders: [
         'Content-Type',
@@ -58,10 +60,7 @@ const configureApp = (app) => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
-  app.use(helmet({
-    crossOriginResourcePolicy: { policy: 'cross-origin' },
-  }
-  ));
+  app.use(helmet());
 };
 
 export default configureApp;
