@@ -26,7 +26,9 @@ const DROPDOWN_ITEMS = [
     { label: 'Leave Tracker', to: '/leave-tracker' },
     { label: 'Add Employee', to: '/add-employee' },
     { label: 'User Registration', to: '/emp-info'},
-    { label: 'User Details', to: '/emp-list'}
+    { label: 'User Details', to: '/emp-list'},
+    { label:'PaySlip Tracker', to:'/payslip-tracker'},
+    { label:'PaySlip Generator', to:'/payslip'},
 ];
 
 // Handle Logout function
@@ -106,7 +108,7 @@ const BottomBar = () => {
             <div className="flex justify-between items-center px-4 py-2">
                 {/* Regular Navigation Items */}
                 {NAV_ITEMS.map((item) => {
-                    if ((item.label === 'Talent' || item.label === 'Auth') && user.role === 'user') {
+                    if ((item.label === 'Talent' || item.label === 'Auth') && (user.role === 'user' ||user.role==='accountant') ) {
                         return null; 
                     }
                     
@@ -128,7 +130,7 @@ const BottomBar = () => {
                     toggleDropdown={toggleAppsDropdown}
                 >
                     {DROPDOWN_ITEMS.map((item) => {
-                        if(user.role === 'superAdmin' && item.label==='User Details'){
+                        if((user.role === 'superAdmin' || user.role==='accountant' )&& (item.label==='User Details'|| item.label==='PaySlip Generator')){
                             <BottomBarDropdownItem
                                     key={item.to}
                                     label={item.label}
@@ -136,27 +138,22 @@ const BottomBar = () => {
                                     onClick={handleDropdownItemClick}  // Close the dropdown on click
                                 />
                         }
-                        else if(item.label==='User Details'){
+                        else if(item.label==='User Details' || item.label==='PaySlip Generator'){
                             return null;
                         }
-                        else if(user.role !== 'superAdmin' && item.label==='User Registration'){
+                        else if((user.role === 'superAdmin' || user.role==='accountant') && item.label==='User Registration'){
                             return (
-                                <BottomBarDropdownItem
-                                    key={item.to}
-                                    label={item.label}
-                                    to={item.to}
-                                    onClick={handleDropdownItemClick}  // Close the dropdown on click
-                                />
+                               null
                             );
-                        }
-                        else if(item.label==='User Registration'){
-                            return null;
                         }
                         else if (
                             ((item.label === 'Post Job' || item.label === 'Job Applications' || item.label === 'Add Employee') &&
-                            user.role === 'user')
+                            (user.role === 'user' ||user.role==='accountant'))
                         ) {
                             return null;  // Hide for regular users
+                        }
+                        else if (user.role==='accountant' && (item.label==='Leave Tracker' || item.label==='Employee Docs')){
+                            return null;
                         }
                         return (
                             <BottomBarDropdownItem
