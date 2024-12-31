@@ -186,6 +186,8 @@ const AuthenticationManagement = () => {
                 return 'bg-red-100 text-red-800';
             case 'superAdmin':
                 return 'bg-yellow-100 text-yellow-800';
+            case 'accountant':
+                return 'bg-blue-100 text-blue-800';
             default:
                 return 'bg-green-100 text-green-800';
         }
@@ -291,22 +293,28 @@ const AuthenticationManagement = () => {
                             <Lock className="mr-2 text-blue-600" /> User Statistics
                         </h2>
                         <div className="space-y-4">
-                            <div className="bg-blue-50 p-4 rounded-lg">
+                            <div className="bg-green-50 p-4 rounded-lg">
                                 <div className="text-sm text-gray-600">Total Users</div>
-                                <div className="text-2xl font-bold text-blue-600">
+                                <div className="text-2xl font-bold text-green-600">
                                     {users.length}
                                 </div>
                             </div>
-                            <div className="bg-green-50 p-4 rounded-lg">
+                            <div className="bg-red-50 p-4 rounded-lg">
                                 <div className="text-sm text-gray-600">Admin Users</div>
-                                <div className="text-2xl font-bold text-green-600">
+                                <div className="text-2xl font-bold text-red-600">
                                     {users.filter((user) => user.role === 'admin').length}
                                 </div>
                             </div>
-                            <div className="bg-red-50 p-4 rounded-lg">
+                            <div className="bg-yellow-50 p-4 rounded-lg">
                                 <div className="text-sm text-gray-600">Super Admin Users</div>
-                                <div className="text-2xl font-bold text-red-600">
+                                <div className="text-2xl font-bold text-yellow-600">
                                     {users.filter((user) => user.role === 'superAdmin').length}
+                                </div>
+                            </div>
+                            <div className="bg-blue-50 p-4 rounded-lg">
+                                <div className="text-sm text-gray-600">Accountant Users</div>
+                                <div className="text-2xl font-bold text-blue-600">
+                                    {users.filter((user) => user.role === 'accountant').length}
                                 </div>
                             </div>
                         </div>
@@ -399,6 +407,7 @@ const AuthenticationManagement = () => {
                                             >
                                                 <option value="user">User</option>
                                                 <option value="admin">Admin</option>
+                                                <option value="accountant">Accountant</option>
                                                 {user.role === 'superAdmin' && (
                                                     <option value="superAdmin">Super Admin</option>
                                                 )}

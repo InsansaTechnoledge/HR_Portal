@@ -157,21 +157,14 @@ function AppLayout() {
                     <Route
                         path="/payslip"
                         element={
-                            <AdminRoute>
+                            <AccountantSuperAdminRoute>
                                 <PayslipGenerator />
-                            </AdminRoute>
+                            </AccountantSuperAdminRoute>
                         }
                     />
 
 
-                    <Route
-                        path="/emp-management"
-                        element={
-                            <AdminRoute>
-                                <EmployeeManagementForm />
-                            </AdminRoute>
-                        }
-                    />
+                    
 
                     
 
