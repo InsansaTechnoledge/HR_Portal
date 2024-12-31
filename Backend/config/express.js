@@ -4,7 +4,8 @@ import setupMiddleware from '../middleware/setupMiddleware.js';
 import routes from '../routes/routes.js';
 
 if(process.env.NODE_ENV !== "production"){
-import ('dotenv').then((dotenv) => dotenv.config()) 
+    (await import('dotenv')).config();
+
 }
 
 const app = express();

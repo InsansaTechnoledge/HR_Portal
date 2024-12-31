@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 
 if(process.env.NODE_ENV !== "production"){
-import ('dotenv').then((dotenv) => dotenv.config()) 
+    (await import('dotenv')).config();
 }
 
 const checkCookies = (req,res,next) => {

@@ -3,7 +3,8 @@ import generateAuthToken from '../utils/generateAuthToken.js';
 import bcrypt from 'bcryptjs';
 
 if(process.env.NODE_ENV !== "production"){
-import ('dotenv').then((dotenv) => dotenv.config()) 
+  (await import('dotenv')).config();
+
 }
 
 //login route

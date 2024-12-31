@@ -2,8 +2,9 @@ import expressApp from './config/express.js';
 import connectDB from './config/database.js';
 
 if(process.env.NODE_ENV !== "production"){
-import ('dotenv').then((dotenv) => dotenv.config()) 
+    (await import('dotenv')).config();
 }
+
 
 const App = async () => {
     try {

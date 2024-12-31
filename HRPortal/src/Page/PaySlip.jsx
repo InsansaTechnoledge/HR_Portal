@@ -11,9 +11,21 @@ const PayslipGenerator = () => {
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
     const [payslip, setPayslip] = useState();
     const professionalTax = 200;
-    var totalEarnings = 0;
-    var netSalary = 0;
-    var totalDeductions = 0;
+    const [employees, setEmployees] = useState();
+    const {user} = useContext(userContext);
+    const [taxType, setTaxType] = useState("Professional Tax");
+
+    useEffect(() => {
+        const fetchEmployees = async () => {
+            const response = await axios.get(`${API_BASE_URL}/api/employee/`);
+
+            if(response.status===201){
+                setEmployees(response.data.employees);
+            }
+        }
+
+        fetchEmployees();
+    }, [])
 
     // Company Details (Static)
     const companyDetails = {
@@ -34,7 +46,7 @@ const PayslipGenerator = () => {
         designation: '',
         month: '',
         year: '',
-        basicSalary: '',
+        salary: '',
         hra: 0,
         conveyanceAllowance: 0,
         medicalAllowance: 0,
@@ -54,29 +66,60 @@ const PayslipGenerator = () => {
         }));
     };
 
+    const handleEmployeeSelect = (e) => {
+        const selectedEmployee = employees.find(emp => emp.name === e.target.value);
+        if (selectedEmployee && selectedEmployee.details) {
+            setEmployeeData({
+                ...employeeData,
+                name: selectedEmployee.name,
+                employeeId: selectedEmployee.details.employeeDetailId,
+                department: selectedEmployee.department,
+                designation: selectedEmployee.details.designation,
+                bankAccount: selectedEmployee.details.accountNumber,
+                panNumber: selectedEmployee.details.panNumber,
+                salary: selectedEmployee.details.salary || 0,
+                uanNumber: selectedEmployee.details.uanNumber || '',
+                hra: 0,
+                conveyanceAllowance: 0,
+                medicalAllowance: 0,
+                specialAllowance: 0,
+                month: '',
+            });
+        }
+        else{
+            alert("employee detail not available");
+        }
+    };
+
     // const calculateDeductions = () => {
-    //     const basicSalary = parseFloat(employeeData.basicSalary) || 0;
-    //     const pf = basicSalary * 0.12;
+    //     const salary = parseFloat(employeeData.salary) || 0;
+    //     const pf = salary * 0.12;
     //     const professionalTax = 200;
-    //     const incomeTax = basicSalary * 0.1;
+    //     const incomeTax = salary * 0.1;
     //     return { pf, professionalTax, incomeTax };
     // };
     const calculateDeductions = () => {
-        const basicSalary = parseFloat(employeeData.basicSalary) || 0;
-        const incomeTax = basicSalary * 0.1;
-        totalDeductions = ( (professionalTax+incomeTax).toFixed(2) );
-        return { professionalTax, incomeTax };
+        const salary = parseFloat(employeeData.salary) || 0;
+        const incomeTax = salary * 0.1;
+        if(taxType==='Professional Tax'){
+            return { professionalTax };
+        }
+        else{
+            return { TDS: salary * 0.1 };
+        }
+        // if(taxType==='Professional Tax'){
+        //     return { professionalTax, incomeTax };
+        // }
+        // else{
+        //     return { TDS: salary * 0.1, incomeTax };
+        // }
     };
 
     const calculateTotalEarnings = () => {
-        totalEarnings = ((parseFloat(employeeData.basicSalary) || 0) +
-            (parseFloat(employeeData.hra) || 0) +
-            (parseFloat(employeeData.conveyanceAllowance) || 0) +
-            (parseFloat(employeeData.medicalAllowance) || 0) +
-            (parseFloat(employeeData.specialAllowance) || 0));
+        
 
         return (
-            (parseFloat(employeeData.basicSalary) || 0) +
+            (parseFloat(employeeData.salary) || 0) +
             (parseFloat(employeeData.hra) || 0) +
             (parseFloat(employeeData.conveyanceAllowance) || 0) +
             (parseFloat(employeeData.medicalAllowance) || 0) +
@@ -92,9 +135,17 @@ const PayslipGenerator = () => {
 
     const calculateNetSalary = () => {
         const totalEarnings = calculateTotalEarnings();
-        const { professionalTax, incomeTax } = calculateDeductions();
-        netSalary = (totalEarnings - (professionalTax + incomeTax));
-        return totalEarnings - (professionalTax + incomeTax);
+        if(taxType==="Professional Tax"){
+            const { professionalTax, incomeTax } = calculateDeductions();
+            // return totalEarnings - (professionalTax + incomeTax);
+            return totalEarnings - (professionalTax);
+        }
+        else{
+            const { TDS, incomeTax } = calculateDeductions();
+            // return totalEarnings - (professionalTax + incomeTax);
+            return totalEarnings - (TDS);
+
+        }
     };
 
     const handleGeneratePayslip = async (e) => {
@@ -111,7 +162,7 @@ const PayslipGenerator = () => {
             department: employeeData.department,
             designation: employeeData.designation,
             month: employeeData.month,
-            basicSalary: employeeData.basicSalary,
+            salary: employeeData.salary,
             hra: employeeData.hra,
             conveyanceAllowance: employeeData.conveyanceAllowance,
             medicalAllowance: employeeData.medicalAllowance,
@@ -120,17 +171,46 @@ const PayslipGenerator = () => {
             panNumber: employeeData.panNumber,
             uanNumber: employeeData.uanNumber,
             professionalTax: professionalTax,
-            incomeTax: employeeData.basicSalary * 0.1,
+            incomeTax: employeeData.salary * 0.1,
             totalEarnings: calculateTotalEarnings().toFixed(2),
             netSalary: calculateNetSalary().toFixed(2),
             totalDeductions: Object.values(calculateDeductions())
                 .reduce((acc, cur) => acc + cur, 0)
-                .toFixed(2)
+                .toFixed(2),
+            generatedBy: user.userName,
+            taxType: taxName.value
             }
         );
 
 
-        const response = await axios.post(`${API_BASE_URL}/api/payslip/generate`,payslip);
+        const response = await axios.post(`${API_BASE_URL}/api/payslip/generate`,{
+            name: employeeData.name,
+            employeeId: employeeData.employeeId,
+            department: employeeData.department,
+            designation: employeeData.designation,
+            month: employeeData.month,
+            salary: employeeData.salary,
+            hra: employeeData.hra,
+            conveyanceAllowance: employeeData.conveyanceAllowance,
+            medicalAllowance: employeeData.medicalAllowance,
+            specialAllowance: employeeData.specialAllowance,
+            bankAccount: employeeData.bankAccount,
+            panNumber: employeeData.panNumber,
+            uanNumber: employeeData.uanNumber,
+            professionalTax: professionalTax,
+            incomeTax: employeeData.salary * 0.1,
+            totalEarnings: calculateTotalEarnings().toFixed(2),
+            netSalary: calculateNetSalary().toFixed(2),
+            totalDeductions: Object.values(calculateDeductions())
+                .reduce((acc, cur) => acc + cur, 0)
+                .toFixed(2),
+            generatedBy: user.userName,
+            taxType: taxName.value
+            });
+
+        if(response.status===201){
+            console.log("Payslip saved");
+        }
 
         setShowPayslip(true);
     };
@@ -143,7 +223,7 @@ const PayslipGenerator = () => {
             designation: '',
             month: '',
             year: '',
-            basicSalary: '',
+            salary: '',
             hra: 0,
             conveyanceAllowance: 0,
             medicalAllowance: 0,
@@ -198,7 +278,68 @@ const PayslipGenerator = () => {
                         <Building2 className="inline-block mb-2" size={24} />
                         <p className="font-bold text-gray-800">{companyDetails.name}</p>
                     </div>
+
+
+                    
+                </div>  
+
+                <div className="space-y-4 mt-4 mb-4">
+                    <label htmlFor="employeeSelect" className="block text-sm font-medium text-gray-700">
+                        Select Employee
+                    </label>
+                    <select
+                        id="employeeSelect"
+                        onChange={handleEmployeeSelect}
+                        className="block w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    >
+                        <option value="">-- Select Employee --</option>
+                        {employees && employees.map(emp => (
+                            <option key={emp.employeeId} value={emp.name}>
+                                {emp.name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
+
+                <div className="space-y-4 mt-4 mb-4">
+    <label htmlFor="taxSelect" className="block text-sm font-medium text-gray-700">
+        Select Tax Type
+    </label>
+    <div className="flex items-center space-x-4">
+        <div className="flex items-center">
+            <input
+                id="professionalTax"
+                type="radio"
+                defaultChecked
+                name="tax"
+                value="Professional Tax"
+                className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+            />
+            <label
+                htmlFor="professionalTax"
+                className="ml-2 text-sm text-gray-700"
+            >
+                Professional Tax
+            </label>
+        </div>
+        <div className="flex items-center">
+            <input
+                id="tds"
+                type="radio"
+                name="tax"
+                value="TDS"
+                className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+            />
+            <label
+                htmlFor="tds"
+                className="ml-2 text-sm text-gray-700"
+            >
+                TDS
+            </label>
+        </div>
+    </div>
+</div>
+
 
                 <form onSubmit={handleGeneratePayslip} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -211,7 +352,7 @@ const PayslipGenerator = () => {
                             { label: 'Bank Account', name: 'bankAccount' },
                             { label: 'PAN Number', name: 'panNumber' },
                             { label: 'UAN Number', name: 'uanNumber' },
-                            { label: 'Basic Salary', name: 'basicSalary', type: 'number' },
+                            { label: 'Basic Salary', name: 'salary', type: 'number' },
                             { label: 'HRA', name: 'hra', type: 'number', disabled: true },
                             { label: 'Conveyance Allowance', name: 'conveyanceAllowance', type: 'number', disabled: true },
                             { label: 'Medical Allowance', name: 'medicalAllowance', type: 'number', disabled: true },
@@ -337,7 +478,7 @@ const PayslipGenerator = () => {
                                     <h3 className="text-lg font-semibold mb-3">Earnings</h3>
                                     <div className="space-y-2 bg-gray-50 p-4 rounded-lg">
                                         {[
-                                            { label: 'Basic Salary', key: 'basicSalary' },
+                                            { label: 'Basic Salary', key: 'salary' },
                                             // { label: 'HRA', key: 'hra' },
                                             // { label: 'Conveyance Allowance', key: 'conveyanceAllowance' },
                                             // { label: 'Medical Allowance', key: 'medicalAllowance' },

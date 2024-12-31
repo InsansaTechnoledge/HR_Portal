@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 
 if(process.env.NODE_ENV !== "production"){
-import ('dotenv').then((dotenv) => dotenv.config()) 
+  (await import('dotenv')).config();
 }
 
 
