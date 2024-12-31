@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-import '../config/passport.js';
 import express from 'express';
 import errorHandler from '../middleware/errorHandler.js';
 import setupMiddleware from '../middleware/setupMiddleware.js';
