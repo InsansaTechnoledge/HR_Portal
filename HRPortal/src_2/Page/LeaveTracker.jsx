@@ -73,7 +73,6 @@ const LeaveTracker = () => {
             return emp;
         });
 
-        console.log(updatedEmployees);
 
         const response = await axios.post(`${API_BASE_URL}/api/employee/addLeave/${selectedEmployeeId}`,newLeave,{
             headers: {

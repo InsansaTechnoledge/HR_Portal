@@ -94,7 +94,7 @@ const Dashboard = () => {
         const accountExtra = [
             {
                 icon: <ClipboardList className="h-6 w-6" />,
-                title: 'Employee List',
+                title: 'Employee Details',
                 description: 'get details of all employees at one place',
                 path: '/emp-list',
                 color: 'bg-purple-500',
@@ -121,7 +121,7 @@ const Dashboard = () => {
         const superAdminExtra = [
             {
                 icon: <ClipboardList className="h-6 w-6" />,
-                title: 'Employee List',
+                title: 'Employee Details',
                 description: 'get details of all employees at one place',
                 path: '/emp-list',
                 color: 'bg-purple-500',

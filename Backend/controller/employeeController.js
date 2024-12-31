@@ -84,7 +84,6 @@ export const uploadDetails = async (req,res) => {
     };
 
     const empId = stringTo6DigitNumber(email);
-    // console.log(hashedEmail);
 
     const newDetails = {
         employeeDetailId:empId,
@@ -99,7 +98,6 @@ export const uploadDetails = async (req,res) => {
         {new: true}
     )
 
-    console.log(updatedEmp);
     res.status(201).json({message: "Details uploaded", updatedEmp});
 }
 

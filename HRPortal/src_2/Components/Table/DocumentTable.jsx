@@ -17,7 +17,6 @@ function DocumentTable(props) {
                 const response = await axios.get(`${API_BASE_URL}/api/documents/all`);
                 const data = Array.isArray(response.data.data) ? response.data.data : [];
                 
-                console.log(data);
     
                 if (props.user && props.user.role === "user") {
                     const filteredData = data.filter(doc => doc.employee.toLowerCase() === props.user.userName.toLowerCase());

@@ -208,10 +208,6 @@ const PayslipGenerator = () => {
             taxType: taxName.value
             });
 
-        if(response.status===201){
-            console.log("Payslip saved");
-        }
-
         setShowPayslip(true);
     };
 

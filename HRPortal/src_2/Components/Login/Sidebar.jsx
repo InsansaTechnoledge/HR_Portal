@@ -19,7 +19,6 @@ import API_BASE_URL from '../../config';
 const handleLogout = async (setUser) => {
 
     try {
-        console.log("Logging out...");
 
         const response = await axios.post(`${API_BASE_URL}/api/auth/logout`, null, {
             withCredentials: true,
@@ -62,7 +61,6 @@ const Sidebar = () => {
 
     useEffect(() => {
         if (user === null) {
-            console.log("User is now null, redirecting...");
             navigate('/', { replace: true });  // Redirect to login after user is null
         }
     }, [user, navigate]);
