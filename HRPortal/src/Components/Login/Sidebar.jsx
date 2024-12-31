@@ -7,16 +7,19 @@ import {
     IconLogout,
     IconChevronDown,
     IconChevronUp,
-    IconBriefcase, 
-    IconUsers, 
-    IconFolder, 
-    IconCalendar, 
-    IconId
+    IconBriefcase,
+    IconUsers,
+    IconFolder,
+    IconCalendar,
+    IconId,
+    IconFilePlus,
+    IconFileText
 } from "@tabler/icons-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { userContext } from "../../Context/userContext";
 import axios from 'axios';
 import API_BASE_URL from '../../config';
+import { use } from "react";
 
 // Logout function to handle user logout
 const handleLogout = async (setUser) => {
@@ -43,9 +46,10 @@ const Sidebar = () => {
     const [isOpen, setIsOpen] = useState(true);
     const [dropdowns, setDropdowns] = useState({
         apps: false,
-        apps1: false,
-        apps2: false,
         user: false,
+        job: false,
+        talent: false,
+        payslip: false
     });
     const { user, setUser } = useContext(userContext);
     const Name = user?.userName; // fetching the name of user
@@ -57,9 +61,10 @@ const Sidebar = () => {
                 // Close all dropdowns when sidebar is closed
                 setDropdowns({
                     apps: false,
-                    apps1: false,
-                    apps2: false,
                     user: false,
+                    job: false,
+                    talent: false,
+                    payslip: false
                 });
             }
             return newIsOpen;
@@ -88,7 +93,7 @@ const Sidebar = () => {
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
                     {isOpen && <h1 className="text-sm font-semibold text-white">{`Hey, ${Name}`}
-                        </h1>}
+                    </h1>}
                     <button className="text-gray-400 hover:text-white" onClick={toggleSidebar}>
                         ☰
                     </button>
@@ -98,7 +103,7 @@ const Sidebar = () => {
                 <nav className="flex-1 mt-6">
                     <ul className="space-y-4">
                         <SidebarItem icon={<IconHome />} label="Home" isOpen={isOpen} to="/" />
-                        
+
 
                         {/* Apps Dropdown for User */}
                         {user && user.role === 'user' && (
@@ -106,17 +111,27 @@ const Sidebar = () => {
                                 icon={<IconGridDots />}
                                 label="User Management"
                                 isOpen={isOpen}
-                                isExpanded={dropdowns.apps1}
-                                toggleDropdown={() => toggleDropdown("apps1")}
+                                isExpanded={dropdowns.user}
+                                toggleDropdown={() => toggleDropdown("user")}
                             >
                                 <SidebarItem icon={<IconFolder />} label="Docs Management" isOpen={isOpen} to="/docs" />
                                 <SidebarItem icon={<IconCalendar />} label="Leave Tracker" isOpen={isOpen} to="/leave-tracker" />
+                                <SidebarItem icon={<IconId />} label="PaySlip Tracker" isOpen={isOpen} to="/payslip-tracker" />
+                                <SidebarItem icon={<IconId />} label="User Registration" isOpen={isOpen} to="/emp-info" />
+
+
+
                             </SidebarDropdown>
                         )}
 
                         {/* Apps Dropdown for Admin/SuperAdmin */}
                         {user && (user.role === 'admin' || user.role === 'superAdmin') && (
                             <>
+                                {user && user.role === 'admin'
+                                    ? <SidebarItem icon={<IconId />} label="User Registration" isOpen={isOpen} to="/emp-info" />
+                                    : null
+                                }
+
                                 <SidebarDropdown
                                     icon={<IconGridDots />}
                                     label="Apps"
@@ -129,12 +144,18 @@ const Sidebar = () => {
                                         icon={<IconUsers />}
                                         label="Employee Management"
                                         isOpen={isOpen}
-                                        isExpanded={dropdowns.apps1}
-                                        toggleDropdown={() => toggleDropdown("apps1")}
+                                        isExpanded={dropdowns.user}
+                                        toggleDropdown={() => toggleDropdown("user")}
                                     >
                                         <SidebarItem icon={<IconFolder />} label="Employee Docs Management" isOpen={isOpen} to="/docs" />
                                         <SidebarItem icon={<IconCalendar />} label="Leave Tracker" isOpen={isOpen} to="/leave-tracker" />
                                         <SidebarItem icon={<IconUsers />} label="Add Employee" isOpen={isOpen} to="/add-employee" />
+                                        {user && user.role === 'superAdmin'
+                                            ? <SidebarItem icon={<IconId />} label="Employee Details" isOpen={isOpen} to="/emp-list" />
+                                            : null
+                                        }
+
+
                                     </SidebarDropdown>
 
                                     {/* Job Management Dropdown */}
@@ -142,8 +163,8 @@ const Sidebar = () => {
                                         icon={<IconBriefcase />}
                                         label="Job Management"
                                         isOpen={isOpen}
-                                        isExpanded={dropdowns.apps2}
-                                        toggleDropdown={() => toggleDropdown("apps2")}
+                                        isExpanded={dropdowns.job}
+                                        toggleDropdown={() => toggleDropdown("job")}
                                     >
                                         <SidebarItem icon={<IconBriefcase />} label="Post Current Job Openings" isOpen={isOpen} to="/post-job" />
                                         <SidebarItem icon={<IconBriefcase />} label="Job Application Management" isOpen={isOpen} to="/application" />
@@ -155,11 +176,27 @@ const Sidebar = () => {
                                     icon={<IconUser />}
                                     label="Talent Management"
                                     isOpen={isOpen}
-                                    isExpanded={dropdowns.user}
-                                    toggleDropdown={() => toggleDropdown("user")}
+                                    isExpanded={dropdowns.talent}
+                                    toggleDropdown={() => toggleDropdown("talent")}
                                 >
                                     <SidebarItem icon={<IconUser />} label="Register Candidate" isOpen={isOpen} to="/register-candidate" />
                                     <SidebarItem icon={<IconUser />} label="Candidate Roster" isOpen={isOpen} to="/candidate-detail" />
+                                </SidebarDropdown>
+
+                                <SidebarDropdown
+                                    icon={<IconUsers />}
+                                    label="Payslip Management"
+                                    isOpen={isOpen}
+                                    isExpanded={dropdowns.payslip}
+                                    toggleDropdown={() => toggleDropdown("payslip")}
+                                >
+                                    <SidebarItem icon={<IconFileText />} label="PaySlip Tracker" isOpen={isOpen} to="/payslip-tracker"/>
+                                    {user && user.role === 'superAdmin'
+                                        ?
+                                        <SidebarItem icon={<IconFilePlus />} label="PaySlip Generator" isOpen={isOpen} to="/payslip"/>
+                                        : null
+                                    }
+
                                 </SidebarDropdown>
 
                                 {/* Authentication Management */}
@@ -167,20 +204,27 @@ const Sidebar = () => {
                             </>
                         )}
                         {
-                            user && (user.role==="admin" || user.role==="user")
-                            ?
-                            <SidebarItem icon={<IconId />} label="User Registration" isOpen={isOpen} to="/emp-info" />
-                            :
-                            null
-                        }
-                        {
-                            user && user.role==="superAdmin"
-                            ?
-                            <SidebarItem icon={<IconId />} label="User Details" isOpen={isOpen} to="/emp-list" />
-                            :
-                            null
+                            user && (user.role === "accountant") &&
+
+                            <>
+                                <SidebarItem icon={<IconId />} label="Employee Details" isOpen={isOpen} to="/emp-list" />
+                                <SidebarDropdown
+                                    icon={<IconUsers />}
+                                    label="Payslip Management"
+                                    isOpen={isOpen}
+                                    isExpanded={dropdowns.payslip}
+                                    toggleDropdown={() => toggleDropdown("payslip")}
+                                >
+                                    <SidebarItem icon={<IconFileText />} label="PaySlip Tracker" isOpen={isOpen} to="/payslip-tracker"/>
+
+                                    <SidebarItem icon={<IconFilePlus />} label="PaySlip Generator" isOpen={isOpen} to="/payslip" />
+
+                                </SidebarDropdown>
+                            </>
+
 
                         }
+
                     </ul>
                 </nav>
 

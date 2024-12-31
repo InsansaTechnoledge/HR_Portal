@@ -181,9 +181,9 @@ function AppLayout() {
                     <Route
                         path="/emp-list"
                         element={
-                            <SuperAdminRoute>
+                            <AccountantSuperAdminRoute>
                                 <EmployeeList />
-                            </SuperAdminRoute>
+                            </AccountantSuperAdminRoute>
                         }
                     />
 
