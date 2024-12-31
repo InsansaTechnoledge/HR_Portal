@@ -1,10 +1,11 @@
-import dotenv from 'dotenv';
 import express from 'express';
 import errorHandler from '../middleware/errorHandler.js';
 import setupMiddleware from '../middleware/setupMiddleware.js';
 import routes from '../routes/routes.js';
 
-dotenv.config();
+if(process.env.NODE_ENV !== "production"){
+import ('dotenv').then((dotenv) => dotenv.config()) 
+}
 
 const app = express();
 

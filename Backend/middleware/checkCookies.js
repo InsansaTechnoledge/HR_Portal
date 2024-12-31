@@ -1,7 +1,8 @@
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv'
 
-dotenv.config();
+if(process.env.NODE_ENV !== "production"){
+import ('dotenv').then((dotenv) => dotenv.config()) 
+}
 
 const checkCookies = (req,res,next) => {
     const token = req.cookies.jwtAuth;

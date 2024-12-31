@@ -1,8 +1,10 @@
 import User from "../models/User.js";
-import dotenv from 'dotenv';
 import generateAuthToken from '../utils/generateAuthToken.js';
 import bcrypt from 'bcryptjs';
-dotenv.config();
+
+if(process.env.NODE_ENV !== "production"){
+import ('dotenv').then((dotenv) => dotenv.config()) 
+}
 
 //login route
 export const login=async(req, res, next)=>{

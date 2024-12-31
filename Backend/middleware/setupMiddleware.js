@@ -2,8 +2,10 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import cors from 'cors';
-import dotenv from 'dotenv';
-dotenv.config();
+
+if(process.env.NODE_ENV !== "production"){
+import ('dotenv').then((dotenv) => dotenv.config()) 
+}
 
 
 const configureApp = (app) => {
