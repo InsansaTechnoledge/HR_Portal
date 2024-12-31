@@ -46,7 +46,7 @@ const PayslipGenerator = () => {
         designation: '',
         month: '',
         year: '',
-        basicSalary: '',
+        salary: '',
         hra: 0,
         conveyanceAllowance: 0,
         medicalAllowance: 0,
@@ -77,7 +77,7 @@ const PayslipGenerator = () => {
                 designation: selectedEmployee.details.designation,
                 bankAccount: selectedEmployee.details.accountNumber,
                 panNumber: selectedEmployee.details.panNumber,
-                basicSalary: selectedEmployee.details.basicSalary || 0,
+                salary: selectedEmployee.details.salary || 0,
                 uanNumber: selectedEmployee.details.uanNumber || '',
                 hra: 0,
                 conveyanceAllowance: 0,
@@ -92,26 +92,26 @@ const PayslipGenerator = () => {
     };
 
     // const calculateDeductions = () => {
-    //     const basicSalary = parseFloat(employeeData.basicSalary) || 0;
-    //     const pf = basicSalary * 0.12;
+    //     const salary = parseFloat(employeeData.salary) || 0;
+    //     const pf = salary * 0.12;
     //     const professionalTax = 200;
-    //     const incomeTax = basicSalary * 0.1;
+    //     const incomeTax = salary * 0.1;
     //     return { pf, professionalTax, incomeTax };
     // };
     const calculateDeductions = () => {
-        const basicSalary = parseFloat(employeeData.basicSalary) || 0;
-        const incomeTax = basicSalary * 0.1;
+        const salary = parseFloat(employeeData.salary) || 0;
+        const incomeTax = salary * 0.1;
         if(taxType==='Professional Tax'){
             return { professionalTax };
         }
         else{
-            return { TDS: basicSalary * 0.1 };
+            return { TDS: salary * 0.1 };
         }
         // if(taxType==='Professional Tax'){
         //     return { professionalTax, incomeTax };
         // }
         // else{
-        //     return { TDS: basicSalary * 0.1, incomeTax };
+        //     return { TDS: salary * 0.1, incomeTax };
         // }
     };
 
@@ -119,7 +119,7 @@ const PayslipGenerator = () => {
         
 
         return (
-            (parseFloat(employeeData.basicSalary) || 0) +
+            (parseFloat(employeeData.salary) || 0) +
             (parseFloat(employeeData.hra) || 0) +
             (parseFloat(employeeData.conveyanceAllowance) || 0) +
             (parseFloat(employeeData.medicalAllowance) || 0) +
@@ -162,7 +162,7 @@ const PayslipGenerator = () => {
             department: employeeData.department,
             designation: employeeData.designation,
             month: employeeData.month,
-            basicSalary: employeeData.basicSalary,
+            salary: employeeData.salary,
             hra: employeeData.hra,
             conveyanceAllowance: employeeData.conveyanceAllowance,
             medicalAllowance: employeeData.medicalAllowance,
@@ -171,7 +171,7 @@ const PayslipGenerator = () => {
             panNumber: employeeData.panNumber,
             uanNumber: employeeData.uanNumber,
             professionalTax: professionalTax,
-            incomeTax: employeeData.basicSalary * 0.1,
+            incomeTax: employeeData.salary * 0.1,
             totalEarnings: calculateTotalEarnings().toFixed(2),
             netSalary: calculateNetSalary().toFixed(2),
             totalDeductions: Object.values(calculateDeductions())
@@ -189,7 +189,7 @@ const PayslipGenerator = () => {
             department: employeeData.department,
             designation: employeeData.designation,
             month: employeeData.month,
-            basicSalary: employeeData.basicSalary,
+            salary: employeeData.salary,
             hra: employeeData.hra,
             conveyanceAllowance: employeeData.conveyanceAllowance,
             medicalAllowance: employeeData.medicalAllowance,
@@ -198,7 +198,7 @@ const PayslipGenerator = () => {
             panNumber: employeeData.panNumber,
             uanNumber: employeeData.uanNumber,
             professionalTax: professionalTax,
-            incomeTax: employeeData.basicSalary * 0.1,
+            incomeTax: employeeData.salary * 0.1,
             totalEarnings: calculateTotalEarnings().toFixed(2),
             netSalary: calculateNetSalary().toFixed(2),
             totalDeductions: Object.values(calculateDeductions())
@@ -223,7 +223,7 @@ const PayslipGenerator = () => {
             designation: '',
             month: '',
             year: '',
-            basicSalary: '',
+            salary: '',
             hra: 0,
             conveyanceAllowance: 0,
             medicalAllowance: 0,
@@ -352,7 +352,7 @@ const PayslipGenerator = () => {
                             { label: 'Bank Account', name: 'bankAccount' },
                             { label: 'PAN Number', name: 'panNumber' },
                             { label: 'UAN Number', name: 'uanNumber' },
-                            { label: 'Basic Salary', name: 'basicSalary', type: 'number' },
+                            { label: 'Basic Salary', name: 'salary', type: 'number' },
                             { label: 'HRA', name: 'hra', type: 'number', disabled: true },
                             { label: 'Conveyance Allowance', name: 'conveyanceAllowance', type: 'number', disabled: true },
                             { label: 'Medical Allowance', name: 'medicalAllowance', type: 'number', disabled: true },
@@ -478,7 +478,7 @@ const PayslipGenerator = () => {
                                     <h3 className="text-lg font-semibold mb-3">Earnings</h3>
                                     <div className="space-y-2 bg-gray-50 p-4 rounded-lg">
                                         {[
-                                            { label: 'Basic Salary', key: 'basicSalary' },
+                                            { label: 'Basic Salary', key: 'salary' },
                                             // { label: 'HRA', key: 'hra' },
                                             // { label: 'Conveyance Allowance', key: 'conveyanceAllowance' },
                                             // { label: 'Medical Allowance', key: 'medicalAllowance' },
