@@ -12,7 +12,7 @@ const configureApp = async (app) => {
 
   await app.use(
     cors({
-      origin: process.env.CLIENT_ORIGIN || 'https://hr-portal-5d6l.vercel.app', 
+      origin: process.env.CLIENT_ORIGIN || 'https://hr-portal-5d6l.vercel.app' ||  'https://hr-portal-mu.vercel.app' , 
       credentials: true, 
       allowedHeaders: [
         'Content-Type',
@@ -36,9 +36,9 @@ const configureApp = async (app) => {
   );
 
   // Handle preflight requests explicitly
-  await app.options('*', cors());
+await app.options('/api/payslip/generate', cors());
 
-  // Set security headers
+
   await app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', process.env.CLIENT_ORIGIN || 'https://hr-portal-5d6l.vercel.app'); 
     res.setHeader('Access-Control-Allow-Credentials', 'true');
