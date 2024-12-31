@@ -20,10 +20,6 @@ const configureApp = (app) => {
         'X-Requested-With',
         'Accept',
         'Origin',
-        'Access-Control-Allow-Origin',
-        'Access-Control-Allow-Headers',
-        'Access-Control-Allow-Credentials',
-        'Access-Control-Expose-Headers',
         'X-Custom-Header',
       ], 
       exposedHeaders: [
@@ -32,10 +28,6 @@ const configureApp = (app) => {
         'X-Requested-With',
         'Accept',
         'Origin',
-        'Access-Control-Allow-Origin',
-        'Access-Control-Allow-Headers',
-        'Access-Control-Allow-Credentials',
-        'Access-Control-Expose-Headers',
         'X-Custom-Header',
       ], 
     })
