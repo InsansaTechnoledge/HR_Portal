@@ -3,6 +3,7 @@ import { Search, Download, ChevronDown, User } from 'lucide-react';
 import { userContext } from '../Context/userContext';
 import API_BASE_URL from '../config';
 import axios from 'axios';
+import Loader from '../Components/Loader/Loader';
 
 const PayslipTracker = () => {
     const [userRole, setUserRole] = useState('employee'); // 'employee' or 'accountant'
@@ -11,6 +12,7 @@ const PayslipTracker = () => {
     const [error, setError] = useState(null);
     const {user} = useContext(userContext);
     const [payslips, setPayslips] = useState();
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
 
@@ -38,6 +40,7 @@ const PayslipTracker = () => {
 
                 }
             } 
+            setLoading(false);
         }
 
         fetchPayslips();
@@ -49,6 +52,12 @@ const PayslipTracker = () => {
         const matchesMonth = filterMonth ? payslip.month === filterMonth : true;
         return matchesSearch && matchesMonth;
     });
+
+    if(loading){
+        return(
+            <Loader/>
+        )
+    }
 
     return (
         <div className="max-w-7xl mx-auto p-6 space-y-6 bg-white text-black">
@@ -138,7 +147,8 @@ const PayslipTracker = () => {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                                        <button className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-100">
+                                        <button 
+                                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-100 hover:cursor-not-allowed">
                                             <Download className="h-5 w-5 text-blue-500" />
                                         </button>
                                     </td>

@@ -90,6 +90,16 @@ const Dashboard = () => {
             : []),
     ].filter(Boolean);
 
+    if(user && user.role!=='superAdmin'){
+        categories[0].items.unshift({
+            icon: <Users className="h-6 w-6" />,
+            title: 'Employee Information',
+            description: 'Your personal as well as professional details',
+            path: '/emp-info',
+            color: 'bg-red-500',
+        })
+    }
+
     const FeatureCard = ({ icon, title, description, path, color }) => (
         <div
             className="group hover:shadow-lg transition-all duration-300 cursor-pointer p-6 rounded-lg bg-white border"
