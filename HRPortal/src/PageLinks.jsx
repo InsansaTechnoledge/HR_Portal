@@ -151,14 +151,6 @@ function AppLayout() {
                         }
                     />
 
-                    <Route
-                        path="/payslip"
-                        element={
-                            <AccountantSuperAdminRoute>
-                                <PayslipGenerator />
-                            </AccountantSuperAdminRoute>
-                        }
-                    />
 
 
                     
@@ -175,6 +167,7 @@ function AppLayout() {
                             </NoSuperAdminRoute>
                         } />
 
+                    {/* Super Admin route */}
                     <Route
                         path="/emp-list"
                         element={
@@ -185,6 +178,14 @@ function AppLayout() {
                     />
 
                     {/* Accountant and Super admin */}
+                        <Route
+                            path="/payslip"
+                            element={
+                                <AccountantSuperAdminRoute>
+                                    <PayslipGenerator />
+                                </AccountantSuperAdminRoute>
+                            }
+                        />
 
                     {/* Any other route */}
                     <Route

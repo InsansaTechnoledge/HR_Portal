@@ -18,7 +18,7 @@ const PayslipTracker = () => {
 
         const fetchPayslips = async () => {
 
-            if(user && user.role==='superAdmin' || user.role==='accountant'){
+            if(user && user.role==='superAdmin' || user.role==='accountant' || user.role==='admin'){
                 const response = await axios.get(`${API_BASE_URL}/api/payslip`);
                 if (response.status === 201) {
                     const allPayslips = response.data.paySlips;
