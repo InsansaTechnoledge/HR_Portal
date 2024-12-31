@@ -21,6 +21,8 @@ const configureApp = (app) => {
         'Accept',
         'Origin',
         'X-Custom-Header',
+         'Content-Disposition', 
+        'Content-Length', 
       ], 
       exposedHeaders: [
         'Content-Type',
