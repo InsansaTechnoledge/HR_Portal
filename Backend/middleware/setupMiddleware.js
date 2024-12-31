@@ -32,7 +32,7 @@ app.options('*', (req, res) => {
 // Additional middleware
 
 const corsOptions = {
-  origin: '*', // Adjust as needed for your app's security
+  origin: ['https://hr-portal-5d6l.vercel.app', 'https://hr-portal-mu.vercel.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
 };
