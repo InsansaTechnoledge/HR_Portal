@@ -3,21 +3,25 @@ import { ChevronDown, ChevronUp, Download, Pencil } from 'lucide-react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
 import { userContext } from '../Context/userContext';
+import Loader from '../Components/Loader/Loader';
 
 const EmployeeList = () => {
     const [expandedRows, setExpandedRows] = useState(new Set());
     const [employees, setEmployees] = useState([]);
     const [toggleEditsalary, setToggleEditSalary] = useState(false);
     const {user} = useContext(userContext);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        setIsLoading(true);
+
         const fetchEmployees = async () => {
             const response = await axios.get(`${API_BASE_URL}/api/employee`);
             if (response.status === 201) {
                 const allEmployees = response.data.employees;
                 const filteredEmployees = allEmployees.filter(emp => emp.details !== undefined);
                 setEmployees(filteredEmployees);
-                console.log(filteredEmployees);
+                setIsLoading(false);
             }
         }
 
@@ -126,10 +130,6 @@ const EmployeeList = () => {
         </div>
     );
 
-    if (!employees || employees.length === 0) {
-        return <p className="text-center text-gray-500 py-6">No employees found.</p>;
-    }
-
     const handleDownload = (employee, doc) => {
         'PAN Card', 'Aadhar Card', 'Degree Certificate', 'Experience Certificate'
         if (doc === 'PAN Card') {
@@ -191,9 +191,15 @@ const EmployeeList = () => {
         }
     }
 
+    if(isLoading){
+        return(
+            <Loader/>
+        )
+    }
 
 
     return (
+
         <div className="max-w-7xl mx-auto p-6">
             <div className="bg-white shadow-lg rounded-lg overflow-hidden">
                 <div className="px-6 py-4 bg-gray-100 border-b border-gray-300">

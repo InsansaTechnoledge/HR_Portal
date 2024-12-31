@@ -91,8 +91,7 @@ function EmployeeDetailsForm(props) {
                 console.log(response.data.updatedEmp);
                 alert("Details uploaded!");
 
-                props.setEmployee(newEmployee);
-                window.location.reload();
+                props.setEmployee(response.data.updatedEmp);
             }
 
 
