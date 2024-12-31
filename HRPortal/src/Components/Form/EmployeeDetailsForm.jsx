@@ -2,13 +2,14 @@ import React, { useState, useContext } from "react";
 import { userContext } from "../../Context/userContext";
 import axios from 'axios';
 import API_BASE_URL from "../../config.js";
+import Loader from "../Loader/Loader.jsx";
 
 function EmployeeDetailsForm(props) {
 
     const { user } = useContext(userContext);
 
     const Name = user?.userName; // fetching the name of user
-
+    const [loading, setLoading] = useState(false);
 
     const [employees, setEmployees] = useState([]);
     const [file, setFile] = useState();
@@ -53,6 +54,7 @@ function EmployeeDetailsForm(props) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setLoading(true);
         setEmployees((prev) => [...prev, { ...newEmployee, id: Date.now() }]);
 
 
@@ -88,6 +90,7 @@ function EmployeeDetailsForm(props) {
                 alert("Details uploaded!");
 
                 props.setEmployee(response.data.updatedEmp);
+                setLoading(false);
             }
 
 
@@ -145,6 +148,12 @@ function EmployeeDetailsForm(props) {
     const handleDragOver = (field, event) => {
         event.preventDefault();
     };
+
+    if(loading){
+        return (
+            <Loader/>
+        )
+    }
 
     return (
         <div>
