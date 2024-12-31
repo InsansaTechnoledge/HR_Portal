@@ -4,6 +4,7 @@ import { userContext } from '../Context/userContext';
 import API_BASE_URL from '../config';
 import axios from 'axios';
 import Loader from '../Components/Loader/Loader';
+import { useNavigate } from 'react-router-dom';
 
 const PayslipTracker = () => {
     const [userRole, setUserRole] = useState('employee'); // 'employee' or 'accountant'
@@ -13,6 +14,8 @@ const PayslipTracker = () => {
     const {user} = useContext(userContext);
     const [payslips, setPayslips] = useState();
     const [loading, setLoading] = useState(true);
+    const [noEmployeeDetail, setNoEmployeeDetail] = useState(false);
+    const navigate = useNavigate();
 
     useEffect(() => {
 
@@ -32,10 +35,16 @@ const PayslipTracker = () => {
                     const employee = empResponse.data;
                     console.log(employee);
 
-                    const response = await axios.get(`${API_BASE_URL}/api/payslip/fetchByEmployeeId/${employee.details.employeeDetailId}`);
-                    if(response.status===201){
-                        const filteredPayslips = response.data.paySlips;
-                        setPayslips(filteredPayslips);    
+                    if(!employee.details){
+                        setLoading(false);
+                        setNoEmployeeDetail(true);
+                    }
+                    else{
+                        const response = await axios.get(`${API_BASE_URL}/api/payslip/fetchByEmployeeId/${employee.details.employeeDetailId}`);
+                        if(response.status===201){
+                            const filteredPayslips = response.data.paySlips;
+                            setPayslips(filteredPayslips);    
+                        }
                     }
 
                 }
@@ -56,6 +65,18 @@ const PayslipTracker = () => {
     if(loading){
         return(
             <Loader/>
+        )
+    }
+
+    if(noEmployeeDetail){
+        return(
+            <>
+            <div>
+                Please register yourself through Employee Registration form
+            </div>
+            <button 
+            onClick={()=>navigate('/emp-info')}>register yourself</button>
+            </>
         )
     }
 
