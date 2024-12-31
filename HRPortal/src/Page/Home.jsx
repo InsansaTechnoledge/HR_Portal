@@ -25,6 +25,13 @@ const Dashboard = () => {
                     path: '/leave-tracker',
                     color: 'bg-green-500',
                 },
+                {
+                    icon: <Briefcase className='h-6 w-6' />,
+                    title: 'Payslip Tracker',
+                    description: 'Track and view your Payslips',
+                    path: '/payslip-tracker',
+                    color: 'bg-orange-500',
+                }
             ],
         },
         ...(user.role !== 'user'

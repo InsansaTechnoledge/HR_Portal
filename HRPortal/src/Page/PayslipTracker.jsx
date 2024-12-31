@@ -8,10 +8,6 @@ const PayslipTracker = () => {
     const [userRole, setUserRole] = useState('employee'); // 'employee' or 'accountant'
     const [searchTerm, setSearchTerm] = useState('');
     const [filterMonth, setFilterMonth] = useState('');
-    const [selectedYear, setSelectedYear] = useState('2024');
-    const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
-    const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
-    const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
     const [error, setError] = useState(null);
     const {user} = useContext(userContext);
     const [payslips, setPayslips] = useState();
@@ -70,16 +66,22 @@ const PayslipTracker = () => {
             {/* Filters */}
             <div className="flex flex-wrap gap-4 bg-white p-4 rounded-lg shadow">
                 <div className="flex-1 min-w-[200px]">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                        <input
-                            type="text"
-                            placeholder="Search by name or ID..."
-                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100 text-black"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
+                    {
+                        user && (user.role==="user" || user==="admin")
+                        ?
+                        null
+                        : 
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                            <input
+                                type="text"
+                                placeholder="Search by name or ID..."
+                                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100 text-black"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                    }
                 </div>
 
                 <div className="flex gap-4">
@@ -93,7 +95,7 @@ const PayslipTracker = () => {
             </div>
 
             {/* Payslips Table */}
-            <div className="bg-white rounded-lg shadow overflow-x-auto">
+            <div className="bg-white rounded-lg shadow overflow-auto max-h-96">
                 {error && (
                     <div className="text-red-500 text-center py-4">
                         {error}
@@ -104,7 +106,7 @@ const PayslipTracker = () => {
                         No payslips found. Please adjust your filters or try again.
                     </div>
                 ) : (
-                    <table className="min-w-full divide-y divide-gray-200">
+                    <table className="min-w-full h-3/4 divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee ID</th>
