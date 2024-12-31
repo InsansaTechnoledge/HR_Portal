@@ -13,7 +13,7 @@ const configureApp = (app) => {
 
   app.use(
     cors({
-      origin: `${process.env.CLIENT_BASE_URL}`,
+      origin: `*`,
       credentials: true, 
       allowedHeaders: ['Content-Type', 'Authorization'], 
     }
