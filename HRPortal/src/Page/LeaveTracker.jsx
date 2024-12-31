@@ -11,6 +11,7 @@ import {
 import axios from 'axios';
 import API_BASE_URL from '../config';
 import { userContext } from '../Context/userContext';
+import Loader from '../Components/Loader/Loader';
 
 const initialEmployees = [];
 
@@ -39,6 +40,7 @@ const LeaveTracker = () => {
     });
     const { user } = useContext(userContext);
     const [oneDayLeave, setOneDayLeave] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     const fetchEmployeeData = async () => {
         try {
@@ -59,6 +61,7 @@ const LeaveTracker = () => {
                     setSelectedEmployeeId(employees[0]?.empId);
                     setSelectedEmployee(employees[0]);
                 }
+                setLoading(false);
             }
         } catch (error) {
             console.error("Error fetching employee data:", error);
@@ -70,6 +73,7 @@ const LeaveTracker = () => {
     }, [user]);
 
     useEffect(() => {
+        setLoading(true);
         const updateSelectedEmployee = async () => {
             try {
                 const response = await axios.get(`${API_BASE_URL}/api/employee/${selectedEmployeeId}`);
@@ -83,6 +87,7 @@ const LeaveTracker = () => {
                     setFilteredEmployees(prev =>
                         prev.map(emp => emp.empId === selectedEmployeeId ? updatedEmployee : emp)
                     );
+                    setLoading(false);
                 }
             } catch (error) {
                 console.error("Error fetching employee details:", error);
@@ -235,6 +240,11 @@ const LeaveTracker = () => {
     };
 
     const availableLeaveMonths = handleLeaveMonths();
+
+    if(loading){
+        return <Loader/>
+    }
+
     return (
         <div className="flex min-h-screen bg-gray-50">
             {/* Sidebar */}

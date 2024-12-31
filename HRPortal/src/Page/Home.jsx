@@ -25,9 +25,16 @@ const Dashboard = () => {
                     path: '/leave-tracker',
                     color: 'bg-green-500',
                 },
+                {
+                    icon: <Briefcase className='h-6 w-6' />,
+                    title: 'Payslip Tracker',
+                    description: 'Track and view your Payslips',
+                    path: '/payslip-tracker',
+                    color: 'bg-orange-500',
+                }
             ],
         },
-        ...(user.role !== 'user'
+        ...(user.role !== 'user' && user.role!=='accountant'
             ? [
                 {
                     title: 'Recruitment',
@@ -82,6 +89,62 @@ const Dashboard = () => {
             ]
             : []),
     ].filter(Boolean);
+
+    if(user && user.role==='accountant'){
+        const accountExtra = [
+            {
+                icon: <ClipboardList className="h-6 w-6" />,
+                title: 'Employee List',
+                description: 'get details of all employees at one place',
+                path: '/emp-list',
+                color: 'bg-purple-500',
+            },
+            {
+                icon: <FileText className="h-6 w-6" />,
+                title: 'Payslip Generation',
+                description: 'Easily generate payslips for employees',
+                path: '/payslip',
+                color: 'bg-red-500',
+            },
+            {
+                icon: <Briefcase className='h-6 w-6' />,
+                title: 'Payslip Tracker',
+                description: 'Track and view your Payslips',
+                path: '/payslip-tracker',
+                color: 'bg-orange-500',
+            }
+        ]   
+
+        categories[0].items=accountExtra;
+    }
+    else if(user && user.role==='superAdmin'){
+        const superAdminExtra = [
+            {
+                icon: <ClipboardList className="h-6 w-6" />,
+                title: 'Employee List',
+                description: 'get details of all employees at one place',
+                path: '/emp-list',
+                color: 'bg-purple-500',
+            },
+            {
+                icon: <FileText className="h-6 w-6" />,
+                title: 'Payslip Generation',
+                description: 'Easily generate payslips for employees',
+                path: '/payslip',
+                color: 'bg-red-500',
+            }
+        ]
+        categories[0].items.push(...superAdminExtra);
+    }
+    else if(user && user.role!=='superAdmin'){
+        categories[0].items.unshift({
+            icon: <Users className="h-6 w-6" />,
+            title: 'Employee Information',
+            description: 'Your personal as well as professional details',
+            path: '/emp-info',
+            color: 'bg-red-500',
+        })
+    }
 
     const FeatureCard = ({ icon, title, description, path, color }) => (
         <div
