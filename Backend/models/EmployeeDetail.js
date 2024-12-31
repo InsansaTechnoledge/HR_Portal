@@ -65,7 +65,7 @@ const EmployeeDetailSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    reportingManager: {
+    nameAsPerBank: {
         type: String,
         required: true
     },

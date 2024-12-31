@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Search, Download, ChevronDown, User } from 'lucide-react';
+import { userContext } from '../Context/userContext';
+import API_BASE_URL from '../config';
+import axios from 'axios';
 
 const PayslipTracker = () => {
     const [userRole, setUserRole] = useState('employee'); // 'employee' or 'accountant'
@@ -10,53 +13,46 @@ const PayslipTracker = () => {
     const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
     const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
     const [error, setError] = useState(null);
+    const {user} = useContext(userContext);
+    const [payslips, setPayslips] = useState();
 
-    // Mock data - In a real app, this would come from an API
-    const mockPayslips = [
-        {
-            id: 1,
-            employeeId: 'EMP001',
-            employeeName: 'John Doe',
-            department: 'Engineering',
-            month: '2024-03',
-            basicSalary: 50000,
-            totalEarnings: 75000,
-            totalDeductions: 15000,
-            netSalary: 60000,
-            status: 'Paid',
-        },
-        {
-            id: 2,
-            employeeId: 'EMP002',
-            employeeName: 'Jane Smith',
-            department: 'Marketing',
-            month: '2024-03',
-            basicSalary: 45000,
-            totalEarnings: 65000,
-            totalDeductions: 13000,
-            netSalary: 52000,
-            status: 'Paid',
-        },
-    ];
+    useEffect(() => {
 
-    const currentUserPayslips = mockPayslips.filter(
-        (payslip) => payslip.employeeId === 'EMP002' // This would be the logged-in user's ID
-    );
+        const fetchPayslips = async () => {
 
-    const displayPayslips = userRole === 'accountant' ? mockPayslips : currentUserPayslips;
+            if(user && user.role==='superAdmin' || user.role==='accountant'){
+                const response = await axios.get(`${API_BASE_URL}/api/payslip`);
+                if (response.status === 201) {
+                    const allPayslips = response.data.paySlips;
+                    setPayslips(allPayslips);
+                }
+            }
+            else{
+                const empResponse = await axios.get(`${API_BASE_URL}/api/employee/fetchEmployeeByEmail/${user.userEmail}`);
+                if(empResponse.status===201){
+    
+                    const employee = empResponse.data;
+                    console.log(employee);
 
-    const filteredPayslips = displayPayslips.filter((payslip) => {
-        const matchesSearch = payslip.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    const response = await axios.get(`${API_BASE_URL}/api/payslip/fetchByEmployeeId/${employee.details.employeeDetailId}`);
+                    if(response.status===201){
+                        const filteredPayslips = response.data.paySlips;
+                        setPayslips(filteredPayslips);    
+                    }
+
+                }
+            } 
+        }
+
+        fetchPayslips();
+    }, []);
+
+    const filteredPayslips = payslips && payslips.filter((payslip) => {
+        const matchesSearch = payslip.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             payslip.employeeId.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesMonth = filterMonth ? payslip.month === filterMonth : true;
         return matchesSearch && matchesMonth;
     });
-
-    // Handle potential errors
-    const handleError = (message) => {
-        setError(message);
-        setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
-    };
 
     return (
         <div className="max-w-7xl mx-auto p-6 space-y-6 bg-white text-black">
@@ -68,39 +64,7 @@ const PayslipTracker = () => {
                         {userRole === 'accountant' ? 'Manage all employee payslips' : 'View your payslip history'}
                     </p>
                 </div>
-                <div className="relative">
-                    <button
-                        onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-                        className="flex items-center gap-2 px-4 py-2 border rounded-lg bg-white hover:bg-gray-50 text-blue-500"
-                    >
-                        <User className="h-5 w-5" />
-                        <span>{userRole === 'accountant' ? 'Accountant View' : 'Employee View'}</span>
-                        <ChevronDown className="h-4 w-4" />
-                    </button>
-
-                    {isRoleDropdownOpen && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                            <button
-                                onClick={() => {
-                                    setUserRole('employee');
-                                    setIsRoleDropdownOpen(false);
-                                }}
-                                className="w-full px-4 py-2 text-left hover:bg-gray-100 text-black"
-                            >
-                                Employee View
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setUserRole('accountant');
-                                    setIsRoleDropdownOpen(false);
-                                }}
-                                className="w-full px-4 py-2 text-left hover:bg-gray-100 text-black"
-                            >
-                                Accountant View
-                            </button>
-                        </div>
-                    )}
-                </div>
+                
             </div>
 
             {/* Filters */}
@@ -119,70 +83,12 @@ const PayslipTracker = () => {
                 </div>
 
                 <div className="flex gap-4">
-                    {/* Month Dropdown */}
-                    <div className="relative">
-                        <button
-                            onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
-                            className="flex items-center gap-2 px-4 py-2 border rounded-lg bg-white hover:bg-gray-50 text-blue-500"
-                        >
-                            <span>{filterMonth || 'Select Month'}</span>
-                            <ChevronDown className="h-4 w-4" />
-                        </button>
+                    {/* Month Select */}
+                        <input 
+                        className='flex items-center gap-2 px-4 py-2 border rounded-lg bg-white hover:bg-gray-50 text-blue-500'
+                        type='month'
+                        onChange={(e) => {setFilterMonth(e.target.value)}}></input>
 
-                        {isMonthDropdownOpen && (
-                            <div className="absolute mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                                <button
-                                    onClick={() => {
-                                        setFilterMonth('');
-                                        setIsMonthDropdownOpen(false);
-                                    }}
-                                    className="w-full px-4 py-2 text-left hover:bg-gray-100 text-black"
-                                >
-                                    All Months
-                                </button>
-                                {['2024-03', '2024-02', '2024-01'].map((month) => (
-                                    <button
-                                        key={month}
-                                        onClick={() => {
-                                            setFilterMonth(month);
-                                            setIsMonthDropdownOpen(false);
-                                        }}
-                                        className="w-full px-4 py-2 text-left hover:bg-gray-100 text-black"
-                                    >
-                                        {month}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Year Dropdown */}
-                    <div className="relative">
-                        <button
-                            onClick={() => setIsYearDropdownOpen(!isYearDropdownOpen)}
-                            className="flex items-center gap-2 px-4 py-2 border rounded-lg bg-white hover:bg-gray-50 text-blue-500"
-                        >
-                            <span>{selectedYear}</span>
-                            <ChevronDown className="h-4 w-4" />
-                        </button>
-
-                        {isYearDropdownOpen && (
-                            <div className="absolute mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                                {['2024', '2023'].map((year) => (
-                                    <button
-                                        key={year}
-                                        onClick={() => {
-                                            setSelectedYear(year);
-                                            setIsYearDropdownOpen(false);
-                                        }}
-                                        className="w-full px-4 py-2 text-left hover:bg-gray-100 text-black"
-                                    >
-                                        {year}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
 
@@ -193,7 +99,7 @@ const PayslipTracker = () => {
                         {error}
                     </div>
                 )}
-                {filteredPayslips.length === 0 ? (
+                {filteredPayslips && filteredPayslips.length === 0 ? (
                     <div className="text-gray-500 text-center py-6">
                         No payslips found. Please adjust your filters or try again.
                     </div>
@@ -214,10 +120,10 @@ const PayslipTracker = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
-                            {filteredPayslips.map((payslip) => (
+                            {filteredPayslips && filteredPayslips.map((payslip) => (
                                 <tr key={payslip.id} className="hover:bg-gray-100">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{payslip.employeeId}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{payslip.employeeName}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{payslip.name}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{payslip.department}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{payslip.month}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">₹{payslip.basicSalary.toLocaleString()}</td>
@@ -226,7 +132,7 @@ const PayslipTracker = () => {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-right">₹{payslip.netSalary.toLocaleString()}</td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            {payslip.status}
+                                            paid
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right">

@@ -109,9 +109,29 @@ export const fetchEmployeeByEmail = async (req,res) => {
         const {email} = req.params;
         
         const emp = await Employee.findOne({email: email});
-        
         if(emp){
             res.status(201).json(emp);
+        }
+    }
+    catch(err){
+        console.log(err);
+    }
+}
+
+export const updateSalary = async (req,res) => {
+    try{
+
+        const {salary} = req.body;
+        const {id} = req.params;
+        
+        const updatedUser = await Employee.findByIdAndUpdate(
+            id,
+            { $set: { "details.salary": salary } }, // Using dot notation to update nested field
+            { new: true } // Returns the updated document
+        );
+
+        if(updatedUser){
+            res.status(201).json({message: "Salary updated successfully", updatedUser});
         }
     }
     catch(err){
