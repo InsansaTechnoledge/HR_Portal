@@ -5,6 +5,7 @@ import jsPDF from 'jspdf';
 import API_BASE_URL from '../config';
 import axios from 'axios';
 import { userContext } from '../Context/userContext';
+import Loader from '../Components/Loader/Loader';
 
 const PayslipGenerator = () => {
     const payslipRef = useRef();
@@ -14,13 +15,16 @@ const PayslipGenerator = () => {
     const [employees, setEmployees] = useState();
     const {user} = useContext(userContext);
     const [taxType, setTaxType] = useState("Professional Tax");
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+
         const fetchEmployees = async () => {
             const response = await axios.get(`${API_BASE_URL}/api/employee/`);
 
             if(response.status===201){
                 setEmployees(response.data.employees);
+                setLoading(false);
             }
         }
 
@@ -150,7 +154,7 @@ const PayslipGenerator = () => {
 
     const handleGeneratePayslip = async (e) => {
         e.preventDefault();
-
+        setLoading(true);
         const taxName = document.querySelector('input[name="tax"]:checked');
         if (taxName) {
             setTaxType(taxName.value); // This will set the value of the selected radio button
@@ -210,6 +214,7 @@ const PayslipGenerator = () => {
 
         if(response.status===201){
             console.log("Payslip saved");
+            setLoading(false);
         }
 
         setShowPayslip(true);
@@ -268,6 +273,12 @@ const PayslipGenerator = () => {
             setIsGeneratingPDF(false);
         }
     };
+
+    if(loading){
+        return (
+            <Loader/>
+        )
+    }
 
     return (
         <div className="max-w-5xl mx-auto p-4">
