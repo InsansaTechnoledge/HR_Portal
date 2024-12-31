@@ -186,7 +186,6 @@ const PayslipGenerator = () => {
             }
         );
 
-        axios.defaults.withCredentials = true;
 
         const response = await axios.post(`${API_BASE_URL}/api/payslip/generate`,{
             name: employeeData.name,
@@ -211,7 +210,12 @@ const PayslipGenerator = () => {
                 .toFixed(2),
             generatedBy: user.userName,
             taxType: taxName.value
-            });
+            },
+        {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
 
         if(response.status===201){
             console.log("Payslip saved");

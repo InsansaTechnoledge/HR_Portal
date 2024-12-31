@@ -7,10 +7,10 @@ if (process.env.NODE_ENV !== 'production') {
   import('dotenv').then((dotenv) => dotenv.config());
 }
 
-const configureApp = (app) => {
-  app.set('trust proxy', 1);
+const configureApp = async (app) => {
+  await app.set('trust proxy', 1);
 
-  app.use(
+  await app.use(
     cors({
       origin: process.env.CLIENT_ORIGIN || 'https://hr-portal-5d6l.vercel.app', 
       credentials: true, 
@@ -21,7 +21,7 @@ const configureApp = (app) => {
         'Accept',
         'Origin',
         'X-Custom-Header',
-         'Content-Disposition', 
+        'Content-Disposition', 
         'Content-Length', 
       ], 
       exposedHeaders: [
@@ -36,10 +36,10 @@ const configureApp = (app) => {
   );
 
   // Handle preflight requests explicitly
-  app.options('*', cors());
+  await app.options('*', cors());
 
   // Set security headers
-  app.use((req, res, next) => {
+  await app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', process.env.CLIENT_ORIGIN || 'https://hr-portal-5d6l.vercel.app'); 
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
@@ -49,10 +49,10 @@ const configureApp = (app) => {
     next();
   });
 
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
-  app.use(cookieParser());
-  app.use(helmet());
+  await app.use(express.json());
+  await app.use(express.urlencoded({ extended: true }));
+  await app.use(cookieParser());
+  await app.use(helmet());
 };
 
 export default configureApp;
