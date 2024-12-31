@@ -30,6 +30,16 @@ app.options('*', (req, res) => {
 });
 
 // Additional middleware
+
+const corsOptions = {
+  origin: '*', // Adjust as needed for your app's security
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
+
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
