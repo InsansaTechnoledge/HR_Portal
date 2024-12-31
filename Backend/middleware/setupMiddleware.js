@@ -58,7 +58,10 @@ const configureApp = (app) => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
-  app.use(helmet());
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }
+  ));
 };
 
 export default configureApp;
