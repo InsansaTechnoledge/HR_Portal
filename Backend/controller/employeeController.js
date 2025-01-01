@@ -13,9 +13,16 @@ export const addEmployee = async (req, res) => {
             department: emp.department
     });
     
+    const exists = await Employee.find({email: emp.email});
+    if(exists){
+        return res.status(202).json({message: "Employee already exists"});
+    }
+
     const savedEmp = await newEmp.save();
-    
-    res.status(201).json({message: "Employee saved!", savedEmp});
+    if(savedEmp){
+        res.status(201).json({message: "Employee saved!", savedEmp});
+    }
+
     }
     catch(err){
         console.log(err)

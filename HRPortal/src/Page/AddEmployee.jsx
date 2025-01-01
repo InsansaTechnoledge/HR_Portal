@@ -9,6 +9,8 @@ import {
     CheckCircle2
 } from 'lucide-react';
 import API_BASE_URL from '../config';
+import ErrorToast from '../Components/Toaster/ErrorToaster';
+import SuccessToast from '../Components/Toaster/SuccessToaser';
 
 // Departments list for dropdown
 const DEPARTMENTS = [
@@ -36,6 +38,10 @@ const AddEmployeePage = () => {
         success: false,
         error: null
     });
+    const [toastSuccessMessage, setToastSuccessMessage] = useState();
+    const [toastErrorMessage, setToastErrorMessage] = useState();
+    const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
+    const [toastErrorVisible, setToastErrorVisible] = useState(false);
 
     // Handle input changes
     const handleChange = (e) => {
@@ -68,6 +74,13 @@ const AddEmployeePage = () => {
                 employeeData
             );
 
+            if(response.status===202){
+                setToastErrorMessage(response.data.message);
+                setToastErrorVisible(true);
+                setTimeout(() => setToastErrorVisible(false), 3500);
+            }
+            else
+            {
             // Success handling
             setSubmitStatus({
                 loading: false,
@@ -81,17 +94,29 @@ const AddEmployeePage = () => {
                 email: '',
                 department: ''
             });
+        }
         } catch (error) {
             // Error handling
-            setSubmitStatus({
-                loading: false,
-                success: false,
-                error: error.response?.data?.message || 'An error occurred'
-            });
+            console.log("TTT");
+            setToastErrorMessage(response.data.message);
+                setToastErrorVisible(true);
+                setTimeout(() => setToastErrorVisible(false), 3500);
+            // setSubmitStatus({
+            //     loading: false,
+            //     success: false,
+            //     error: error.response?.data?.message || 'An error occurred'
+            // });
         }
     };
 
     return (
+        <>
+        {
+            toastSuccessVisible ? <SuccessToast message={toastSuccessMessage}/> : null
+        }
+        {
+            toastErrorVisible ? <ErrorToast error={toastErrorMessage}/> : null
+        }
         <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
             <div className="max-w-md w-full bg-white shadow-md rounded-xl p-8">
                 <div className="text-center mb-8">
@@ -215,6 +240,7 @@ const AddEmployeePage = () => {
                 </form>
             </div>
         </div>
+        </>
     );
 };
 
