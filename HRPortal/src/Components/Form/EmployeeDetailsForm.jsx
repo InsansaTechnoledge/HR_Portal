@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { userContext } from "../../Context/userContext";
 import axios from 'axios';
 import API_BASE_URL from "../../config.js";
@@ -55,9 +55,19 @@ function EmployeeDetailsForm(props) {
 
     const departments = ["Engineering", "Product", "Sales", "Marketing", "HR"];
 
-    const handleInputChange = (field, value) => {
-        setNewEmployee((prev) => ({ ...prev, [field]: value }));
+    useEffect(() => {
+        const storedData = localStorage.getItem("employeeDetails");
+        if (storedData) {
+            setNewEmployee(JSON.parse(storedData));
+        }
+    }, []);
+
+     const handleInputChange = (field, value) => {
+        const updatedEmployee = { ...newEmployee, [field]: value };
+        setNewEmployee(updatedEmployee);
+        localStorage.setItem("employeeDetails", JSON.stringify(updatedEmployee));
     };
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -100,6 +110,7 @@ function EmployeeDetailsForm(props) {
                     setTimeout(() => setToastSuccessVisible(false), 3500);
                 props.setEmployee(response.data.updatedEmp);
                 setLoading(false);
+                localStorage.removeItem("employeeDetails");
             }
 
 

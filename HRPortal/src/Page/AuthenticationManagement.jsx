@@ -10,6 +10,7 @@ import {
     Mail,
     Lock,
     Search,
+    Loader,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
@@ -37,6 +38,7 @@ const AuthenticationManagement = () => {
         const [toastErrorMessage, setToastErrorMessage] = useState();
         const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
         const [toastErrorVisible, setToastErrorVisible] = useState(false);
+    const [loading, setLoading] = useState(false); // Loading state
 
     useEffect(() => {
         fetchUsers();
@@ -93,6 +95,7 @@ const AuthenticationManagement = () => {
             return;
         }
 
+        setLoading(true); // Start loading
         try {
             if (userForm.userId) {
                 if (user.role === 'superAdmin') {
@@ -156,6 +159,8 @@ const AuthenticationManagement = () => {
             setToastErrorMessage(`Error: ${error.response?.data?.message || error.message}`);
                 setToastErrorVisible(true);
                 setTimeout(() => setToastErrorVisible(false), 3500);
+        } finally {
+            setLoading(false); // Stop loading
         }
     };
 
@@ -182,6 +187,7 @@ const AuthenticationManagement = () => {
     };
 
     const handleDeleteUser = async (id) => {
+        setLoading(true); // Start loading
         try {
             const response = await axios.delete(`${API_BASE_URL}/api/user/delete/${id}`);
             if (response.status === 200) {
@@ -197,6 +203,8 @@ const AuthenticationManagement = () => {
             setToastSuccessMessage(`Error deleting user: ${error.response?.data?.message || error.message}`);
                     setToastSuccessVisible(true);
                     setTimeout(() => setToastSuccessVisible(false), 3500);
+        } finally {
+            setLoading(false); // Stop loading
         }
     };
 
@@ -250,9 +258,14 @@ const AuthenticationManagement = () => {
                             setModalOpen(true);
                             fetchEmployees();
                         }}
-                        className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                        disabled={loading} // Disable button while loading
+                        className={`flex items-center px-4 py-2 rounded-lg transition ${loading
+                            ? 'bg-blue-400 cursor-not-allowed'
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                            }`}
                     >
-                        <UserPlus className="mr-2" /> Add User
+                        {loading ? <Loader className="animate-spin mr-2" size={16} /> : <UserPlus className="mr-2" />}
+                        Add User
                     </button>
                 </header>
 
@@ -311,9 +324,13 @@ const AuthenticationManagement = () => {
                                                 {user.role === 'superAdmin' && (
                                                     <button
                                                         onClick={() => setDeleteConfirmation(u.userId)}
-                                                        className="bg-red-100 text-red-600 p-2 rounded-md hover:bg-red-200 transition"
+                                                        disabled={loading} // Disable button while loading
+                                                        className={`bg-red-100 text-red-600 p-2 rounded-md transition ${loading
+                                                            ? 'cursor-not-allowed'
+                                                            : 'hover:bg-red-200'
+                                                            }`}
                                                     >
-                                                        <Trash2 />
+                                                        {loading ? <Loader className="animate-spin" size={16} /> : <Trash2 />}
                                                     </button>
                                                 )}
                                             </div>
@@ -357,7 +374,6 @@ const AuthenticationManagement = () => {
                         </div>
                     </div>
                 </div>
-
                 {/* Modals */}
                 <AnimatePresence>
                     {modalOpen && (
@@ -514,3 +530,4 @@ const AuthenticationManagement = () => {
 };
 
 export default AuthenticationManagement;
+
