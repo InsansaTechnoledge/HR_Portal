@@ -28,7 +28,7 @@ const PayslipSchema = new mongoose.Schema(
             type: String,
             required: true, 
         },
-        basicSalary: {
+        salary: {
             type: String,
             required: true,
         },

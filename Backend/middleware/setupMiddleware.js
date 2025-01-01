@@ -11,14 +11,21 @@ const configureApp = async (app) => {
   app.set('trust proxy', 1);
 
 // CORS middleware
-app.use(
-  cors({
-    origin: ['https://hr-portal-5d6l.vercel.app', 'https://hr-portal-mu.vercel.app'],
-    credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-    exposedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  })
-);
+const allowedOrigins = [
+  'https://hr-portal-5d6l.vercel.app',
+  'https://hr-portal-mu.vercel.app',
+  process.env.CLIENT_ORIGIN
+];
+app.use(cors({
+  origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+      } else {
+          callback(new Error('Not allowed by CORS'));
+      }
+  },
+  credentials: true
+}));
 
 // Preflight request handling
 app.options('*', (req, res) => {
@@ -32,7 +39,7 @@ app.options('*', (req, res) => {
 // Additional middleware
 
 const corsOptions = {
-  origin: ['https://hr-portal-5d6l.vercel.app', 'https://hr-portal-mu.vercel.app'],
+  origin: process.env.CLIENT_ORIGIN || 'https://hr-portal-5d6l.vercel.app' || 'https://hr-portal-mu.vercel.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
 };

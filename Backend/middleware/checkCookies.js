@@ -6,7 +6,6 @@ if(process.env.NODE_ENV !== "production"){
 
 const checkCookies = (req,res,next) => {
     const token = req.cookies.jwtAuth;
-
     if(!token){
         return res.json({ message: 'Access denied. No token provided.' });
     }

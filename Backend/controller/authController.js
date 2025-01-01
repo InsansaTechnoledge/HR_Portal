@@ -25,14 +25,13 @@ export const login=async(req, res, next)=>{
     }
     
     const token = generateAuthToken(user);
-
     res.cookie("jwtAuth", token, {
       expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year expiration
       httpOnly: true,                                            // Prevents client-side JS access
       secure: process.env.NODE_ENV !== 'development',            // HTTPS only in production
       sameSite: process.env.NODE_ENV === 'development' ? "Lax" : "None" // Adjust for environment
   });
-  
+
     console.log("cookie created");
     res.status(200).json({ message: 'Login successful', user: user });
 
