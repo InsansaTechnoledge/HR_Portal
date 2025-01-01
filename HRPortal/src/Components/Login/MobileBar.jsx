@@ -25,7 +25,7 @@ const DROPDOWN_ITEMS = [
     { label: 'Job Applications', to: '/application' },
     { label: 'Leave Tracker', to: '/leave-tracker' },
     { label: 'Add Employee', to: '/add-employee' },
-    { label: 'User Registration', to: '/emp-info'},
+    { label: 'Employee Registration', to: '/emp-info'},
     { label: 'User Details', to: '/emp-list'},
     { label:'PaySlip Tracker', to:'/payslip-tracker'},
     { label:'PaySlip Generator', to:'/payslip'},
@@ -141,7 +141,7 @@ const BottomBar = () => {
                         else if(item.label==='User Details' || item.label==='PaySlip Generator'){
                             return null;
                         }
-                        else if((user.role === 'superAdmin' || user.role==='accountant') && item.label==='User Registration'){
+                        else if((user.role === 'superAdmin' || user.role==='accountant') && item.label==='Employee Registration'){
                             return (
                                null
                             );
