@@ -45,7 +45,11 @@ export const login=async(req, res, next)=>{
 export const logout = async (req, res) => {
     
     // Clear the jwtAuth cookie
-    res.clearCookie('jwtAuth');
+    res.clearCookie('jwtAuth', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Match cookie settings
+      sameSite: process.env.NODE_ENV === 'production' ? "None" : "Lax",
+  });
 
     res.status(201).json({ message: 'Logged out and cookie cleared successfully' });
   
