@@ -12,8 +12,7 @@ export const addEmployee = async (req, res) => {
             email: emp.email,
             department: emp.department
     });
-    
-    const exists = await Employee.find({email: emp.email});
+    const exists = await Employee.findOne({email: emp.email});
     if(exists){
         return res.status(202).json({message: "Employee already exists"});
     }

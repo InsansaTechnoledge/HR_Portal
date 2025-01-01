@@ -74,7 +74,12 @@ const AddEmployeePage = () => {
                 employeeData
             );
 
-            if(response.status===202){
+            if(response.status===201){
+                setToastSuccessMessage(response.data.message);
+                setToastSuccessVisible(true);
+                setTimeout(() => setToastSuccessVisible(false), 3500);
+            }
+            else if(response.status===202){
                 setToastErrorMessage(response.data.message);
                 setToastErrorVisible(true);
                 setTimeout(() => setToastErrorVisible(false), 3500);
