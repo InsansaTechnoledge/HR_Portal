@@ -2,6 +2,8 @@ import React, { useContext, useState } from 'react';
 import axios from 'axios';
 import { useNavigate ,useLocation} from 'react-router-dom';
 import { userContext } from '../../Context/userContext';
+import ErrorToast from '../Toaster/ErrorToaster';
+import SuccessToast from '../Toaster/SuccessToaser';
 
 const Login = () => {
     const [userEmail, setEmail] = useState('');
@@ -11,6 +13,10 @@ const Login = () => {
     const location = useLocation();
     // const from = location.state?.from?.pathname || '/';
     const {user,setUser} = useContext(userContext);
+    const [toastSuccessMessage, setToastSuccessMessage] = useState();
+        const [toastErrorMessage, setToastErrorMessage] = useState();
+        const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
+        const [toastErrorVisible, setToastErrorVisible] = useState(false);
 
     const handleLogin = async () => {
         try {
@@ -25,7 +31,10 @@ const Login = () => {
                 setUser(response.data.user);
             }
             else if(response.status===202){
-                alert(response.data.message);
+                // alert(response.data.message);
+                setToastErrorMessage(response.data.message);
+                setToastErrorVisible(true);
+                setTimeout(() => setToastErrorVisible(false), 3500);
             }
             // Handle successful login
             // alert('Login successful!');
@@ -42,6 +51,13 @@ const Login = () => {
     };
     
     return (
+        <>
+        {
+            toastSuccessVisible ? <SuccessToast message={toastSuccessMessage}/> : null
+        }
+        {
+            toastErrorVisible ? <ErrorToast error={toastErrorMessage}/> : null
+        }
         <div className="flex min-h-full flex-1 flex-col justify-center px-2 py-2 lg:px-8">
             <div className="sm:mx-auto sm:w-full sm:max-w-sm">
                 <h1 className="mt-10 text-center text-4xl/6 font-bold tracking-tight text-gray-900">
@@ -104,6 +120,7 @@ const Login = () => {
                 </form>
             </div>
         </div>
+        </>
     );
 };
 

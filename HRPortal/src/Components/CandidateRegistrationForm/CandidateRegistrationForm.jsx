@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import API_BASE_URL from '../../config';
 import axios from 'axios';
+import ErrorToast from '../Toaster/ErrorToaster.jsx';
+import SuccessToast from '../Toaster/SuccessToaser.jsx'
 
 const CandidateRegistrationForm = () => {
 
@@ -8,6 +10,10 @@ const CandidateRegistrationForm = () => {
 
     const [fileName, setFileName] = useState("");
     const [file,setFile] = useState();
+    const [toastSuccessMessage, setToastSuccessMessage] = useState();
+        const [toastErrorMessage, setToastErrorMessage] = useState();
+        const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
+        const [toastErrorVisible, setToastErrorVisible] = useState(false);
 
     const fileChangeHandler = (event) => {
         const file = event.target.files[0];
@@ -40,7 +46,10 @@ const CandidateRegistrationForm = () => {
         const resume = document.getElementById("resume").files[0] || file;
 
         if (!resume) {
-            alert("Please upload a resume.");
+            // alert("Please upload a resume.");
+            setToastErrorMessage("Please upload a resume.");
+                setToastErrorVisible(true);
+                setTimeout(() => setToastErrorVisible(false), 3500);
             return;
         }
 
@@ -60,14 +69,27 @@ const CandidateRegistrationForm = () => {
                     "Content-Type": "multipart/form-data",
                 },
             });
-            alert(response.data.message);
+            // alert(response.data.message);
+            setToastSuccessMessage(response.data.message);
+                    setToastSuccessVisible(true);
+                    setTimeout(() => setToastSuccessVisible(false), 3500);
         } catch (error) {
-            console.error("Error while registering candidate:", error.response?.data || error.message);
-            alert("Error while registering candidate. Please try again.");
+            // console.error("Error while registering candidate:", error.response?.data || error.message);
+            // alert("Error while registering candidate. Please try again.");
+            setToastErrorMessage("Error while registering candidate. Please try again.");
+                setToastErrorVisible(true);
+                setTimeout(() => setToastErrorVisible(false), 3500);
         }
     };
 
     return (
+        <>
+        {
+            toastSuccessVisible ? <SuccessToast message={toastSuccessMessage}/> : null
+        }
+        {
+            toastErrorVisible ? <ErrorToast error={toastErrorMessage}/> : null
+        }
         <div>
             <div className="flex min-h-full flex-1 flex-col justify-center px-2 py-2 lg:px-8">
                 <div className="sm:mx-auto sm:w-full sm:max-w-sm">
@@ -265,6 +287,7 @@ const CandidateRegistrationForm = () => {
                 </div>
             </div>
         </div>
+        </>
     )
 }
 

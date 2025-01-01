@@ -15,6 +15,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import API_BASE_URL from '../config';
 import { userContext } from '../Context/userContext';
+import ErrorToast from '../Components/Toaster/ErrorToaster';
+import SuccessToast from '../Components/Toaster/SuccessToaser';
 
 const AuthenticationManagement = () => {
     const [userForm, setUserForm] = useState({
@@ -31,6 +33,10 @@ const AuthenticationManagement = () => {
     const [deleteConfirmation, setDeleteConfirmation] = useState(null);
     const { user } = useContext(userContext);
     const [newUserList, setNewUserList] = useState([]);
+    const [toastSuccessMessage, setToastSuccessMessage] = useState();
+        const [toastErrorMessage, setToastErrorMessage] = useState();
+        const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
+        const [toastErrorVisible, setToastErrorVisible] = useState(false);
 
     useEffect(() => {
         fetchUsers();
@@ -80,7 +86,10 @@ const AuthenticationManagement = () => {
 
     const handleSubmit = async () => {
         if (!userForm.userName || !userForm.userEmail) {
-            alert('Please fill in all required fields');
+            // alert('Please fill in all required fields');
+            setToastErrorMessage("Please fill all details");
+                setToastErrorVisible(true);
+                setTimeout(() => setToastErrorVisible(false), 3500);
             return;
         }
 
@@ -99,7 +108,10 @@ const AuthenticationManagement = () => {
                     );
 
                     if (response.status === 200) {
-                        alert(response.data.message);
+                        // alert(response.data.message);
+                        setToastSuccessMessage(response.data.message);
+                    setToastSuccessVisible(true);
+                    setTimeout(() => setToastSuccessVisible(false), 3500);
                         setUsers((prev) =>
                             prev.map((user) =>
                                 user.userId === userForm.userId
@@ -110,7 +122,10 @@ const AuthenticationManagement = () => {
                     }
                 } else {
                     if (!userForm.password) {
-                        alert('Password is required!');
+                        // alert('Password is required!');
+                        setToastErrorMessage('Password is required!');
+                setToastErrorVisible(true);
+                setTimeout(() => setToastErrorVisible(false), 3500);
                         return;
                     }
                     const response = await axios.put(
@@ -119,19 +134,28 @@ const AuthenticationManagement = () => {
                     );
 
                     if (response.status === 200) {
-                        alert(response.data.message);
+                        // alert(response.data.message);
+                        setToastSuccessMessage(response.data.message);
+                    setToastSuccessVisible(true);
+                    setTimeout(() => setToastSuccessVisible(false), 3500);
                     }
                 }
             } else {
                 const response = await axios.post(`${API_BASE_URL}/api/user/createUser`, userForm);
-                alert(response.data.message);
+                // alert(response.data.message);
+                setToastSuccessMessage(response.data.message);
+                    setToastSuccessVisible(true);
+                    setTimeout(() => setToastSuccessVisible(false), 3500);
                 setUsers((prev) => [...prev, response.data.new_user]);
             }
 
             resetForm();
             setModalOpen(false);
         } catch (error) {
-            alert(`Error: ${error.response?.data?.message || error.message}`);
+            // alert(`Error: ${error.response?.data?.message || error.message}`);
+            setToastErrorMessage(`Error: ${error.response?.data?.message || error.message}`);
+                setToastErrorVisible(true);
+                setTimeout(() => setToastErrorVisible(false), 3500);
         }
     };
 
@@ -162,11 +186,17 @@ const AuthenticationManagement = () => {
             const response = await axios.delete(`${API_BASE_URL}/api/user/delete/${id}`);
             if (response.status === 200) {
                 setUsers((prev) => prev.filter((user) => user.userId !== id));
-                alert(response.data.message);
+                // alert(response.data.message);
+                setToastSuccessMessage(response.data.message);
+                    setToastSuccessVisible(true);
+                    setTimeout(() => setToastSuccessVisible(false), 3500);
                 setDeleteConfirmation(null);
             }
         } catch (error) {
-            alert(`Error deleting user: ${error.response?.data?.message || error.message}`);
+            // alert(`Error deleting user: ${error.response?.data?.message || error.message}`);
+            setToastSuccessMessage(`Error deleting user: ${error.response?.data?.message || error.message}`);
+                    setToastSuccessVisible(true);
+                    setTimeout(() => setToastSuccessVisible(false), 3500);
         }
     };
 
@@ -201,6 +231,13 @@ const AuthenticationManagement = () => {
     };
 
     return (
+        <>
+        {
+            toastSuccessVisible ? <SuccessToast message={toastSuccessMessage}/> : null
+        }
+        {
+            toastErrorVisible ? <ErrorToast error={toastErrorMessage}/> : null
+        }
         <div className="min-h-screen bg-gray-50 p-8">
             <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} className="max-w-6xl mx-auto">
                 <header className="flex justify-between items-center mb-8">
@@ -472,6 +509,7 @@ const AuthenticationManagement = () => {
                 </AnimatePresence>
             </motion.div>
         </div>
+        </>
     );
 };
 

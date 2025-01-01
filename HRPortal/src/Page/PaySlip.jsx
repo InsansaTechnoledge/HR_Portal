@@ -6,6 +6,8 @@ import API_BASE_URL from '../config';
 import axios from 'axios';
 import { userContext } from '../Context/userContext';
 import Loader from '../Components/Loader/Loader';
+import ErrorToast from '../Components/Toaster/ErrorToaster';
+import SuccessToast from '../Components/Toaster/SuccessToaser';
 
 const PayslipGenerator = () => {
     const payslipRef = useRef();
@@ -16,6 +18,10 @@ const PayslipGenerator = () => {
     const {user} = useContext(userContext);
     const [taxType, setTaxType] = useState("Professional Tax");
     const [loading, setLoading] = useState(true);
+    const [toastSuccessMessage, setToastSuccessMessage] = useState();
+        const [toastErrorMessage, setToastErrorMessage] = useState();
+        const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
+        const [toastErrorVisible, setToastErrorVisible] = useState(false);
 
     useEffect(() => {
 
@@ -91,7 +97,10 @@ const PayslipGenerator = () => {
             });
         }
         else{
-            alert("employee detail not available");
+            // alert("employee detail not available");
+            setToastErrorMessage("employee detail not available");
+                setToastErrorVisible(true);
+                setTimeout(() => setToastErrorVisible(false), 3500);
         }
     };
 
@@ -287,6 +296,13 @@ const PayslipGenerator = () => {
     }
 
     return (
+        <>
+        {
+            toastSuccessVisible ? <SuccessToast message={toastSuccessMessage}/> : null
+        }
+        {
+            toastErrorVisible ? <ErrorToast error={toastErrorMessage}/> : null
+        }
         <div className="max-w-5xl mx-auto p-4">
             <div className="bg-white shadow-md rounded-lg p-6 mb-6">
                 <div className="flex items-center justify-between mb-6">
@@ -547,6 +563,7 @@ const PayslipGenerator = () => {
                 </>
             )}
         </div>
+        </>
     );
 };
 

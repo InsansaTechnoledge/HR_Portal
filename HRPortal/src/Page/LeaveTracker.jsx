@@ -12,6 +12,8 @@ import axios from 'axios';
 import API_BASE_URL from '../config';
 import { userContext } from '../Context/userContext';
 import Loader from '../Components/Loader/Loader';
+import SuccessToast from '../Components/Toaster/SuccessToaser';
+import ErrorToast from '../Components/Toaster/ErrorToaster';
 
 const initialEmployees = [];
 
@@ -41,6 +43,10 @@ const LeaveTracker = () => {
     const { user } = useContext(userContext);
     const [oneDayLeave, setOneDayLeave] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [toastSuccessMessage, setToastSuccessMessage] = useState();
+    const [toastErrorMessage, setToastErrorMessage] = useState();
+    const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
+    const [toastErrorVisible, setToastErrorVisible] = useState(false);
 
     const fetchEmployeeData = async () => {
         try {
@@ -183,7 +189,10 @@ const LeaveTracker = () => {
                 );
 
                 if (response.status === 201) {
-                    alert("Leave added successfully!");
+                    // alert("Leave added successfully!");
+                    setToastSuccessMessage("Leave added successfully!");
+                    setToastSuccessVisible(true);
+                    setTimeout(() => setToastSuccessVisible(false), 3500);
 
                     const updatedEmployeeResponse = await axios.get(`${API_BASE_URL}/api/employee/${selectedEmployeeId}`);
                     if (updatedEmployeeResponse.status === 201) {
@@ -201,8 +210,11 @@ const LeaveTracker = () => {
                     }
                 }
             } catch (error) {
-                console.error("Error adding leave:", error);
-                alert("Error adding leave. Please try again.");
+                // console.error("Error adding leave:", error);
+                // alert("Error adding leave. Please try again.");
+                setToastErrorMessage("Error adding leave. Please try again.");
+                setToastErrorVisible(true);
+                setTimeout(() => setToastErrorVisible(false), 3500);
             }
 
 
@@ -211,10 +223,16 @@ const LeaveTracker = () => {
             setOneDayLeave(false);
             }
             else{
-                alert("end date can't be before start date");
+                // alert("end date can't be before start date");
+                setToastErrorMessage("End date can't be before start date");
+                setToastErrorVisible(true);
+                setTimeout(() => setToastErrorVisible(false), 3500);
             }
         } else {
-            alert("Please fill all details");
+            // alert("Please fill all details");
+            setToastErrorMessage("Please fill all details");
+                setToastErrorVisible(true);
+                setTimeout(() => setToastErrorVisible(false), 3500);
         }
     };
 
@@ -245,6 +263,13 @@ const LeaveTracker = () => {
     }
 
     return (
+        <>
+        {
+            toastSuccessVisible ? <SuccessToast message={toastSuccessMessage}/> : null
+        }
+        {
+            toastErrorVisible ? <ErrorToast error={toastErrorMessage}/> : null
+        }
         <div className="flex min-h-screen bg-gray-50">
             {/* Sidebar */}
             <div className="w-64 bg-white shadow-lg p-6 border-r">
@@ -472,6 +497,7 @@ const LeaveTracker = () => {
                 </div>
             )}
         </div>
+        </>
     );
 };
 

@@ -13,12 +13,18 @@ import {
 import API_BASE_URL from '../../config';
 import axios from 'axios';
 import no_candidate from "/images/no-candidate.avif"
+import ErrorToast from '../../../src/Components/Toaster/ErrorToaster';
+import SuccessToast from '../../../src/Components/Toaster/SuccessToaser';
 
 const CandidatesTable = () => {
     const [candidates, setCandidates] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [toastSuccessMessage, setToastSuccessMessage] = useState();
+    const [toastErrorMessage, setToastErrorMessage] = useState();
+    const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
+    const [toastErrorVisible, setToastErrorVisible] = useState(false);
 
     const iconsMap = {
         name: User,
@@ -76,8 +82,11 @@ const CandidatesTable = () => {
             document.body.removeChild(link);
 
         } catch (err) {
-            console.error('Error downloading resume:', err);
-            alert('Failed to download resume');
+            // console.error('Error downloading resume:', err);
+            // alert('Failed to download resume');
+            setToastErrorMessage('Failed to download resume');
+                setToastErrorVisible(true);
+                setTimeout(() => setToastErrorVisible(false), 3500);
         }
     };
 
@@ -181,6 +190,13 @@ const CandidatesTable = () => {
     }
 
     return (
+        <>
+        {
+            toastSuccessVisible ? <SuccessToast message={toastSuccessMessage}/> : null
+        }
+        {
+            toastErrorVisible ? <ErrorToast error={toastErrorMessage}/> : null
+        }
         <div className="bg-gray-50 min-h-screen p-8">
             <div className="container mx-auto">
                 <h1 className="text-4xl font-extrabold text-gray-800 mb-8 text-center">
@@ -251,6 +267,7 @@ const CandidatesTable = () => {
                 )}
             </div>
         </div>
+        </>
     );
 };
 

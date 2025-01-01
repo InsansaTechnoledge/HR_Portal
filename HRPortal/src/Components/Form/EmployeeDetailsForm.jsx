@@ -3,6 +3,8 @@ import { userContext } from "../../Context/userContext";
 import axios from 'axios';
 import API_BASE_URL from "../../config.js";
 import Loader from "../Loader/Loader.jsx";
+import SuccessToast from "../Toaster/SuccessToaser.jsx";
+import ErrorToast from "../Toaster/ErrorToaster.jsx";
 
 function EmployeeDetailsForm(props) {
 
@@ -13,6 +15,11 @@ function EmployeeDetailsForm(props) {
 
     const [employees, setEmployees] = useState([]);
     const [file, setFile] = useState();
+    const [toastSuccessMessage, setToastSuccessMessage] = useState();
+        const [toastErrorMessage, setToastErrorMessage] = useState();
+        const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
+        const [toastErrorVisible, setToastErrorVisible] = useState(false);
+
     // const [file, setFile] = useState();
     const [newEmployee, setNewEmployee] = useState({
         name: "",
@@ -87,8 +94,10 @@ function EmployeeDetailsForm(props) {
             });
 
             if (response.status === 201) {
-                alert("Details uploaded!");
-
+                // alert("Details uploaded!");
+                setToastSuccessMessage("Details uploaded!");
+                    setToastSuccessVisible(true);
+                    setTimeout(() => setToastSuccessVisible(false), 3500);
                 props.setEmployee(response.data.updatedEmp);
                 setLoading(false);
             }
@@ -156,6 +165,13 @@ function EmployeeDetailsForm(props) {
     }
 
     return (
+        <>
+        {
+            toastSuccessVisible ? <SuccessToast message={toastSuccessMessage}/> : null
+        }
+        {
+            toastErrorVisible ? <ErrorToast error={toastErrorMessage}/> : null
+        }
         <div>
             <div className="relative bg-gradient-to-r from-blue-500 via-purple-600 to-pink-500 text-white rounded-lg shadow-lg overflow-hidden p-8">
                 <div className="absolute inset-0 bg-black bg-opacity-30"></div>
@@ -666,6 +682,7 @@ function EmployeeDetailsForm(props) {
                 </button>
             </form>
         </div>
+        </>
     )
 }
 

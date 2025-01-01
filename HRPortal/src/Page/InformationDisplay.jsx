@@ -4,6 +4,8 @@ import axios from 'axios';
 import API_BASE_URL from '../config';
 import { userContext } from '../Context/userContext';
 import Loader from '../Components/Loader/Loader';
+import SuccessToast from '../Components/Toaster/SuccessToaser';
+import ErrorToast from '../Components/Toaster/ErrorToaster';
 
 const EmployeeList = () => {
     const [expandedRows, setExpandedRows] = useState(new Set());
@@ -11,6 +13,10 @@ const EmployeeList = () => {
     const [toggleEditsalary, setToggleEditSalary] = useState(false);
     const { user } = useContext(userContext);
     const [isLoading, setIsLoading] = useState(true);
+    const [toastSuccessMessage, setToastSuccessMessage] = useState();
+        const [toastErrorMessage, setToastErrorMessage] = useState();
+        const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
+        const [toastErrorVisible, setToastErrorVisible] = useState(false);
 
     useEffect(() => {
         setIsLoading(true);
@@ -68,7 +74,10 @@ const EmployeeList = () => {
                     });
 
                 if (response.status === 201) {
-                    alert(response.data.message);
+                    // alert(response.data.message);
+                    setToastSuccessMessage(response.data.message);
+                    setToastSuccessVisible(true);
+                    setTimeout(() => setToastSuccessVisible(false), 3500);
                 }
             }
         }
@@ -199,7 +208,13 @@ const EmployeeList = () => {
 
 
     return (
-
+        <>
+        {
+            toastSuccessVisible ? <SuccessToast message={toastSuccessMessage}/> : null
+        }
+        {
+            toastErrorVisible ? <ErrorToast error={toastErrorMessage}/> : null
+        }
         <div className="max-w-7xl mx-auto p-6">
             <div className="bg-white shadow-lg rounded-lg overflow-hidden">
                 <div className="px-6 py-4 bg-gray-100 border-b border-gray-300">
@@ -396,6 +411,7 @@ const EmployeeList = () => {
                 </div>
             </div>
         </div>
+        </>
     );
 };
 

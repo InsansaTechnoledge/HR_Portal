@@ -20,6 +20,8 @@ import { userContext } from "../../Context/userContext";
 import axios from 'axios';
 import API_BASE_URL from '../../config';
 import { use } from "react";
+import ErrorToast from "../Toaster/ErrorToaster";
+import SuccessToast from "../Toaster/SuccessToaser";
 
 // Logout function to handle user logout
 const handleLogout = async (setUser) => {
@@ -31,12 +33,18 @@ const handleLogout = async (setUser) => {
         if (response.status === 201) {
             setUser(null);
         } else {
-            console.error("Logout failed:", response.data.message || response.statusText);
-            alert("Logout failed. Please try again");
+            // console.error("Logout failed:", response.data.message || response.statusText);
+            // alert("Logout failed. Please try again");
+            setToastErrorMessage("Logout failed. Please try again");
+                setToastErrorVisible(true);
+                setTimeout(() => setToastErrorVisible(false), 3500);
         }
     } catch (error) {
-        console.error("Logout error:", error);
-        alert("An error occurred during logout.");
+        // console.error("Logout error:", error);
+        // alert("An error occurred during logout.");
+        setToastErrorMessage("An error occurred during logout.");
+                setToastErrorVisible(true);
+                setTimeout(() => setToastErrorVisible(false), 3500);
     }
 };
 
@@ -52,6 +60,10 @@ const Sidebar = () => {
     });
     const { user, setUser } = useContext(userContext);
     const Name = user?.userName; // fetching the name of user
+    const [toastSuccessMessage, setToastSuccessMessage] = useState();
+        const [toastErrorMessage, setToastErrorMessage] = useState();
+        const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
+        const [toastErrorVisible, setToastErrorVisible] = useState(false);
 
     const toggleSidebar = () => {
         setIsOpen((prevState) => {
@@ -84,6 +96,13 @@ const Sidebar = () => {
     }, [user, navigate]);
 
     return (
+        <>
+        {
+            toastSuccessVisible ? <SuccessToast message={toastSuccessMessage}/> : null
+        }
+        {
+            toastErrorVisible ? <ErrorToast error={toastErrorMessage}/> : null
+        }
         <div className="flex h-screen">
             <aside
                 className={`bg-gray-800 overflow-auto text-white transition-width duration-300 ${isOpen ? "w-64" : "w-16"} flex flex-col`}
@@ -238,6 +257,7 @@ const Sidebar = () => {
                 </div>
             </aside>
         </div>
+        </>
     );
 };
 
