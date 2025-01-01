@@ -569,7 +569,7 @@ function EmployeeDetailsForm(props) {
                                             (<p className="ml-3 text-sm text-gray-500 "><span className="font-semibold">Click to upload</span> or drag and drop</p>)
                                         }
                                     </div>
-                                    <input id="documentsPanCard" type="file" className="hidden" onChange={(e) => fileChangeHandler("documentsPanCard", e)} />
+                                    <input id="documentsPanCard" type="file" required className="hidden" onChange={(e) => fileChangeHandler("documentsPanCard", e)} />
                                 </label>
 
                             </div>
@@ -596,7 +596,7 @@ function EmployeeDetailsForm(props) {
                                             (<p className="ml-3 text-sm text-gray-500 "><span className="font-semibold">Click to upload</span> or drag and drop</p>)
                                         }
                                     </div>
-                                    <input id="documentsAadhar" type="file" className="hidden" onChange={(e) => fileChangeHandler("documentsAadhar", e)} />
+                                    <input id="documentsAadhar" required type="file" className="hidden" onChange={(e) => fileChangeHandler("documentsAadhar", e)} />
                                 </label>
 
                             </div>
