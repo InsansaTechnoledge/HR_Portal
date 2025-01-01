@@ -154,7 +154,9 @@ function EmployeeDetailsDisplay({ employee }) {
                             <div className="space-y-6">
                                 {renderDetailSection('Personal Information', {
                                     Phone: employee.details.phone,
-                                    'Date of Birth': employee.details.dateOfBirth,
+                                    'Date of Birth': employee.details.dateOfBirth
+                                        ? new Date(employee.details.dateOfBirth).toLocaleDateString('en-GB') // Format to dd-mm-yyyy
+                                        : null,
                                     Gender: employee.details.gender,
                                     'Marital Status': employee.details.maritalStatus,
                                     Nationality: employee.details.nationality
@@ -169,7 +171,9 @@ function EmployeeDetailsDisplay({ employee }) {
                                 })}
 
                                 {renderDetailSection('Employment Details', {
-                                    'Date of Joining': employee.details.dateOfJoining,
+                                    'Date of Joining': employee.details.dateOfJoining
+                                        ? new Date(employee.details.dateOfJoining).toLocaleDateString('en-GB') // Format to dd-mm-yyyy
+                                        : null,
                                 })}
 
                                 {renderDetailSection('Financial Information', {
@@ -193,16 +197,69 @@ function EmployeeDetailsDisplay({ employee }) {
                                         Documents
                                     </h3>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        {['PAN Card', 'Aadhar Card', 'Degree Certificate', 'Experience Certificate'].map((doc) => (
-                                            <button
-                                                onClick={() => handleDownload(employee, doc)}
-                                                key={doc}
-                                                className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                                            >
-                                                <Download className="w-4 h-4 mr-2" />
-                                                {doc}
-                                            </button>
-                                        ))}
+                                        {
+                                            employee.details.documentsAadhar || employee.details.documentsPanCard || employee.details.documentsDegree || employee.details.documentsExperience
+                                                ?
+                                                null
+                                                :
+                                                <div className='text-gray-500'>No documents submitted</div>
+                                        }
+                                        {
+                                            employee.details.documentsPanCard
+                                                ?
+                                                <button
+                                                    onClick={() => handleDownload(employee, 'PAN Card')}
+                                                    key='PAN Card'
+                                                    className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                                                >
+                                                    <Download className="w-4 h-4 mr-2" />
+                                                    PAN Card
+                                                </button>
+                                                :
+                                                null
+                                        }
+                                        {
+                                            employee.details.documentsAadhar
+                                                ?
+                                                <button
+                                                    onClick={() => handleDownload(employee, 'Aadhar Card')}
+                                                    key='Aadhar Card'
+                                                    className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                                                >
+                                                    <Download className="w-4 h-4 mr-2" />
+                                                    Aadhar Card
+                                                </button>
+                                                :
+                                                null
+                                        }
+                                        {
+                                            employee.details.documentsDegree
+                                                ?
+                                                <button
+                                                    onClick={() => handleDownload(employee, 'Degree Certificate')}
+                                                    key='Degree Certificate'
+                                                    className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                                                >
+                                                    <Download className="w-4 h-4 mr-2" />
+                                                    Degree Certificate
+                                                </button>
+                                                :
+                                                null
+                                        }
+                                        {
+                                            employee.details.documentsExperience
+                                                ?
+                                                <button
+                                                    onClick={() => handleDownload(employee, 'Experience Certificate')}
+                                                    key='Experience Certificate'
+                                                    className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                                                >
+                                                    <Download className="w-4 h-4 mr-2" />
+                                                    Experience Certificate
+                                                </button>
+                                                :
+                                                null
+                                        }
                                     </div>
                                 </div>
                             </div>
