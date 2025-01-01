@@ -10,7 +10,7 @@ import {
     Mail,
     Lock,
     Search,
-    Loader,
+    Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
@@ -18,6 +18,7 @@ import API_BASE_URL from '../config';
 import { userContext } from '../Context/userContext';
 import ErrorToast from '../Components/Toaster/ErrorToaster';
 import SuccessToast from '../Components/Toaster/SuccessToaser';
+import Loader from '../Components/Loader/Loader';
 
 const AuthenticationManagement = () => {
     const [userForm, setUserForm] = useState({
@@ -240,7 +241,7 @@ const AuthenticationManagement = () => {
 
     if(loading){
         return(
-            <Loader />
+            <Loader/>
         )
     }
 
@@ -270,7 +271,7 @@ const AuthenticationManagement = () => {
                             : 'bg-blue-600 text-white hover:bg-blue-700'
                             }`}
                     >
-                        {loading ? <Loader className="animate-spin mr-2" size={16} /> : <UserPlus className="mr-2" />}
+                        {loading ? <Loader2 className="animate-spin mr-2" size={16} /> : <UserPlus className="mr-2" />}
                         Add User
                     </button>
                 </header>
