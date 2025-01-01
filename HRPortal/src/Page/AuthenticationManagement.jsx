@@ -238,6 +238,12 @@ const AuthenticationManagement = () => {
         }));
     };
 
+    if(loading){
+        return(
+            <Loader />
+        )
+    }
+
     return (
         <>
         {
