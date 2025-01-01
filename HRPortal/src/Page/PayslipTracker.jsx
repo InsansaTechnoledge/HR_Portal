@@ -163,7 +163,7 @@ const PayslipTracker = () => {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{payslip.name}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{payslip.department}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{payslip.month}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">₹{payslip.basicSalary.toLocaleString()}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">₹{payslip.salary.toLocaleString()}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">₹{payslip.totalEarnings.toLocaleString()}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">₹{payslip.totalDeductions.toLocaleString()}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-right">₹{payslip.netSalary.toLocaleString()}</td>
