@@ -48,9 +48,19 @@ function EmployeeDetailsForm(props) {
 
     const departments = ["Engineering", "Product", "Sales", "Marketing", "HR"];
 
-    const handleInputChange = (field, value) => {
-        setNewEmployee((prev) => ({ ...prev, [field]: value }));
+    useEffect(() => {
+        const storedData = localStorage.getItem("employeeDetails");
+        if (storedData) {
+            setNewEmployee(JSON.parse(storedData));
+        }
+    }, []);
+
+     const handleInputChange = (field, value) => {
+        const updatedEmployee = { ...newEmployee, [field]: value };
+        setNewEmployee(updatedEmployee);
+        localStorage.setItem("employeeDetails", JSON.stringify(updatedEmployee));
     };
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -91,6 +101,7 @@ function EmployeeDetailsForm(props) {
 
                 props.setEmployee(response.data.updatedEmp);
                 setLoading(false);
+                localStorage.removeItem("employeeDetails");
             }
 
 
