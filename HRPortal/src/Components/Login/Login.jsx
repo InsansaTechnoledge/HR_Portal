@@ -22,7 +22,7 @@ const Login = () => {
     const handleLogin = async () => {
         try {
             // Make a POST request to the backend
-            const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
+            const response = await axios.post(`https://hr-portal-mu.vercel.app/api/auth/login`, {
                 userEmail,
                 password,
             }, { withCredentials: true });
