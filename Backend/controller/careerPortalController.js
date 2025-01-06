@@ -4,21 +4,23 @@ import JobApplication from "../models/JobApplications.js";
 
 export const applyForJob = async (req, res) => {
     try {
-        const { jobId,applicantId,formDetails } = req.body;
-        const job = await Job.findById(jobId);
+        const formDetails = req.body;
+        const job = await Job.findById(formDetails.jobId);
         if (!job) {
             return res.status(404).json({ message: 'Job not found' });
         }
+
+
         const jobApplication = {
-            jobId:jobId,
-            applicantId:applicantId,
+            jobId:formDetails.jobId,
+            applicantId:formDetails.applicantId,
             name:formDetails.applicantName,
             email:formDetails.applicantEmail,
             phone:formDetails.applicantPhone,
-            resume:formDetails.applicantResume,
+            resume:req.file.buffer,
         };
         const savedJobApplication = await JobApplication.create(jobApplication);
-        const applicant = await Applicant.findById(applicantId);
+        const applicant = await Applicant.findById(formDetails.applicantId);
         applicant.applications.push(savedJobApplication._id);
         await applicant.save();
         res.status(200).json({ message: 'Job application saved successfully!', jobApplication: savedJobApplication });
