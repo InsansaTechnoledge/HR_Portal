@@ -1,55 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
+import axios from 'axios';
+import API_BASE_URL from '../config';
 import { Eye, FileText, Search, Check, X, Clock } from 'lucide-react';
 
 const JobApplication = () => {
-    const [applications, setApplications] = useState([
-        {
-            id: 1,
-            name: 'John Doe',
-            email: 'john.doe@example.com',
-            phone: '+1 (555) 123-4567',
-            position: 'Software Engineer',
-            appliedDate: '2024-02-15',
-            resumeLink: '/path/to/resume1.pdf',
-            status: 'under-review',
-        },
-        {
-            id: 2,
-            name: 'Jane Smith',
-            email: 'jane.smith@example.com',
-            phone: '+1 (555) 987-6543',
-            position: 'Product Manager',
-            appliedDate: '2024-02-20',
-            resumeLink: '/path/to/resume2.pdf',
-            status: 'selected',
-        },
-        {
-            id: 3,
-            name: 'Mike Johnson',
-            email: 'mike.johnson@example.com',
-            phone: '+1 (555) 456-7890',
-            position: 'UX Designer',
-            appliedDate: '2024-02-10',
-            resumeLink: '/path/to/resume3.pdf',
-            status: 'rejected',
-        },
-    ]);
+    const [applications, setApplications] = useState([]);
+
+
+    useEffect(() => {
+        fetchApplications();
+    }, []);
+
+    const fetchApplications = async () => {
+        try{
+        console.log("Fetching applications...");
+        const response=await axios.get(`${API_BASE_URL}/api/job/applications`);
+        console.log(response.data.JobApplications);
+        setApplications(response.data.JobApplications);
+        }catch(err){
+            console.error("Error fetching applications:",err);
+            setApplications([]);
+        };
+    }
 
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
 
     const statusStyles = {
-        'under-review': {
+        'Under Review': {
             color: 'text-yellow-600',
             icon: <Clock className="inline mr-2" />,
             label: 'Under Review',
         },
-        selected: {
+        'Selected': {
             color: 'text-green-600',
             icon: <Check className="inline mr-2" />,
             label: 'Selected',
         },
-        rejected: {
+        'Rejected': {
             color: 'text-red-600',
             icon: <X className="inline mr-2" />,
             label: 'Rejected',
@@ -62,14 +50,27 @@ const JobApplication = () => {
         );
     };
 
-    const filteredApplications = applications.filter(
-        (app) =>
-            (searchTerm === '' ||
-                app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                app.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                app.position.toLowerCase().includes(searchTerm.toLowerCase())) &&
-            (statusFilter === '' || app.status === statusFilter)
-    );
+    const [filteredApplications, setFilteredApplications] = useState();   
+
+    useEffect(()=>{
+        if(applications && searchTerm!==''){
+            setFilteredApplications(applications.filter(
+                (app) =>
+                    (searchTerm === '' ||
+                        app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        app.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        app.position.toLowerCase().includes(searchTerm.toLowerCase())) &&
+                    (statusFilter === '' || app.status === statusFilter)
+            ));
+
+            console.log("Filtered Applications:",filteredApplications);
+        }
+        else{
+            setFilteredApplications(applications);
+            console.log("Filtered Applications:",applications);
+        }
+    },[applications]);
+
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
@@ -117,8 +118,9 @@ const JobApplication = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredApplications.map((app) => (
+                            {filteredApplications && filteredApplications.length!==0 &&  filteredApplications.map((app) => (
                                 <tr key={app.id} className="border-b hover:bg-gray-100">
+                                    {console.log(app)}
                                     <td className="p-2 text-gray-700">{app.name}</td>
                                     <td className="p-2 text-gray-700">{app.email}</td>
                                     <td className="p-2 text-gray-700">{app.phone}</td>
@@ -151,7 +153,7 @@ const JobApplication = () => {
                             ))}
                         </tbody>
                     </table>
-                    {filteredApplications.length === 0 && (
+                    {filteredApplications && filteredApplications.length === 0 && (
                         <div className="text-center py-6 text-gray-500">
                             No job applications found
                         </div>
