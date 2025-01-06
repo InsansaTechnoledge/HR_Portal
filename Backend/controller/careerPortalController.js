@@ -30,9 +30,36 @@ export const applyForJob = async (req, res) => {
 
 export const getMyJobApplication = async (req, res) => {};
 
-export const updateProfile = async (req, res) => {};
+export const updateProfile = async (req, res) => {
+    const {applicantId,data}=req.body;   
+    const savedApplicant = await Applicant.findByIdAndUpdate(applicantId
+        ,data
+        ,{new:true}
+    );
+    console.log(savedApplicant);
+    res.status(201).json({ message: 'Applicant updated successfully!', applicant: savedApplicant });
 
-export const getProfile = async (req, res) => {};
+};
+
+export const getProfile = async (req, res) => {
+    try{
+        const { applicantId } = req.params;
+        const applicant = await Applicant.findById(applicantId);
+        if (!applicant) {
+            return res.status(404).json({ message: 'Applicant not found' });
+        }
+        const data={
+            name:applicant.name,
+            email:applicant.email,
+            phone:applicant.phone,
+            resume:applicant.resume,
+        }
+        res.status(201).json({data});
+    }catch{
+        console.error('Error fetching applicant:', error.message);
+        res.status(500).json({ message: 'Error fetching applicant', error: error.message }); 
+    };
+};
 
 export const changeStatus = async (req, res) => {};
 
