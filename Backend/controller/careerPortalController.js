@@ -57,7 +57,7 @@ export const getProfile = async (req, res) => {
             resume:applicant.resume,
         }
         res.status(201).json({data});
-    }catch{
+    }catch(error){
         console.error('Error fetching applicant:', error.message);
         res.status(500).json({ message: 'Error fetching applicant', error: error.message }); 
     };
