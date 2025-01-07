@@ -4,6 +4,7 @@ import { useNavigate ,useLocation} from 'react-router-dom';
 import { userContext } from '../../Context/userContext';
 import ErrorToast from '../Toaster/ErrorToaster';
 import SuccessToast from '../Toaster/SuccessToaser';
+import API_BASE_URL from '../../config';
 
 const Login = () => {
     const [userEmail, setEmail] = useState('');
@@ -21,7 +22,7 @@ const Login = () => {
     const handleLogin = async () => {
         try {
             // Make a POST request to the backend
-            const response = await axios.post('https://hr-portal-mu.vercel.app/api/auth/login', {
+            const response = await axios.post(`https://hr-portal-mu.vercel.app/api/auth/login`, {
                 userEmail,
                 password,
             }, { withCredentials: true });

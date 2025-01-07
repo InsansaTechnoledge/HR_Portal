@@ -30,7 +30,24 @@ export const applyForJob = async (req, res) => {
     }
 };
 
-export const getMyJobApplication = async (req, res) => {};
+export const getMyJobApplications = async (req, res) => {
+    try{
+        const {applicantId}=req.params;
+        const applicant=await Applicant.findById(applicantId);
+        if(!applicant){
+            return res.status(404).json({ message: 'Applicant not found' });
+        }
+        const jobApplications=[];
+        for(const jobApplicationId of applicant.applications){
+            const jobApplication=await JobApplication.findById(jobApplicationId);
+        jobApplications.push(jobApplication);
+        }
+        res.status(201).json({jobApplications});
+    }catch(error){
+        console.error('Error fetching job applications:', error.message);
+        res.status(500).json({ message: 'Error fetching job applications', error: error.message });
+    }
+};
 
 export const updateProfile = async (req, res) => {
     const formDetails=req.body;   
@@ -73,7 +90,16 @@ export const getProfile = async (req, res) => {
     };
 };
 
-export const changeStatus = async (req, res) => {};
+export const changeStatus = async (req, res) => {
+    const {jobApplicationId,status}=req.body;   
+    const savedJobApplication = await JobApplication.findByIdAndUpdate(
+        jobApplicationId,
+        {$set:{status:status}},
+        {new:true});
+    console.log(savedJobApplication);
+    res.status(201).json({ message: 'Status updated successfully!', jobApplication: savedJobApplication });
+
+};
 
 export const createApplicant = async (req, res) => {
     try{

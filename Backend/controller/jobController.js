@@ -1,4 +1,5 @@
 import Job from "../models/Job.js"
+import JobApplication from "../models/JobApplications.js"
 
 //post job  
 export const postJob = async (req,res) => {
@@ -68,3 +69,12 @@ export const updateJob = async (req, res) => {
     res.status(500).json({ message: "Failed to update job", error: err.message });
   }
 };
+
+//get job application
+export const getJobApplications= async (req, res) => {
+  const JobApplications= await JobApplication.find();
+  // console.log(JobApplications);
+  
+  res.status(201).json({message:"application fetched successfully",JobApplications: JobApplications});
+
+}
