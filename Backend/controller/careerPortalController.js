@@ -33,7 +33,16 @@ export const applyForJob = async (req, res) => {
 export const getMyJobApplication = async (req, res) => {};
 
 export const updateProfile = async (req, res) => {
-    const {applicantId,data}=req.body;   
+    const formDetails=req.body;   
+    const applicantId = formDetails.applicantId;
+
+    const data = {
+        name: formDetails.name,
+        phone: formDetails.phone,
+        email: formDetails.email,
+        resume: req.file.buffer
+    }
+
     const savedApplicant = await Applicant.findByIdAndUpdate(applicantId
         ,data
         ,{new:true}
@@ -55,6 +64,7 @@ export const getProfile = async (req, res) => {
             email:applicant.email,
             phone:applicant.phone,
             resume:applicant.resume,
+            applications: applicant.applications
         }
         res.status(201).json({data});
     }catch(error){

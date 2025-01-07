@@ -12,6 +12,6 @@ const upload = multer({ storage: storage });
 router.post('/apply',upload.single('applicantResume'), applyForJob );
 router.post('/sign-in',createApplicant );
 router.get('/profile/:applicantId',getProfile );
-router.put('/profile',updateProfile );
+router.put('/profile',upload.single('resume') ,updateProfile );
 
 export default router;
