@@ -401,7 +401,7 @@ const PayslipGenerator = () => {
                                     type={type}
                                     value={employeeData[name]}
                                     onChange={handleInputChange}
-                                    required
+                                    required = {label==="UAN Number" ? false : true}
                                     disabled={disabled}
                                     className="block w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                 />

@@ -197,18 +197,24 @@ const CandidateRegistrationForm = () => {
                             <div>
                                 <div className="flex items-center justify-between">
                                     <label htmlFor="source" className="block text-base/6 font-medium text-gray-900">
-                                        Source
+                                        Status
                                     </label>
                                 </div>
                                 <div className="mt-2">
-                                    <input
+                                    <select id='source' name='source'
+                                    className="block w-full rounded-md bg-white px-3 py-3 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6">
+                                        <option value="Accepted">Accepted</option>
+                                        <option value="Rejected">Rejected</option>
+                                        <option value="On hold">On hold</option>
+                                    </select>
+                                    {/* <input
                                         id="source"
                                         name="source"
                                         type="text"
                                         required
                                         autoComplete="source"
                                         className="block w-full rounded-md bg-white px-3 py-3 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
-                                    />
+                                    /> */}
                                 </div>
                             </div>
                             <div>
