@@ -113,7 +113,7 @@ const PayslipGenerator = () => {
     // };
     const calculateDeductions = () => {
         const salary = parseFloat(employeeData.salary) || 0;
-        const incomeTax = salary * 0.1;
+        const incomeTax = 0;
         if(taxType==='Professional Tax'){
             return { professionalTax };
         }
