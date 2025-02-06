@@ -40,13 +40,13 @@ const PayslipGenerator = () => {
     // Company Details (Static)
     const companyDetails = {
         name: "INSANSA TECHNOLOGIES",
-        address: "123 Tech Park, Electronic City Phase 1",
-        city: "Bangalore, Karnataka - 560100",
-        gst: "29AABCI1234R1Z5",
-        phone: "+91 80 1234 5678",
-        email: "hr@insansa.com",
+        address: "B/321 Monalisa Business Center Manjalpur ",
+        city: "Vadodara Gujarat INDIA 390011",
+        // gst: "29AABCI1234R1Z5",
+        phone: "+91 9724379123 ",
+        email: "talent@insansa.com",
         website: "www.insansa.com",
-        cin: "U72200KA2020PTC123456"
+        // cin: "U72200KA2020PTC123456"
     };
 
     const [employeeData, setEmployeeData] = useState({
