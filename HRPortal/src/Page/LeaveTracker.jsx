@@ -33,7 +33,7 @@ const LeaveTracker = () => {
     const [showAddLeaveModal, setShowAddLeaveModal] = useState(false);
     const [activeFilter, setActiveFilter] = useState(false);
     const [filteredEmployees, setFilteredEmployees] = useState(employees);
-    const [selectedEmployeeId, setSelectedEmployeeId] = useState();
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [newLeave, setNewLeave] = useState({
         type: '',
@@ -50,60 +50,113 @@ const LeaveTracker = () => {
 
     const fetchEmployeeData = async () => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/api/employee`);
+            if (user && user.role === "user") {
+                // For regular users, fetch from User collection
+                const response = await axios.get(`${API_BASE_URL}/api/user`);
+                
+                if (response.status === 200 && response.data) {
+                    // Filter to get only the logged-in user's data
+                    const users = response.data;
+                    const currentUser = users.find(u => u.userEmail === user.userEmail);
+                    
+                    if (currentUser) {
+                        const userData = {
+                            empId: currentUser.userId,
+                            name: currentUser.userName,
+                            email: currentUser.userEmail,
+                            department: currentUser.role || 'User',
+                            leaveHistory: currentUser.leaveHistory || []
+                        };
+                        
+                        setEmployees([userData]);
+                        setFilteredEmployees([userData]);
+                        setSelectedEmployeeId(userData.empId);
+                        setSelectedEmployee(userData);
+                    }
+                    setLoading(false);
+                }
+            } else if (user && (user.role === "admin" || user.role === "superAdmin")) {
+                // For admin and superadmin, fetch all employees
+                const response = await axios.get(`${API_BASE_URL}/api/employee`);
 
-            if (response.status === 201) {
-                const employees = response.data.employees;
-
-                if (user && user.role === "user") {
-                    const filteredEmployees = employees.filter(emp => emp.email === user.userEmail);
-                    setEmployees(filteredEmployees);
-                    setFilteredEmployees(filteredEmployees);
-                    setSelectedEmployeeId(filteredEmployees[0]?.empId);
-                    setSelectedEmployee(filteredEmployees[0]);
-                } else {
+                if (response.status === 201) {
+                    const employees = response.data.employees;
                     setEmployees(employees);
                     setFilteredEmployees(employees);
-                    setSelectedEmployeeId(employees[0]?.empId);
-                    setSelectedEmployee(employees[0]);
+                    if (employees.length > 0) {
+                        setSelectedEmployeeId(employees[0]?.empId);
+                        setSelectedEmployee(employees[0]);
+                    }
+                    setLoading(false);
                 }
-                setLoading(false);
             }
         } catch (error) {
-            console.error("Error fetching employee data:", error);
+            console.error("Error fetching data:", error);
+            setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchEmployeeData();
+        if (user) {
+            fetchEmployeeData();
+        }
     }, [user]);
 
     useEffect(() => {
+        if (!selectedEmployeeId) {
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
-        const updateSelectedEmployee = async () => {
+        const updateSelectedData = async () => {
             try {
-                const response = await axios.get(`${API_BASE_URL}/api/employee/${selectedEmployeeId}`);
-                if (response.status === 201) {
-                    const updatedEmployee = response.data.employee[0];
-                    setSelectedEmployee(updatedEmployee);
+                let response;
+                let updatedData;
+
+                if (user && user.role === "user") {
+                    // Fetch from user API
+                    response = await axios.get(`${API_BASE_URL}/api/user/${selectedEmployeeId}`);
+                    if (response.data && response.data.user) {
+                        const userData = response.data.user;
+                        // Transform to match employee structure
+                        updatedData = {
+                            empId: userData.userId,
+                            name: userData.userName,
+                            email: userData.userEmail,
+                            department: userData.role || 'User',
+                            leaveHistory: userData.leaveHistory || []
+                        };
+                    }
+                } else {
+                    // Fetch from employee API
+                    response = await axios.get(`${API_BASE_URL}/api/employee/${selectedEmployeeId}`);
+                    if (response.data && response.data.employee && response.data.employee[0]) {
+                        updatedData = response.data.employee[0];
+                    }
+                }
+
+                if (updatedData) {
+                    setSelectedEmployee(updatedData);
 
                     setEmployees(prev =>
-                        prev.map(emp => emp.empId === selectedEmployeeId ? updatedEmployee : emp)
+                        prev.map(emp => String(emp.empId) === String(selectedEmployeeId) ? updatedData : emp)
                     );
                     setFilteredEmployees(prev =>
-                        prev.map(emp => emp.empId === selectedEmployeeId ? updatedEmployee : emp)
+                        prev.map(emp => String(emp.empId) === String(selectedEmployeeId) ? updatedData : emp)
                     );
+                    setLoading(false);
+                } else {
                     setLoading(false);
                 }
             } catch (error) {
-                console.error("Error fetching employee details:", error);
+                console.error("Error fetching details:", error);
+                setLoading(false);
             }
         };
 
-        if (selectedEmployeeId) {
-            updateSelectedEmployee();
-            setSelectedMonth(null);
-        }
+        updateSelectedData();
+        setSelectedMonth(null);
     }, [selectedEmployeeId]);
 
     const handleLeaveMonths = () => {
@@ -178,40 +231,53 @@ const LeaveTracker = () => {
 
             
             try {
-                const response = await axios.post(
-                    `${API_BASE_URL}/api/employee/addLeave/${selectedEmployeeId}`,
-                    newLeave,
-                    {
-                        headers: {
-                            'content-type': 'application/json'
-                        }
-                    }
-                );
+                // Determine which API endpoint to use based on user role
+                const apiEndpoint = user && user.role === "user"
+                    ? `${API_BASE_URL}/api/user/addLeave/${selectedEmployeeId}`
+                    : `${API_BASE_URL}/api/employee/addLeave/${selectedEmployeeId}`;
+
+                const response = await axios.post(apiEndpoint, newLeave);
 
                 if (response.status === 201) {
-                    // alert("Leave added successfully!");
                     setToastSuccessMessage("Leave added successfully!");
                     setToastSuccessVisible(true);
                     setTimeout(() => setToastSuccessVisible(false), 3500);
 
-                    const updatedEmployeeResponse = await axios.get(`${API_BASE_URL}/api/employee/${selectedEmployeeId}`);
-                    if (updatedEmployeeResponse.status === 201) {
-                        const updatedEmployee = updatedEmployeeResponse.data.employee[0];
+                    // Fetch updated data based on role
+                    let updatedData;
+                    if (user && user.role === "user") {
+                        const updatedResponse = await axios.get(`${API_BASE_URL}/api/user/${selectedEmployeeId}`);
+                        if (updatedResponse.data && updatedResponse.data.user) {
+                            const userData = updatedResponse.data.user;
+                            updatedData = {
+                                empId: userData.userId,
+                                name: userData.userName,
+                                email: userData.userEmail,
+                                department: userData.role || 'User',
+                                leaveHistory: userData.leaveHistory || []
+                            };
+                        }
+                    } else {
+                        const updatedResponse = await axios.get(`${API_BASE_URL}/api/employee/${selectedEmployeeId}`);
+                        if (updatedResponse.status === 201) {
+                            updatedData = updatedResponse.data.employee[0];
+                        }
+                    }
 
-                        setSelectedEmployee(updatedEmployee);
-                        setSelectedEmployeeId(updatedEmployee.empId);
+                    if (updatedData) {
+                        setSelectedEmployee(updatedData);
+                        setSelectedEmployeeId(updatedData.empId);
 
                         setEmployees(prev =>
-                            prev.map(emp => emp.empId === selectedEmployeeId ? updatedEmployee : emp)
+                            prev.map(emp => String(emp.empId) === String(selectedEmployeeId) ? updatedData : emp)
                         );
                         setFilteredEmployees(prev =>
-                            prev.map(emp => emp.empId === selectedEmployeeId ? updatedEmployee : emp)
+                            prev.map(emp => String(emp.empId) === String(selectedEmployeeId) ? updatedData : emp)
                         );
                     }
                 }
             } catch (error) {
-                // console.error("Error adding leave:", error);
-                // alert("Error adding leave. Please try again.");
+                console.error("Error adding leave:", error);
                 setToastErrorMessage("Error adding leave. Please try again.");
                 setToastErrorVisible(true);
                 setTimeout(() => setToastErrorVisible(false), 3500);
@@ -292,10 +358,13 @@ const LeaveTracker = () => {
                     <select
                         onChange={(e) => setSelectedEmployeeId(e.target.value)}
                         className="w-full rounded-md border-gray-300 shadow-sm"
-                        value={selectedEmployeeId}
+                        value={selectedEmployeeId || ''}
                     >
+                        {filteredEmployees.length === 0 && (
+                            <option value="">No employees available</option>
+                        )}
                         {filteredEmployees.map((emp) => (
-                            <option key={emp.empId} value={emp.empId}>
+                            <option key={emp.empId} value={String(emp.empId)}>
                                 {emp.name} - {emp.department}
                             </option>
                         ))}

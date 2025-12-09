@@ -11,6 +11,7 @@ import {
 import { NavLink } from "react-router-dom";
 import { handleLogout } from './Sidebar';
 import { userContext } from '../../Context/userContext';
+import { DROPDOWN_ITEMS } from '../../Constant/constant';
 
 // Configuration for navigation items
 const NAV_ITEMS = [
@@ -19,17 +20,6 @@ const NAV_ITEMS = [
     { icon: IconSettings, label: 'Auth', to: '/auth' },
 ];
 
-const DROPDOWN_ITEMS = [
-    { label: 'Employee Docs', to: '/docs' },
-    { label: 'Post Job', to: '/post-job' },
-    { label: 'Job Applications', to: '/application' },
-    { label: 'Leave Tracker', to: '/leave-tracker' },
-    { label: 'Add Employee', to: '/add-employee' },
-    { label: 'Employee Registration', to: '/emp-info'},
-    { label: 'User Details', to: '/emp-list'},
-    { label:'PaySlip Tracker', to:'/payslip-tracker'},
-    { label:'PaySlip Generator', to:'/payslip'},
-];
 
 // Handle Logout function
 const handleClick = (setUser) => {

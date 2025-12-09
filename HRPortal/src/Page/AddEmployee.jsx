@@ -11,18 +11,8 @@ import {
 import API_BASE_URL from '../config';
 import ErrorToast from '../Components/Toaster/ErrorToaster';
 import SuccessToast from '../Components/Toaster/SuccessToaser';
+import { DEPARTMENTS } from '../Constant/constant';
 
-// Departments list for dropdown
-const DEPARTMENTS = [
-    'Engineering',
-    'Marketing',
-    'Sales',
-    'Human Resources',
-    'Finance',
-    'Customer Support',
-    'Product Management',
-    'Design'
-];
 
 const AddEmployeePage = () => {
     // Form state

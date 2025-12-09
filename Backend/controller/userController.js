@@ -121,3 +121,46 @@ export const changePassword = async (req,res) => {
     console.log(err);
   }
 }
+
+// Get user by ID
+export const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findOne({ userId: id });
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    res.status(200).json({ message: "User fetched", user: user });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: err });
+  }
+}
+
+// Add leave for user
+export const addLeaveToUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log("Received leave data for user ID:", id);
+    console.log("Request body:", req.body);
+    
+    const leaveHistory = req.body;
+    
+    const updatedUser = await User.findOneAndUpdate(
+      { userId: id },
+      { $push: { leaveHistory: leaveHistory } },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(201).json({ message: "Leave added", updatedUser });
+  } catch (err) {
+    console.log("Error in addLeaveToUser:", err);
+    res.status(400).json({ message: err.message || err });
+  }
+}

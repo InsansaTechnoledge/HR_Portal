@@ -8,6 +8,7 @@ import { userContext } from '../Context/userContext';
 import Loader from '../Components/Loader/Loader';
 import ErrorToast from '../Components/Toaster/ErrorToaster';
 import SuccessToast from '../Components/Toaster/SuccessToaser';
+import { companyDetails } from '../Constant/constant';
 
 const PayslipGenerator = () => {
     const payslipRef = useRef();
@@ -36,19 +37,6 @@ const PayslipGenerator = () => {
 
         fetchEmployees();
     }, [])
-
-    // Company Details (Static)
-    const companyDetails = {
-        name: "INSANSA TECHNOLOGIES",
-        address: "B/321 Monalisa Business Center Manjalpur ",
-        city: "Vadodara Gujarat INDIA 390011",
-        // gst: "29AABCI1234R1Z5",
-        phone: "+91 9724379123 ",
-        email: "talent@insansa.com",
-        website: "www.insansa.com",
-        // cin: "U72200KA2020PTC123456"
-    };
-
     const [employeeData, setEmployeeData] = useState({
         name: '',
         employeeId: '',

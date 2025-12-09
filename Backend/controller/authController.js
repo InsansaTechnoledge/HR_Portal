@@ -12,7 +12,7 @@ export const login=async(req, res, next)=>{
   const { userEmail, password } = req.body;
 
   try {
-    const user = await User.findOne({ userEmail });
+    const user = await User.findOne({ userEmail});
 
     if (!user) {
       return res.status(400).json({ message: 'User not found, please sign up first.' });

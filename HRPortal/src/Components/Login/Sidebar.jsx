@@ -133,8 +133,8 @@ const Sidebar = () => {
                             >
                                 <SidebarItem icon={<IconFolder />} label="Docs Management" isOpen={isOpen} to="/docs" />
                                 <SidebarItem icon={<IconCalendar />} label="Leave Tracker" isOpen={isOpen} to="/leave-tracker" />
-                                <SidebarItem icon={<IconId />} label="PaySlip Tracker" isOpen={isOpen} to="/payslip-tracker" />
-                                <SidebarItem icon={<IconId />} label="Employee Registration" isOpen={isOpen} to="/emp-info" />
+                                {/* <SidebarItem icon={<IconId />} label="PaySlip Tracker" isOpen={isOpen} to="/payslip-tracker" /> */}
+                                {/* <SidebarItem icon={<IconId />} label="Employee Registration" isOpen={isOpen} to="/emp-info" /> */}
 
 
 

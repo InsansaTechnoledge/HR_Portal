@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import mongooseSequence from 'mongoose-sequence';
+import LeaveSchema from './Leave.js';
 
 const UserSchema = new mongoose.Schema({
   userId: {
@@ -23,7 +24,8 @@ const UserSchema = new mongoose.Schema({
   role: {
     type: String,
     required: true
-  }
+  },
+  leaveHistory: [LeaveSchema]
 });
 
 // Hash the password before saving it
