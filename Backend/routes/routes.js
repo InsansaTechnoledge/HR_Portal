@@ -7,6 +7,7 @@ import employee from "./employee.js"
 import payslip from "./paySlip.js";
 import careerPortal from "./careerPortal.js";
 
+
 const routes = (app) => {
     app.use("/api/auth", auth);
     app.use("/api/job", job);

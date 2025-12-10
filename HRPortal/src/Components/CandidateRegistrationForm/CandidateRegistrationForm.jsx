@@ -64,7 +64,7 @@ const CandidateRegistrationForm = () => {
         formData.append("resume", resume); // Attach the file
 
         try {
-            const response = await axios.post(API_BASE_URL + "/api/candidate/add", formData, {
+            const response = await axios.post(`${API_BASE_URL}/api/candidate/add`, formData, {
                 headers: {
                     "Content-Type": "multipart/form-data",
                 },

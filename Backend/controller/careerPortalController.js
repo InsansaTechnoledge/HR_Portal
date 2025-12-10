@@ -100,26 +100,25 @@ export const updateProfile = async (req, res) => {
 
 };
 
-export const getProfile = async (req, res) => {
-    try{
-        const { applicantId } = req.params;
-        const applicant = await Applicant.findById(applicantId);
-        if (!applicant) {
-            return res.status(404).json({ message: 'Applicant not found' });
-        }
-        const data={
-            name:applicant.name,
-            email:applicant.email,
-            phone:applicant.phone,
-            resume:applicant.resume,
-            applications: applicant.applications
-        }
-        res.status(201).json({data});
-    }catch(error){
-        console.error('Error fetching applicant:', error.message);
-        res.status(500).json({ message: 'Error fetching applicant', error: error.message }); 
-    };
-};
+export const getApplicantDetails = async (req, res) => {
+  try {
+    const { applicantId } = req.params;
+    
+    const applicant = await Applicant.findById(applicantId).select('-password');
+    
+    if (!applicant) {
+      return res.status(404).json({ message: "Applicant not found" });
+    }
+
+    res.status(200).json({ 
+      message: "Applicant details fetched successfully",
+      applicant: applicant 
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch applicant details", error: err.message });
+  }
+}
 
 export const changeStatus = async (req, res) => {
     const {jobApplicationId,status}=req.body;   

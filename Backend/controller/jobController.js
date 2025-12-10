@@ -1,12 +1,14 @@
 import Job from "../models/Job.js"
 import JobApplication from "../models/JobApplications.js"
 
+
 //post job  
 export const postJob = async (req,res) => {
 
     try{
 
         const job = req.body;
+        console.log(req.body)
         
         const savedJob = await Job.create(job)
         
@@ -78,3 +80,47 @@ export const getJobApplications= async (req, res) => {
   res.status(201).json({message:"application fetched successfully",JobApplications: JobApplications});
 
 }
+
+//update job application status
+export const updateApplicationStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ message: "Status is required" });
+    }
+
+    const updatedApplication = await JobApplication.findByIdAndUpdate(
+      id,
+      { status: status },
+      { new: true }
+    );
+
+    if (!updatedApplication) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    res.status(200).json({ 
+      message: "Application status updated successfully!", 
+      application: updatedApplication 
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update application status", error: err.message });
+  }
+}
+
+export const fetchApplicationsByApplicantId = async (req, res) => {
+  try{
+    const { applicantId } = req.params;
+    const applications = await JobApplication.findById({ applicantId: applicantId });
+    return res.status(200).json("Applications fetched successfully", applications);
+
+  }
+  catch(err){
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch applications", error: err.message });
+  }
+}
+

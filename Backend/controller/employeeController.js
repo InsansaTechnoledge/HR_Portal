@@ -45,7 +45,7 @@ export const fetchEmployee = async (req,res) => {
     try{
 
         const employees = await Employee.find();
-        res.status(201).json({message: "Fetched Employees", employees});
+        return res.status(201).json({message: "Employees fetched", employees: employees});
     }
     catch(Err){
         console.log(Err);
