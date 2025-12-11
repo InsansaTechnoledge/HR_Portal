@@ -6,27 +6,28 @@ import bcrypt from "bcryptjs";
 export const createUser=async(req,res) => {
     try {
       const { userName, userEmail, password, role } = req.body;
-  
+      // Validate required fields
+      if (!userName || !userEmail || !password) {
+        return res.status(400).json({ error: 'Username, email, and password are required' });
+      }
+
       const existingUser = await User.findOne({ userEmail });
       if (existingUser) {
         return res.status(200).json({ message: 'User already exists' });
       }
-      else{
-  
-        
-        const newUser = new User({
+      
+      const newUser = new User({
         userName: userName,
         userEmail,
         password,
-        role
+        role: role || "user"
       });
       
       const new_user = await newUser.save();
       res.status(201).json({ message: 'User created successfully', new_user: new_user});
-      }
     } catch (error) {
       console.error('Error during signup process:', error);
-      res.status(500).json({ error: 'Failed to create user' });
+      res.status(500).json({ error: error.message || 'Failed to create user' });
     }
 }
 
@@ -46,7 +47,7 @@ export const getUser = async (req,res) => {
 export const deleteUser = async (req,res) => {
     try{
         const {id} = req.params;
-        const deletedUser = await User.findOneAndDelete({"userId": id});
+        const deletedUser = await User.findByIdAndDelete(id);
 
         res.status(200).json({message: "User deleted successfully!"});
     }
@@ -56,86 +57,132 @@ export const deleteUser = async (req,res) => {
 }
 
 
-// Edit login info route
-export const editLoginInfo = async (req, res) => {
-  const { userEmail, currentPassword, newPassword, newEmail } = req.body;
-
-  if (!userEmail || !currentPassword) {
-    return res.status(400).json({ message: "Current email and password are required." });
-  }
-
-  try {
-    // Fetch user by current email
-    const user = await User.findOne({ userEmail });
-    if (!user) {
-      return res.status(404).json({ message: "User not found. Invalid email." });
-    }
-
-    // Verify current password
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: "Invalid current password." });
-    }
-
-    // Update email (if newEmail is provided)
-    if (newEmail) {
-      const emailExists = await User.findOne({ userEmail: newEmail });
-      if (emailExists) {
-        return res.status(400).json({ message: "Email already in use. Please use another email." });
-      }
-      user.userEmail = newEmail;
-    }
-
-    // Update password (if newPassword is provided)
-    if (newPassword) {
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(newPassword,10);
-      user.password = newPassword;
-    }
-
-    // Save updated user info
-    await user.save();
-
-    res.status(200).json({ message: "Login information updated successfully.", user: { userEmail: user.userEmail } });
-  } catch (error) {
-    console.error("Error updating login info:", error);
-    res.status(500).json({ message: "Failed to update login information. Please try again." });
-  }
-};
 
 
 export const changePassword = async (req,res) => {
   try{
+    const requester = req.user;
+    if (!requester) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
     const {id} = req.params;
     const newPassword = req.body.newPassword;
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     
-    const updatedUser = await User.findOneAndUpdate({userId:id},{
-      password: hashedPassword
-    })
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { password: hashedPassword },
+      { new: true }
+    );
     
     res.status(200).json({message: "Password updated successfully!"});
+
   }
   catch(err){
-    console.log(err);
+    console.error("Error changing password:", err);
+    res.status(500).json({ message: "Failed to change password. Please try again." });
   }
 }
+
+
+export const editLoginInfo = async (req, res) => {
+  try {
+    const { id } = req.params; 
+    const { userName, userEmail, newPassword, currentPassword, role } = req.body;
+
+    const requester = req.user;
+    if (!requester) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    console.log("Requester:",requester)
+    // Only superAdmin may change roles
+    if (role && requester.role !== "superAdmin") {
+      return res.status(403).json({ message: "Only superAdmin can change roles." });
+    }
+
+    const targetUser = await User.findById(id);
+    if (!targetUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Build updates
+    const updateFields = {};
+    if (userName) updateFields.userName = userName;
+
+    if (userEmail) {
+      const emailExists = await User.findOne({ userEmail, _id: { $ne: id } });
+      if (emailExists) {
+        return res.status(400).json({ message: "Email already in use. Please use another email." });
+      }
+      updateFields.userEmail = userEmail;
+    }
+
+    if (role) updateFields.role = role;
+
+    if (newPassword) {
+      // require currentPassword in payload
+      if (!currentPassword || !currentPassword.trim()) {
+        return res.status(400).json({ message: "Current password is required to change password." });
+      }
+
+      if (requester.role !== "admin" && requester.role !== "superAdmin") {
+        if (requester._id.toString() !== id.toString()) {
+          return res.status(403).json({
+            message: "You can only change your own password. Ask an admin or superAdmin to reset others' passwords."
+          });
+        }
+      }
+
+      // Compare provided currentPassword with target user's stored hash
+      const isMatch = await bcrypt.compare(currentPassword, targetUser.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: "Current password doesn't match. Please verify the current password." });
+      }
+
+      // Hash and set new password
+      const hashed = await bcrypt.hash(newPassword, 10);
+      updateFields.password = hashed;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { $set: updateFields },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const safeUser = {
+      _id: updatedUser._id,
+      userName: updatedUser.userName,
+      userEmail: updatedUser.userEmail,
+      role: updatedUser.role,
+    };
+
+    return res.status(200).json({ message: "User updated successfully", user: safeUser });
+  } catch (err) {
+    console.error("Error in editLoginInfo:", err);
+    return res.status(500).json({ message: "Failed to update user" });
+  }
+};
 
 // Get user by ID
 export const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
-    const user = await User.findOne({ userId: id });
+    const user = await User.findById(id);
     
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
     
-    res.status(200).json({ message: "User fetched", user: user });
+    res.status(200).json({ message: "User fetched", user });
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ message: err });
+    console.error(err);
+    res.status(500).json({ message: err.message || err });
   }
 }
 
@@ -148,8 +195,8 @@ export const addLeaveToUser = async (req, res) => {
     
     const leaveHistory = req.body;
     
-    const updatedUser = await User.findOneAndUpdate(
-      { userId: id },
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
       { $push: { leaveHistory: leaveHistory } },
       { new: true }
     );

@@ -26,6 +26,7 @@ const AuthenticationManagement = () => {
     userName: "",
     userEmail: "",
     password: "",
+    currentPassword: "",
     role: "user",
   });
 
@@ -41,7 +42,6 @@ const AuthenticationManagement = () => {
   const [toastErrorVisible, setToastErrorVisible] = useState(false);
   const [loading, setLoading] = useState(false); // Loading state
 
-
   const fetchCandidates = async () => {
     try {
       const response = await axios.get(
@@ -51,14 +51,14 @@ const AuthenticationManagement = () => {
       if (response.status === 200) {
         const candidates = Array.isArray(response.data) ? response.data : [];
         console.log("All candidates from API:", candidates);
-        
+
         // Filter out candidates whose email already exists as a user
         const userEmailSet = new Set(users.map((u) => u.userEmail));
         const available = candidates.filter(
           (c) => c?.email && !userEmailSet.has(c.email)
         );
         setNewUserList(available);
-        
+
         // Set the first available candidate in the form
         if (available.length > 0) {
           setUserForm((prev) => ({
@@ -99,94 +99,107 @@ const AuthenticationManagement = () => {
     setUserForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async () => {
-    if (!userForm.userName || !userForm.userEmail) {
-      // alert('Please fill in all required fields');
-      setToastErrorMessage("Please fill all details");
-      setToastErrorVisible(true);
-      setTimeout(() => setToastErrorVisible(false), 3500);
-      return;
-    }
+ const handleSubmit = async () => {
+  if (!userForm.userName || !userForm.userEmail) {
+    setToastErrorMessage("Please fill all details");
+    setToastErrorVisible(true);
+    setTimeout(() => setToastErrorVisible(false), 3500);
+    return;
+  }
 
-    setLoading(true); // Start loading
-    try {
-      if (userForm.userId) {
-        if (user.role === "superAdmin") {
-          const payload = {
-            userEmail: userForm.currentEmail || userForm.userEmail,
-            currentPassword: prompt(
-              "Enter current password to confirm changes:"
-            ),
-            newEmail: userForm.userEmail,
-            newPassword: userForm.password,
-          };
-          const response = await axios.put(
-            `${API_BASE_URL}/api/user/edit-login-info`,
-            payload
-          );
+  setLoading(true);
+  try {
+   
+    if (userForm.userId) {
+      const payload = {
+        userName: userForm.userName,
+        userEmail: userForm.userEmail,
+      };
 
-          if (response.status === 200) {
-            // alert(response.data.message);
-            setToastSuccessMessage(response.data.message);
-            setToastSuccessVisible(true);
-            setTimeout(() => setToastSuccessVisible(false), 3500);
-            setUsers((prev) =>
-              prev.map((user) =>
-                user.userId === userForm.userId
-                  ? {
-                      ...user,
-                      userName: userForm.userName,
-                      userEmail: userForm.userEmail,
-                    }
-                  : user
-              )
-            );
-          }
-        } else {
-          if (!userForm.password) {
-            // alert('Password is required!');
-            setToastErrorMessage("Password is required!");
-            setToastErrorVisible(true);
-            setTimeout(() => setToastErrorVisible(false), 3500);
-            return;
-          }
-          const response = await axios.put(
-            `${API_BASE_URL}/api/user/changePassword/${userForm.userId}`,
-            { newPassword: userForm.password }
-          );
 
-          if (response.status === 200) {
-            // alert(response.data.message);
-            setToastSuccessMessage(response.data.message);
-            setToastSuccessVisible(true);
-            setTimeout(() => setToastSuccessVisible(false), 3500);
-          }
+      if (userForm.password && userForm.password.trim()) {
+        if (!userForm.currentPassword || !userForm.currentPassword.trim()) {
+          setToastErrorMessage("Current password is required to change password");
+          setToastErrorVisible(true);
+          setTimeout(() => setToastErrorVisible(false), 3500);
+          setLoading(false);
+          return;
         }
-      } else {
-        const response = await axios.post(
-          `${API_BASE_URL}/api/user/createUser`,
-          userForm
+
+        // include both new and current password in the request
+        payload.newPassword = userForm.password;
+        payload.currentPassword = userForm.currentPassword;
+      }
+
+      // Only allow role change from frontend if current user is superAdmin
+      if (user.role === "superAdmin") {
+        payload.role = userForm.role;
+      }
+
+      const response = await axios.put(
+        `${API_BASE_URL}/api/user/edit-login-info/${userForm.userId}`,
+        payload
+      );
+
+      if (response.status === 200) {
+        setToastSuccessMessage(response.data.message || "User updated successfully");
+        setToastSuccessVisible(true);
+        setTimeout(() => setToastSuccessVisible(false), 3500);
+
+        // update local list
+        setUsers((prev) =>
+          prev.map((existing) =>
+            existing._id === userForm.userId || existing.userId === userForm.userId
+              ? {
+                  ...existing,
+                  userName: response.data.user.userName,
+                  userEmail: response.data.user.userEmail,
+                  role: response.data.user.role,
+                  _id: response.data.user._id,
+                }
+              : existing
+          )
         );
-        // alert(response.data.message);
-        setToastSuccessMessage(response.data.message);
+      }
+    } else {
+      // CREATE NEW USER
+      const createPayload = {
+        userName: userForm.userName,
+        userEmail: userForm.userEmail,
+        password:
+          userForm.password && userForm.password.trim()
+            ? userForm.password
+            : `${userForm.userName.toLowerCase().replace(/\s+/g, "")}@123`,
+        role: userForm.role || "user",
+      };
+
+      const response = await axios.post(
+        `${API_BASE_URL}/api/user/createUser`,
+        createPayload
+      );
+
+      if (response.status === 201 || response.status === 200) {
+        setToastSuccessMessage(response.data.message || "User created successfully");
         setToastSuccessVisible(true);
         setTimeout(() => setToastSuccessVisible(false), 3500);
         setUsers((prev) => [...prev, response.data.new_user]);
       }
-
-      resetForm();
-      setModalOpen(false);
-    } catch (error) {
-      // alert(`Error: ${error.response?.data?.message || error.message}`);
-      setToastErrorMessage(
-        `Error: ${error.response?.data?.message || error.message}`
-      );
-      setToastErrorVisible(true);
-      setTimeout(() => setToastErrorVisible(false), 3500);
-    } finally {
-      setLoading(false); // Stop loading
     }
-  };
+
+    resetForm();
+    setModalOpen(false);
+  } catch (error) {
+    console.error("handleSubmit error:", error);
+    setToastErrorMessage(
+      error.response?.data?.message || error.message || "Failed to update user"
+    );
+    setToastErrorVisible(true);
+    setTimeout(() => setToastErrorVisible(false), 3500);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const resetForm = () => {
     setUserForm({
@@ -194,22 +207,38 @@ const AuthenticationManagement = () => {
       userName: "",
       userEmail: "",
       password: "",
+      currentPassword: "",
       role: "user",
     });
   };
 
-  const handleEditUser = (u) => {
-    setUserForm({
-      userId: u.userId,
-      userName: u.userName,
-      userEmail: u.userEmail,
-      password: "",
-      role: u.role,
-      currentEmail: u.userEmail,
-    });
-    setModalOpen(true);
+  // Populate form for editing; respects current user's role for allowed fields
+  const handleEditUser = async (id) => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_BASE_URL}/api/user/${id}`);
+      if (response.status === 200 && response.data?.user) {
+        const u = response.data.user;
+        setUserForm({
+          userId: u._id || u.userId,
+          userName: u.userName || "",
+          userEmail: u.userEmail || "",
+          password: "",
+          role: u.role || "user",
+        });
+        setModalOpen(true);
+      }
+    } catch (error) {
+      console.error("Error loading user for edit:", error);
+      setToastErrorMessage(
+        `Error loading user: ${error.response?.data?.message || error.message}`
+      );
+      setToastErrorVisible(true);
+      setTimeout(() => setToastErrorVisible(false), 3500);
+    } finally {
+      setLoading(false);
+    }
   };
-
   const handleDeleteUser = async (id) => {
     setLoading(true); // Start loading
     try {
@@ -217,7 +246,7 @@ const AuthenticationManagement = () => {
         `${API_BASE_URL}/api/user/delete/${id}`
       );
       if (response.status === 200) {
-        setUsers((prev) => prev.filter((user) => user.userId !== id));
+        setUsers((prev) => prev.filter((user) => user._id !== id));
         // alert(response.data.message);
         setToastSuccessMessage(response.data.message);
         setToastSuccessVisible(true);
@@ -337,7 +366,7 @@ const AuthenticationManagement = () => {
                   ) : (
                     filteredUsers.map((u) => (
                       <motion.div
-                        key={u.userId}
+                        key={u._id || u.userId}
                         initial={{ opacity: 0, x: -50 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 50 }}
@@ -364,7 +393,7 @@ const AuthenticationManagement = () => {
                             (user.role === "admin" &&
                               u.role !== "superAdmin")) && (
                             <button
-                              onClick={() => handleEditUser(u)}
+                              onClick={() => handleEditUser(u._id || u.userId)}
                               className="bg-gray-200 text-gray-700 p-2 rounded-md hover:bg-gray-300 transition"
                             >
                               <Edit3 />
@@ -372,7 +401,7 @@ const AuthenticationManagement = () => {
                           )}
                           {user.role === "superAdmin" && (
                             <button
-                              onClick={() => setDeleteConfirmation(u.userId)}
+                              onClick={() => setDeleteConfirmation(u._id)}
                               disabled={loading} // Disable button while loading
                               className={`bg-red-100 text-red-600 p-2 rounded-md transition ${
                                 loading
@@ -461,7 +490,12 @@ const AuthenticationManagement = () => {
                             name="userName"
                             value={userForm.userName}
                             onChange={handleInputChange}
-                            disabled={user.role !== "superAdmin"}
+                            disabled={
+                              !(
+                                user.role === "superAdmin" ||
+                                user.role === "admin"
+                              )
+                            }
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                           />
                         ) : (
@@ -477,7 +511,6 @@ const AuthenticationManagement = () => {
                             value={userForm.userName}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                           >
-                        
                             {newUserList.map((newUser) => (
                               <option key={newUser.email} value={newUser.name}>
                                 {newUser.name}
@@ -499,18 +532,60 @@ const AuthenticationManagement = () => {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Password
-                        </label>
-                        <input
-                          name="password"
-                          type="password"
-                          value={userForm.password}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
+                      {!userForm.userId && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Password (Optional)
+                          </label>
+                          <input
+                            name="password"
+                            type="password"
+                            value={userForm.password}
+                            onChange={handleInputChange}
+                            placeholder="Leave empty for default password"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            If empty, default password will be: {userForm.userName.toLowerCase().replace(/\s+/g, '')}@123
+                          </p>
+                        </div>
+                      )}
+                      {userForm.userId && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            New Password (Optional)
+                          </label>
+                          <input
+                            name="password"
+                            type="password"
+                            value={userForm.password}
+                            onChange={handleInputChange}
+                            placeholder="Leave empty to keep current password"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            To change password, enter new password below and verify with current password
+                          </p>
+                        </div>
+                      )}
+                      {userForm.userId && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Current Password (Required if changing password)
+                          </label>
+                          <input
+                            name="currentPassword"
+                            type="password"
+                            value={userForm.currentPassword}
+                            onChange={handleInputChange}
+                            placeholder="Enter current password to verify before changing"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Enter the current password to verify your identity before making any changes
+                          </p>
+                        </div>
+                      )}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Role
@@ -519,6 +594,9 @@ const AuthenticationManagement = () => {
                           name="role"
                           value={userForm.role}
                           onChange={handleInputChange}
+                          disabled={
+                            userForm.userId && user.role !== "superAdmin"
+                          }
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="user">User</option>

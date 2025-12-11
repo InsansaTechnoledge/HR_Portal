@@ -6,7 +6,7 @@ if(process.env.NODE_ENV !== "production"){
 
 const generateAuthToken = (userData) => {
     try{
-    const token = jwt.sign({"userId": userData.userId, "role": userData.role}, process.env.JWT_KEY);
+    const token = jwt.sign({"userId": userData._id, "role": userData.role}, process.env.JWT_KEY);
 
     return token;
     }
