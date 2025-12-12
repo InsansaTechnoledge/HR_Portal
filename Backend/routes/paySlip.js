@@ -1,10 +1,10 @@
 import express from 'express'
-import { fetchByEmployeeId, generatePaySlip, getPayslips } from '../controller/paySlipController.js';
+import { fetchPaySlipbyEmployeeEmail, generatePaySlip, getPayslips } from '../controller/paySlipController.js';
 
 const router = express.Router()
 
 router.post('/generate', generatePaySlip);
 router.get('/', getPayslips);
-router.get('/fetchByEmployeeId/:id', fetchByEmployeeId);
+router.get('/my-payslip/:email', fetchPaySlipbyEmployeeEmail);
 
 export default router

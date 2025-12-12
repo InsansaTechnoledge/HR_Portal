@@ -1,52 +1,66 @@
-import mongoose from 'mongoose';
-import mongooseSequence from 'mongoose-sequence'
-import LeaveSchema from './Leave.js';
-import EmployeeDetailSchema from './EmployeeDetail.js';
- 
-const EmployeeSchema = new mongoose.Schema({
+import mongoose from "mongoose";
+import mongooseSequence from "mongoose-sequence";
+import LeaveSchema from "./Leave.js";
+import EmployeeDetailSchema from "./EmployeeDetail.js";
+
+const EmployeeSchema = new mongoose.Schema(
+  {
     empId: {
-        type: Number,
+      type: Number,
     },
     name: {
-        type: String,
-        required: true,
-        trim: true
+      type: String,
+      required: true,
+      trim: true,
     },
     email: {
-        type: String,
-        required: true,
-        unique: true,
-        trim: true,
-        lowercase: true
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
     },
     department: {
-        type: String,
-        required: true,
-        trim: true
+      type: String,
+      required: true,
+      trim: true,
     },
+
     leaveHistory: [LeaveSchema],
     totalLeaveBalance: {
-        vacation: {
-            type: Number,
-            default: 20
-        },
-        sickLeave: {
-            type: Number,
-            default: 10
-        },
-        personalLeave: {
-            type: Number,
-            default: 5
-        }
+      vacation: {
+        type: Number,
+        default: 20,
+      },
+      sickLeave: {
+        type: Number,
+        default: 10,
+      },
+      personalLeave: {
+        type: Number,
+        default: 5,
+      },
     },
     details: {
-        type: EmployeeDetailSchema
-    }
-}, {
-    timestamps: true
-});
+      type: EmployeeDetailSchema,
+    },
+    payslips: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "PaySlip",
+        },
+      ],
+      default: [],  // Initialize as empty array
+    },
 
-EmployeeSchema.plugin(mongooseSequence(mongoose), { inc_field: 'empId' });
+  },
+  {
+    timestamps: true,
+  }
+);
+
+EmployeeSchema.plugin(mongooseSequence(mongoose), { inc_field: "empId" });
 
 const Employee = mongoose.model("Employee", EmployeeSchema);
 export default Employee;

@@ -74,8 +74,18 @@ function EmployeeDetailsForm(props) {
         setLoading(true);
         setEmployees((prev) => [...prev, { ...newEmployee, id: Date.now() }]);
 
+        // Validate required document uploads (PAN and Aadhar) before submitting; the file inputs are hidden
+        if (!newEmployee.documentsPanCard || !newEmployee.documentsAadhar) {
+            setToastErrorMessage("Please upload both PAN and Aadhar documents.");
+            setToastErrorVisible(true);
+            setTimeout(() => setToastErrorVisible(false), 3500);
+            setLoading(false);
+            return;
+        }
 
-        const empResponse = await axios.get(`${API_BASE_URL}/api/employee/fetchEmployeeByEmail/${user.userEmail}`);
+
+        // Look up employee by the email entered in the form to avoid overwriting admin's record
+        const empResponse = await axios.get(`${API_BASE_URL}/api/employee/fetchEmployeeByEmail/${newEmployee.email}`);
 
         if (empResponse.status === 201) {
             const empEmail = empResponse.data.email;
@@ -108,7 +118,9 @@ function EmployeeDetailsForm(props) {
                 setToastSuccessMessage("Details uploaded!");
                     setToastSuccessVisible(true);
                     setTimeout(() => setToastSuccessVisible(false), 3500);
-                props.setEmployee(response.data.updatedEmp);
+                if (props.setEmployee) {
+                    props.setEmployee(response.data.updatedEmp);
+                }
                 setLoading(false);
                 localStorage.removeItem("employeeDetails");
             }
@@ -579,7 +591,7 @@ function EmployeeDetailsForm(props) {
                                 PAN Card*
                             </label>
                             <div className="flex items-center justify-center w-full">
-                                <label forName="documentsPanCard" className="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
+                                <label htmlFor="documentsPanCard" className="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
                                     onDrop={(e) => handleDrop("documentsPanCard", e)}
                                     onDragOver={(e) => handleDragOver("documentsPanCard", e)}>
                                     <div className="flex items-center justify-center">
@@ -596,7 +608,7 @@ function EmployeeDetailsForm(props) {
                                             (<p className="ml-3 text-sm text-gray-500 "><span className="font-semibold">Click to upload</span> or drag and drop</p>)
                                         }
                                     </div>
-                                    <input id="documentsPanCard" type="file" required className="hidden" onChange={(e) => fileChangeHandler("documentsPanCard", e)} />
+                                    <input id="documentsPanCard" type="file" className="hidden" onChange={(e) => fileChangeHandler("documentsPanCard", e)} />
                                 </label>
 
                             </div>
@@ -606,7 +618,7 @@ function EmployeeDetailsForm(props) {
                                 Aadhar Card*
                             </label>
                             <div className="flex items-center justify-center w-full">
-                                <label forName="documentsAadhar" className="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
+                                <label htmlFor="documentsAadhar" className="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
                                     onDrop={(e) => handleDrop("documentsAadhar", e)}
                                     onDragOver={(e) => handleDragOver("documentsAadhar", e)}>
                                     <div className="flex items-center justify-center">
@@ -623,7 +635,7 @@ function EmployeeDetailsForm(props) {
                                             (<p className="ml-3 text-sm text-gray-500 "><span className="font-semibold">Click to upload</span> or drag and drop</p>)
                                         }
                                     </div>
-                                    <input id="documentsAadhar" required type="file" className="hidden" onChange={(e) => fileChangeHandler("documentsAadhar", e)} />
+                                    <input id="documentsAadhar" type="file" className="hidden" onChange={(e) => fileChangeHandler("documentsAadhar", e)} />
                                 </label>
 
                             </div>
@@ -633,7 +645,7 @@ function EmployeeDetailsForm(props) {
                                 Degree Certificate
                             </label>
                             <div className="flex items-center justify-center w-full">
-                                <label forName="documentsDegree" className="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
+                                <label htmlFor="documentsDegree" className="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
                                     onDrop={(e) => handleDrop("documentsDegree", e)}
                                     onDragOver={(e) => handleDragOver("documentsDegree", e)}>
                                     <div className="flex items-center justify-center">
@@ -660,7 +672,7 @@ function EmployeeDetailsForm(props) {
                                 Experience Certificate
                             </label>
                             <div className="flex items-center justify-center w-full">
-                                <label forName="documentsExperience" className="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
+                                <label htmlFor="documentsExperience" className="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
                                     onDrop={(e) => handleDrop("documentsExperience", e)}
                                     onDragOver={(e) => handleDragOver("documentsExperience", e)}>
                                     <div className="flex items-center justify-center">

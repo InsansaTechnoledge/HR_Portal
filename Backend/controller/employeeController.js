@@ -6,7 +6,6 @@ export const addEmployee = async (req, res) => {
     try{
 
         const emp = req.body;
-        
         const newEmp = new Employee({
             name: emp.name,
             email: emp.email,

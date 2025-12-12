@@ -54,7 +54,7 @@ function EmployeeDetailsDisplay({ employee }) {
         else if (doc === 'Experience Certificate') {
             downloadDocument(employee.name, doc, employee.details.documentsExperience);
 
-
+            
         }
     }
 

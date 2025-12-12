@@ -64,6 +64,7 @@ const AddEmployeePage = () => {
                 employeeData
             );
 
+            
             if (response.status === 201) {
                 setToastSuccessMessage(response.data.message);
                 setToastSuccessVisible(true);

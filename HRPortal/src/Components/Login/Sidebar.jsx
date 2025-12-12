@@ -145,7 +145,7 @@ const Sidebar = () => {
                         {user && (user.role === 'admin' || user.role === 'superAdmin') && (
                             <>
                                 {user && user.role === 'admin'
-                                    ? <SidebarItem icon={<IconId />} label="Employee Registration" isOpen={isOpen} to="/emp-info" />
+                                    ? <SidebarItem icon={<IconId />} label="Employee Registration" isOpen={isOpen} to="/emp-info-register" />
                                     : null
                                 }
 
@@ -168,7 +168,7 @@ const Sidebar = () => {
                                         <SidebarItem icon={<IconCalendar />} label="Leave Tracker" isOpen={isOpen} to="/leave-tracker" />
                                         <SidebarItem icon={<IconUsers />} label="Add Employee" isOpen={isOpen} to="/add-employee" />
                                         {user && user.role === 'superAdmin'
-                                            ? <SidebarItem icon={<IconId />} label="Employee Details" isOpen={isOpen} to="/emp-list" />
+                                            ? <SidebarItem icon={<IconId />} label="Employee Details" isOpen={isOpen} to="/emp-info" />
                                             : null
                                         }
 

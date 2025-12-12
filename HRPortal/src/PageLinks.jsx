@@ -32,6 +32,7 @@ import NoSuperAdminRoute from './Route/NoSuperAdminRoute';
 import PayslipTracker from './Page/PayslipTracker';
 import AccountantSuperAdminRoute from './Route/AccountantSuperAdminRoute';
 import Loader from './Components/Loader/Loader';
+import EmployeeDetailsForm from './Components/Form/EmployeeDetailsForm';
 
 function AppLayout() {
     // const location = useLocation();
@@ -142,6 +143,15 @@ function AppLayout() {
                             </AdminRoute>
                         }
                     />
+
+                    <Route 
+                        path="/emp-info-register"
+                        element={
+                           <AdminRoute>
+                            <EmployeeDetailsForm />
+                           </AdminRoute>
+                        }/>
+
                     <Route
                         path="/auth"
                         element={

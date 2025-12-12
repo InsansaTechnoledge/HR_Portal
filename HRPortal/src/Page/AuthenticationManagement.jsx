@@ -600,6 +600,7 @@ const AuthenticationManagement = () => {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="user">User</option>
+                          <option value="employee">Employee</option>
                           <option value="admin">Admin</option>
                           <option value="accountant">Accountant</option>
                           {user.role === "superAdmin" && (
