@@ -75,14 +75,12 @@ export const fetchPaySlipbyEmployeeEmail = async(req,res)=>{
   try {
     const { email } = req.params;
 
-    console.log("eMAIL IN cONTROLLER:", email);
 
     // Find employee by email
     const employee = await Employee.findOne({email:email})
       .populate('payslips')  // This fetches all referenced payslips
       .exec();
 
-      console.log("Employee Date in Controller: ", employee);
 
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found' });
