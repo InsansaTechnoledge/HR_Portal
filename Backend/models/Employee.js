@@ -2,9 +2,8 @@ import mongoose from "mongoose";
 import mongooseSequence from "mongoose-sequence";
 import LeaveSchema from "./Leave.js";
 import EmployeeDetailSchema from "./EmployeeDetail.js";
-
-const EmployeeSchema = new mongoose.Schema(
-  {
+ 
+const EmployeeSchema = new mongoose.Schema({
     empId: {
       type: Number,
     },
@@ -48,7 +47,7 @@ const EmployeeSchema = new mongoose.Schema(
       type: [
         {
           type: mongoose.Schema.Types.ObjectId,
-          ref: "PaySlip",
+          ref: "Payslip",
         },
       ],
       default: [],  // Initialize as empty array

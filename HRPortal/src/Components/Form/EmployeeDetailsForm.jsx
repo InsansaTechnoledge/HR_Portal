@@ -83,7 +83,6 @@ function EmployeeDetailsForm(props) {
             return;
         }
 
-
         // Look up employee by the email entered in the form to avoid overwriting admin's record
         const empResponse = await axios.get(`${API_BASE_URL}/api/employee/fetchEmployeeByEmail/${newEmployee.email}`);
 
@@ -118,7 +117,7 @@ function EmployeeDetailsForm(props) {
                 setToastSuccessMessage("Details uploaded!");
                     setToastSuccessVisible(true);
                     setTimeout(() => setToastSuccessVisible(false), 3500);
-                if (props.setEmployee) {
+                 if (props.setEmployee) {
                     props.setEmployee(response.data.updatedEmp);
                 }
                 setLoading(false);
@@ -672,7 +671,7 @@ function EmployeeDetailsForm(props) {
                                 Experience Certificate
                             </label>
                             <div className="flex items-center justify-center w-full">
-                                <label htmlFor="documentsExperience" className="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
+                                 <label htmlFor="documentsExperience" className="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
                                     onDrop={(e) => handleDrop("documentsExperience", e)}
                                     onDragOver={(e) => handleDragOver("documentsExperience", e)}>
                                     <div className="flex items-center justify-center">

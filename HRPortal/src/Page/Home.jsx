@@ -17,40 +17,52 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const categories = [
-    {
-      title: "Quick Actions",
-      items: [
-        // {
-        //     icon: <FileText className="h-6 w-6" />,
-        //     title: 'Employee Documents',
-        //     description: 'Manage employee documentation and records',
-        //     path: '/docs',
-        //     color: 'bg-blue-500',
-        // },
-        {
-          icon: <FolderOpen className="h-6 w-6" />,
-          title: "Employee Documents",
-          description: "Manage employee documentation and records",
-          path: "/docs",
-          color: "bg-blue-500",
-        },
-        {
-          icon: <Calendar className="h-6 w-6" />,
-          title: "Leave Tracker",
-          description: "Track and manage employee leave requests",
-          path: "/leave-tracker",
-          color: "bg-green-500",
-        },
-        // {
-        //     icon: <Briefcase className='h-6 w-6' />,
-        //     title: 'Payslip Tracker',
-        //     description: 'Track and view your Payslips',
-        //     path: '/payslip-tracker',
-        //     color: 'bg-orange-500',
-        // }
-      ],
-    },
-    ...(user.role !== "user" && user.role !== "accountant"
+    
+    /* --------------------------------------
+     * 2. Employee Only Section
+     * -------------------------------------- */
+    ...(user.role === "employee"
+      ? [
+          {
+            title: "Employee Services",
+            items: [
+              {
+                icon: <Users className="h-6 w-6" />,
+                title: "Employee Information",
+                description: "Your personal as well as professional details",
+                path: "/user-profile",
+                color: "bg-indigo-500",
+              },
+              {
+                icon: <FolderOpen className="h-6 w-6" />,
+                title: "Employee Documents",
+                description: "Employee documentation and records",
+                path: "/docs",
+                color: "bg-blue-500",
+              },
+              {
+                icon: <Calendar className="h-6 w-6" />,
+                title: "Leave Tracker",
+                description: "Track and generate leave requests",
+                path: "/leave-tracker",
+                color: "bg-green-500",
+              },
+              {
+                icon: <FileText className="h-6 w-6" />,
+                title: "Employee Payslip",
+                description: "View your payslips and salary slips",
+                path: "/pay-slip",
+                color: "bg-green-500",
+              },
+            ],
+          },
+        ]
+      : []),
+
+    /* --------------------------------------
+     * 3. Admin / SuperAdmin (NOT accountant)
+     * -------------------------------------- */
+    ...(user.role !== "user" && user.role !== "accountant" && user.role !== 'employee'
       ? [
           {
             title: "Recruitment",
@@ -106,12 +118,15 @@ const Dashboard = () => {
       : []),
   ].filter(Boolean);
 
-  if (user && user.role === "accountant") {
-    const accountExtra = [
+  /* --------------------------------------
+   * 4. Handle Accountant Role
+   * -------------------------------------- */
+  if (user.role === "accountant") {
+    categories[0].items = [
       {
         icon: <ClipboardList className="h-6 w-6" />,
         title: "Employee Details",
-        description: "get details of all employees at one place",
+        description: "Get details of all employees at one place",
         path: "/emp-list",
         color: "bg-purple-500",
       },
@@ -125,41 +140,80 @@ const Dashboard = () => {
       {
         icon: <Briefcase className="h-6 w-6" />,
         title: "Payslip Tracker",
-        description: "Track and view your Payslips",
+        description: "Track and view employee payslips",
         path: "/payslip-tracker",
         color: "bg-orange-500",
       },
     ];
+  }
 
-    categories[0].items = accountExtra;
-  } else if (user && user.role === "superAdmin") {
-    const superAdminExtra = [
+  /* --------------------------------------
+   * 5. SuperAdmin Extra Options
+   * -------------------------------------- */
+  if (user.role === "superAdmin") {
+    categories[0].items.push(
       {
         icon: <ClipboardList className="h-6 w-6" />,
         title: "Employee Details",
-        description: "get details of all employees at one place",
+        description: "Get details of all employees at one place",
         path: "/emp-list",
         color: "bg-purple-500",
       },
       {
         icon: <FileText className="h-6 w-6" />,
         title: "Payslip Generation",
-        description: "Easily generate payslips for employees",
+        description: "Generate payslips for employees",
         path: "/payslip",
         color: "bg-red-500",
-      },
-    ];
-    categories[0].items.push(...superAdminExtra);
-  } else if (user && user.role !== "user") {
+      }
+    ),
+    /* --------------------------------------
+     * 1. Default User Services (Always Shown)
+     * -------------------------------------- */
+    {
+      title: "User Services",
+      items: [
+        {
+          icon: <Users className="h-6 w-6" />,
+          title: "User Information",
+          description: "Your personal as well as professional details",
+          path: "/user-profile",
+          color: "bg-indigo-500",
+        },
+        {
+          icon: <FolderOpen className="h-6 w-6" />,
+          title: "User Documents",
+          description: "User documentation and records",
+          path: "/docs",
+          color: "bg-blue-500",
+        },
+        {
+          icon: <Calendar className="h-6 w-6" />,
+          title: "Leave Tracker",
+          description: "Track and generate leave requests",
+          path: "/leave-tracker",
+          color: "bg-green-500",
+        },
+      ],
+    };
+  }
+
+  /* --------------------------------------
+   * 6. Add Employee Info for non-user roles
+   * -------------------------------------- */
+  if (user.role !== "user" ) {
     categories[0].items.unshift({
       icon: <Users className="h-6 w-6" />,
       title: "Employee Information",
-      description: "Your personal as well as professional details",
-      path: "/emp-info",
+      description: "Employee profile and details",
+      path: "/user-profile",
       color: "bg-red-500",
     });
   }
 
+  /* --------------------------------------
+   * UI Card Component
+   * -------------------------------------- */
   const FeatureCard = ({ icon, title, description, path, color }) => (
     <div
       className="group hover:shadow-lg transition-all duration-300 cursor-pointer p-6 rounded-lg bg-white border"
@@ -188,7 +242,7 @@ const Dashboard = () => {
           </p>
         </div>
 
-        {/* Dashboard Sections */}
+        {/* Sections */}
         <div className="space-y-8">
           {categories.map((category, index) => (
             <div key={index}>

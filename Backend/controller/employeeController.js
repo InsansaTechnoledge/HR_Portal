@@ -31,7 +31,7 @@ export const addEmployee = async (req, res) => {
 export const fetchEmployeeById = async (req,res) => {
     try{
         const {id} = req.params;
-        const employee = await Employee.find({empId:id});
+        const employee = await Employee.findById(id);
 
         res.status(201).json({message: "employee fetched",employee:employee});
     }
@@ -56,8 +56,9 @@ export const addLeave = async (req,res) => {
     try{
         const {id} = req.params;
         const leaveHistory = req.body;
-        const updatedEmp = await Employee.findOneAndUpdate(
-            { empId: id }, // Find the employee by empId
+        console.log("ID:", id);
+        const updatedEmp = await Employee.findByIdAndUpdate(
+            id, // Find the employee by empId
             { $push: { leaveHistory: leaveHistory } }, // Append the new leaveHistory object to the array
             { new: true } // Return the updated document
         );
@@ -106,20 +107,26 @@ export const uploadDetails = async (req,res) => {
     res.status(201).json({message: "Details uploaded", updatedEmp});
 }
 
-export const fetchEmployeeByEmail = async (req,res) => {
-    try{
+export const fetchEmployeeByEmail = async (req, res) => {
+  try {
+    const { email } = req.params;
+    console.log("Email in controller:", email);
 
-        const {email} = req.params;
-        
-        const emp = await Employee.findOne({email: email});
-        if(emp){
-            res.status(201).json(emp);
-        }
+    const emp = await Employee.findOne({"details.email" : email});
+
+    console.log("EMP Email:", emp);
+
+    if (!emp) {
+      return res.status(404).json({ message: "Employee not found" });
     }
-    catch(err){
-        console.log(err);
-    }
-}
+
+    res.status(200).json(emp);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 
 export const updateSalary = async (req,res) => {
     try{

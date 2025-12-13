@@ -32,6 +32,8 @@ import NoSuperAdminRoute from './Route/NoSuperAdminRoute';
 import PayslipTracker from './Page/PayslipTracker';
 import AccountantSuperAdminRoute from './Route/AccountantSuperAdminRoute';
 import Loader from './Components/Loader/Loader';
+import UserProfile from './Page/UserProfile';
+import ChangePassword from './Components/Form/ChangePassword';
 import EmployeeDetailsForm from './Components/Form/EmployeeDetailsForm';
 
 function AppLayout() {
@@ -81,6 +83,22 @@ function AppLayout() {
                         element={
                             <ProtectedRoute>
                                 <DocumentManagement />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/user-profile"
+                        element={
+                            <ProtectedRoute >
+                                <UserProfile />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/change-password"
+                        element={
+                            <ProtectedRoute >
+                                <ChangePassword />
                             </ProtectedRoute>
                         }
                     />
@@ -143,14 +161,14 @@ function AppLayout() {
                             </AdminRoute>
                         }
                     />
-
-                    <Route 
+                     <Route 
                         path="/emp-info-register"
                         element={
                            <AdminRoute>
                             <EmployeeDetailsForm />
                            </AdminRoute>
-                        }/>
+                        }
+                    />
 
                     <Route
                         path="/auth"

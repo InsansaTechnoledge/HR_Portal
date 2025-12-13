@@ -3,28 +3,50 @@ import Payslip from "../models/PaySlip.js";
 import Employee from "../models/Employee.js";
 
 export const generatePaySlip = async (req, res) => {
-    try{
+  try {
+    const payslipData = req.body;
 
-        const payslip = req.body;
-        
-        const newPayslip = new Payslip(payslip);
-        
-        const saved = await newPayslip.save();
-        
-        if(saved){
-            res.status(201).json({message: "saved",paySlip: newPayslip});
-        }
+    // Find employee first
+    const employee = await Employee.findOne({ empId: Number(payslipData.employeeId )});
+
+    if (!employee) {
+      return res.status(404).json({
+        message: "Employee not found",
+      });
     }
-    catch(err){
-        console.log(err);
-    }
-}
+
+    // Create payslip
+    const newPayslip = new Payslip(payslipData);
+    const savedPayslip = await newPayslip.save();
+
+    // Push payslip ID into employee.payslips
+    employee.payslips.push(savedPayslip._id);
+    await employee.save();
+
+    // Success response
+    res.status(201).json({
+      message: "Payslip generated and linked to employee successfully",
+      payslip: savedPayslip,
+    });
+
+  } catch (err) {
+    console.error("Generate Payslip Error:", err);
+    res.status(500).json({
+      message: "Failed to generate payslip",
+      error: err.message,
+    });
+  }
+};
 
 export const getPayslips = async (req,res) => {
     try{
         const paySlips = await Payslip.find();
+        console.log(paySlips);
         if(paySlips){
-            res.status(201).json({message: "Payslips fetched", paySlips});
+            res.status(200).json({message: "Payslips fetched", paySlips});
+        }
+        else{
+            res.status(201).json({message:"No Payslips Found"})
         }
     }
     catch(err){
@@ -38,7 +60,10 @@ export const getPayslips = async (req,res) => {
 //         const paySlips = await Payslip.find({employeeId: id});
         
 //         if(paySlips){
-//             res.status(201).json({message: "Payslips fetched", paySlips});
+//             res.status(200).json({message: "Payslips fetched", paySlips});
+//         }
+//         else{
+//             res.status(201).json({message:"No Payslips Found"})
 //         }
 //     }
 //     catch(err){
@@ -50,10 +75,14 @@ export const fetchPaySlipbyEmployeeEmail = async(req,res)=>{
   try {
     const { email } = req.params;
 
+    console.log("eMAIL IN cONTROLLER:", email);
+
     // Find employee by email
-    const employee = await Employee.findOne({ email })
+    const employee = await Employee.findOne({email:email})
       .populate('payslips')  // This fetches all referenced payslips
       .exec();
+
+      console.log("Employee Date in Controller: ", employee);
 
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found' });

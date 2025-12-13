@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import { ObjectId } from "mongodb";
 
 
 //create user
@@ -56,9 +57,6 @@ export const deleteUser = async (req,res) => {
     }
 }
 
-
-
-
 export const changePassword = async (req,res) => {
   try{
     const requester = req.user;
@@ -68,6 +66,7 @@ export const changePassword = async (req,res) => {
 
     const {id} = req.params;
     const newPassword = req.body.newPassword;
+
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     
     const updatedUser = await User.findByIdAndUpdate(
@@ -184,15 +183,13 @@ export const getUserById = async (req, res) => {
     console.error(err);
     res.status(500).json({ message: err.message || err });
   }
-}
+};
+
 
 // Add leave for user
 export const addLeaveToUser = async (req, res) => {
   try {
-    const { id } = req.params;
-    console.log("Received leave data for user ID:", id);
-    console.log("Request body:", req.body);
-    
+    const { id }  = req.params
     const leaveHistory = req.body;
     
     const updatedUser = await User.findByIdAndUpdate(
@@ -200,6 +197,8 @@ export const addLeaveToUser = async (req, res) => {
       { $push: { leaveHistory: leaveHistory } },
       { new: true }
     );
+
+    
 
     if (!updatedUser) {
       return res.status(404).json({ message: "User not found" });
@@ -209,5 +208,28 @@ export const addLeaveToUser = async (req, res) => {
   } catch (err) {
     console.log("Error in addLeaveToUser:", err);
     res.status(400).json({ message: err.message || err });
+  }
+}
+
+// Update user profile
+export const updateUserProfile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userName, userEmail } = req.body;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { userName, userEmail },
+      { new: true }
+    ).select('-password');
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ message: "Profile updated successfully!", user: updatedUser });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: err });
   }
 }

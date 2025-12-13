@@ -13,7 +13,8 @@ import {
     IconCalendar,
     IconId,
     IconFilePlus,
-    IconFileText
+    IconFileText,
+    IconKey
 } from "@tabler/icons-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { userContext } from "../../Context/userContext";
@@ -22,6 +23,7 @@ import API_BASE_URL from '../../config';
 import { use } from "react";
 import ErrorToast from "../Toaster/ErrorToaster";
 import SuccessToast from "../Toaster/SuccessToaser";
+import UserProfile from "../../Page/UserProfile";
 
 // Logout function to handle user logout
 const handleLogout = async (setUser) => {
@@ -118,12 +120,12 @@ const Sidebar = () => {
 
                 {/* Navigation */}
                 <nav className="flex-1 mt-6">
-                    <ul className="space-y-4">
+                    <ul className="space-y-2">
                         <SidebarItem icon={<IconHome />} label="Home" isOpen={isOpen} to="/" />
 
 
                         {/* Apps Dropdown for User */}
-                        {user && user.role === 'user' && (
+                        {/* {user && user.role === 'user' && (
                             <SidebarDropdown
                                 icon={<IconGridDots />}
                                 label="User Management"
@@ -132,13 +134,24 @@ const Sidebar = () => {
                                 toggleDropdown={() => toggleDropdown("user")}
                             >
                                 <SidebarItem icon={<IconFolder />} label="Docs Management" isOpen={isOpen} to="/docs" />
+                                <SidebarItem icon={<IconUser />} label="User Profile" isOpen={isOpen} to="/user-profile" />
                                 <SidebarItem icon={<IconCalendar />} label="Leave Tracker" isOpen={isOpen} to="/leave-tracker" />
-                                {/* <SidebarItem icon={<IconId />} label="PaySlip Tracker" isOpen={isOpen} to="/payslip-tracker" /> */}
-                                {/* <SidebarItem icon={<IconId />} label="Employee Registration" isOpen={isOpen} to="/emp-info" /> */}
+                                {/* <SidebarItem icon={<IconId />} label="PaySlip Tracker" isOpen={isOpen} to="/payslip-tracker" />
+                                {/* <SidebarItem icon={<IconId />} label="Employee Registration" isOpen={isOpen} to="/emp-info" /> 
 
 
 
                             </SidebarDropdown>
+                        )} */}
+
+                        {user && (user.role === 'user' || user.role === 'employee') &&  (
+                            <>
+                                <SidebarItem icon={<IconFolder />} label={`${user.role === "user" ? "User" : "Employee"} Documents`} isOpen={isOpen} to="/docs" />
+                                <SidebarItem icon={<IconUser />} label={`${user.role === "user" ? "User" : "Employee"} Profile`}  isOpen={isOpen} to="/user-profile" />
+                                <SidebarItem icon={<IconCalendar />} label={`${user.role === "user" ? "User" : "Employee"} Leave`}  isOpen={isOpen} to="/leave-tracker" />
+                                {user.role === 'employee' && <SidebarItem icon={<IconKey />} label="Employee Payslip" isOpen={isOpen} to="/payslip-tracker" />}
+                                <SidebarItem icon={<IconKey />} label="Change Password" isOpen={isOpen} to="/change-password" />
+                            </>
                         )}
 
                         {/* Apps Dropdown for Admin/SuperAdmin */}

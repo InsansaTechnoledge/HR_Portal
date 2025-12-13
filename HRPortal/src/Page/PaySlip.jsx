@@ -70,7 +70,7 @@ const PayslipGenerator = () => {
             setEmployeeData({
                 ...employeeData,
                 name: selectedEmployee.name,
-                employeeId: selectedEmployee.details.employeeDetailId,
+                employeeId: selectedEmployee.empId,
                 department: selectedEmployee.department,
                 designation: selectedEmployee.details.designation,
                 bankAccount: selectedEmployee.details.accountNumber,

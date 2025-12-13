@@ -5,6 +5,7 @@ import API_BASE_URL from '../config';
 import axios from 'axios';
 import Loader from '../Components/Loader/Loader';
 import { useNavigate } from 'react-router-dom';
+import ErrorToast from '../Components/Toaster/ErrorToaster';
 
 const PayslipTracker = () => {
     const [userRole, setUserRole] = useState('employee'); // 'employee' or 'accountant'
@@ -18,19 +19,44 @@ const PayslipTracker = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-
         const fetchPayslips = async () => {
-
-            if(user && user.role==='superAdmin' || user.role==='accountant' || user.role==='admin'){
-                const response = await axios.get(`${API_BASE_URL}/api/payslip`);
-                if (response.status === 201) {
+            
+            if(user && user.role ==='superAdmin' || user.role ==='accountant' || user.role ==='admin'){
+                const response = await axios.get(`${API_BASE_URL}/api/payslip/`);
+                console.log(response)
+                if (response.status === 200){
                     const allPayslips = response.data.paySlips;
                     setPayslips(allPayslips);
+                }
+                 
+            }
+            else if(user && user.role === 'employee'){
+                console.log("In Employee Role..");
+
+                // const fetchedemp = await axios.get(`${API_BASE_URL}/api/employee/fetchEmployeeByEmail/${user.userEmail}`);
+
+                // const eid = fetchedemp.data.empId;
+
+                // if(!fetchedemp){
+                //     <ErrorToast message=""/>
+                // }
+                const response = await axios.get(`${API_BASE_URL}/api/payslip/my-payslip/${user.userEmail}`);
+                if (response.status === 200) {
+                    const employeePayslip = response.data.payslips;
+
+                    console.log("EMP PAYSLIPS:",employeePayslip);
+                    setPayslips(employeePayslip);
+                console.log("Employee Payslip Data on frontend: ", employeePayslip);
+                }   
+                else{
+                    setPayslips(null);
+                    <ErrorToast message="No Payslips Found"/>
+                    console.log("No Payslip from response");
                 }
             }
             else{
                 const empResponse = await axios.get(`${API_BASE_URL}/api/employee/fetchEmployeeByEmail/${user.userEmail}`);
-                if(empResponse.status===201){
+                if(empResponse.status===200){
     
                     const employee = empResponse.data;
 
@@ -102,7 +128,7 @@ const PayslipTracker = () => {
             <div className="flex flex-wrap gap-4 bg-white p-4 rounded-lg shadow">
                 <div className="flex-1 min-w-[200px]">
                     {
-                        user && (user.role==="user" || user==="admin")
+                        user && (user.role==="user" || user.role ==="admin" || user.role === "employee")
                         ?
                         null
                         : 
@@ -179,10 +205,16 @@ const PayslipTracker = () => {
                                         </button>
                                     </td>
                                 </tr>
+                                
                             ))}
                         </tbody>
                     </table>
                 )}
+                { !payslips && 
+                            <div className='flex min-w-full items-center justify-center min-h-20 text-gray-400'>
+                                <p>No Payslips Found</p>
+                            </div>
+                }
             </div>
         </div>
     );
