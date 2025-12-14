@@ -109,9 +109,40 @@ const LeaveTracker = () => {
             if (match) {
               setEmployees([match]);
               setCurrentPerson(match);
-              setSelectedEmployeeId(match.empId);
+              setSelectedUserId(match.empId ? String(match.empId) : "");
+              setSelectedEmployeeId("");
+              localStorage.setItem(
+                "leaveTracker:lastSelection",
+                JSON.stringify({ type: "user", id: match.empId ? String(match.empId) : "" })
+              );
             } else {
               setEmployees([]);
+            }
+          }
+        }
+
+        // Restore last viewed person (helps when navigating away and back)
+        if (!cancelled) {
+          const lastSelection = localStorage.getItem("leaveTracker:lastSelection");
+          if (lastSelection) {
+            try {
+              const parsed = JSON.parse(lastSelection);
+              if (parsed?.type === "employee" && parsed.id) {
+                // For non-admins, treat restore as user selection to avoid employee fetch failures
+                if (user.role === "admin" || user.role === "superAdmin") {
+                  setSelectedEmployeeId(String(parsed.id));
+                  setSelectedUserId("");
+                } else {
+                  setSelectedUserId(String(parsed.id));
+                  setSelectedEmployeeId("");
+                }
+              }
+              if (parsed?.type === "user" && parsed.id) {
+                setSelectedUserId(String(parsed.id));
+                setSelectedEmployeeId("");
+              }
+            } catch (e) {
+              console.warn("Failed to restore leave tracker selection", e);
             }
           }
         }
@@ -142,12 +173,17 @@ const LeaveTracker = () => {
     const id = selectedUserId || selectedEmployeeId;
     const isUser = Boolean(selectedUserId);
 
+    // For non-admin roles, default to user API even if selectedEmployeeId was set via restore
+    const shouldForceUserApi = !isUser && user && user.role !== "admin" && user.role !== "superAdmin";
+    const effectiveIsUser = isUser || shouldForceUserApi;
+    const effectiveId = shouldForceUserApi ? (selectedUserId || selectedEmployeeId) : id;
+
     let cancelled = false;
     const fetchDetails = async () => {
       setLoading(true);
       try {
-        if (isUser) {
-          const resp = await axios.get(`${API_BASE_URL}/api/user/${id}`);
+        if (effectiveIsUser) {
+          const resp = await axios.get(`${API_BASE_URL}/api/user/${effectiveId}`);
           // Expect resp.data.user
           const u = resp?.data?.user;
           const person = u
@@ -161,7 +197,7 @@ const LeaveTracker = () => {
             : null;
           if (!cancelled) setCurrentPerson(person);
         } else {
-          const resp = await axios.get(`${API_BASE_URL}/api/employee/${id}`);
+          const resp = await axios.get(`${API_BASE_URL}/api/employee/${effectiveId}`);
           // Expect resp.data.employee[0] or resp.data.employee
           const e = resp?.data?.employee;
           const person = e
@@ -244,18 +280,24 @@ const LeaveTracker = () => {
 
   // --- Handlers to ensure mutual exclusivity ---
   const handleEmployeeSelect = (empId) => {
-    setSelectedEmployeeId(empId || "");
-    // reset user selection
-    if (empId) {
+    const normalized = empId || "";
+    setSelectedEmployeeId(normalized);
+    if (normalized) {
       setSelectedUserId("");
+      localStorage.setItem("leaveTracker:lastSelection", JSON.stringify({ type: "employee", id: normalized }));
+    } else {
+      localStorage.removeItem("leaveTracker:lastSelection");
     }
   };
 
   const handleUserSelect = (uId) => {
-    setSelectedUserId(uId || "");
-    // reset employee selection
-    if (uId) {
+    const normalized = uId || "";
+    setSelectedUserId(normalized);
+    if (normalized) {
       setSelectedEmployeeId("");
+      localStorage.setItem("leaveTracker:lastSelection", JSON.stringify({ type: "user", id: normalized }));
+    } else {
+      localStorage.removeItem("leaveTracker:lastSelection");
     }
   };
 
@@ -312,6 +354,14 @@ const LeaveTracker = () => {
         setToastSuccessMessage("Leave added successfully!");
         setToastSuccessVisible(true);
         setTimeout(() => setToastSuccessVisible(false), 3500);
+
+        // Optimistically merge the new leave into current view so previous leaves stay visible
+        setCurrentPerson((prev) => {
+          if (!prev) return prev;
+          const merged = [...(prev.leaveHistory || []), { ...newLeave }];
+          return { ...prev, leaveHistory: merged };
+        });
+
         // Refresh lists & current person:
         await refreshAfterSave(targetId, useUserApi);
       } else {
@@ -374,11 +424,12 @@ const LeaveTracker = () => {
           // set selection to that person so months show
           setSelectedUserId(u._id || u.userId);
           setSelectedEmployeeId("");
+          localStorage.setItem("leaveTracker:lastSelection", JSON.stringify({ type: "user", id: u._id || u.userId }));
         }
       } else {
         // employee path
         const det = await axios.get(`${API_BASE_URL}/api/employee/${targetId}`);
-        const e = det?.data?.employee ? det.data.employee[0] : det?.data;
+        const e = det?.data?.employee;
         if (e) {
           setCurrentPerson({
             empId: e._id || e.empId,
@@ -389,6 +440,7 @@ const LeaveTracker = () => {
           });
           setSelectedEmployeeId(e._id || e.empId);
           setSelectedUserId("");
+          localStorage.setItem("leaveTracker:lastSelection", JSON.stringify({ type: "employee", id: e._id || e.empId }));
         }
       }
       setSelectedMonth(null);

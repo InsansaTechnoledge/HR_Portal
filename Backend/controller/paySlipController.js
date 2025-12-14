@@ -1,4 +1,3 @@
-import { response } from "express";
 import Payslip from "../models/PaySlip.js";
 import Employee from "../models/Employee.js";
 
@@ -83,7 +82,7 @@ export const fetchPaySlipbyEmployeeEmail = async(req,res)=>{
 
 
     if (!employee) {
-      return res.status(404).json({ message: 'Employee not found' });
+      return res.status(404).json({ message: "Currently You are not Employee " });
     }
 
     // Return all payslips for this employee

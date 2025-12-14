@@ -20,65 +20,48 @@ const PayslipTracker = () => {
 
     useEffect(() => {
         const fetchPayslips = async () => {
-            
-            if(user && user.role ==='superAdmin' || user.role ==='accountant' || user.role ==='admin'){
-                const response = await axios.get(`${API_BASE_URL}/api/payslip/`);
-                console.log(response)
-                if (response.status === 200){
-                    const allPayslips = response.data.paySlips;
-                    setPayslips(allPayslips);
-                }
-                 
-            }
-            else if(user && user.role === 'employee'){
-                console.log("In Employee Role..");
-
-                // const fetchedemp = await axios.get(`${API_BASE_URL}/api/employee/fetchEmployeeByEmail/${user.userEmail}`);
-
-                // const eid = fetchedemp.data.empId;
-
-                // if(!fetchedemp){
-                //     <ErrorToast message=""/>
-                // }
-                const response = await axios.get(`${API_BASE_URL}/api/payslip/my-payslip/${user.userEmail}`);
-                if (response.status === 200) {
-                    const employeePayslip = response.data.payslips;
-
-                    console.log("EMP PAYSLIPS:",employeePayslip);
-                    setPayslips(employeePayslip);
-                console.log("Employee Payslip Data on frontend: ", employeePayslip);
-                }   
-                else{
-                    setPayslips(null);
-                    <ErrorToast message="No Payslips Found"/>
-                    console.log("No Payslip from response");
-                }
-            }
-            else{
-                const empResponse = await axios.get(`${API_BASE_URL}/api/employee/fetchEmployeeByEmail/${user.userEmail}`);
-                if(empResponse.status===200){
-    
-                    const employee = empResponse.data;
-
-                    if(!employee.details){
-                        setLoading(false);
-                        setNoEmployeeDetail(true);
+            try {
+                // For superAdmin/accountant/admin - Get all payslips
+                if (user && (user.role === 'superAdmin' || user.role === 'accountant' || user.role === 'admin')) {
+                    const response = await axios.get(`${API_BASE_URL}/api/payslip/`);
+                    if (response.status === 200) {
+                        const allPayslips = response.data.paySlips;
+                        setPayslips(allPayslips);
                     }
-                    else{
-                        const response = await axios.get(`${API_BASE_URL}/api/payslip/fetchByEmployeeId/${employee.details.employeeDetailId}`);
-                        if(response.status===201){
-                            const filteredPayslips = response.data.paySlips;
-                            setPayslips(filteredPayslips);    
-                        }
-                    }
-
                 }
-            } 
-            setLoading(false);
+                // For user role - Get payslips by email
+                else if (user && user.role === "user") {
+                    const response = await axios.get(`${API_BASE_URL}/api/payslip/my-payslip/${user.userEmail}`);
+                    if (response.status === 200) {
+                        const employeePayslip = response.data.payslips;
+                        setPayslips(employeePayslip || []);
+                    } else {
+                        setPayslips([]);
+                    }
+                }
+                // For employee role - Get payslips by email using same endpoint
+                else if (user && user.role === "employee") {
+                    const response = await axios.get(`${API_BASE_URL}/api/payslip/my-payslip/${user.userEmail}`);
+                    if (response.status === 200) {
+                        const employeePayslip = response.data.payslips;
+                        setPayslips(employeePayslip || []);
+                    } else {
+                        setPayslips([]);
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching payslips:", error);
+                setPayslips([]); // Set empty array on error so "No payslips found" shows
+                setError(error.response?.data?.message || "Failed to fetch payslips");
+            } finally {
+                setLoading(false);
+            }
         }
 
-        fetchPayslips();
-    }, []);
+        if (user) {
+            fetchPayslips();
+        }
+    }, [user]);
 
     const filteredPayslips = payslips && payslips.filter((payslip) => {
         const matchesSearch = payslip.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

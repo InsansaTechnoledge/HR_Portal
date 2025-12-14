@@ -110,11 +110,8 @@ export const uploadDetails = async (req,res) => {
 export const fetchEmployeeByEmail = async (req, res) => {
   try {
     const { email } = req.params;
-    console.log("Email in controller:", email);
-
+   
     const emp = await Employee.findOne({"details.email" : email});
-
-    console.log("EMP Email:", emp);
 
     if (!emp) {
       return res.status(404).json({ message: "Employee not found" });
