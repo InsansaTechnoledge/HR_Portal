@@ -8,8 +8,7 @@ export const postJob = async (req,res) => {
     try{
 
         const job = req.body;
-        console.log(req.body)
-        
+      
         const savedJob = await Job.create(job)
         
         res.status(200).json({'message': 'Job saved successfully!', 'job': savedJob});

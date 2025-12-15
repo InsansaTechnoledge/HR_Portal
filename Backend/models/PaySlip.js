@@ -98,6 +98,10 @@ const PayslipSchema = new mongoose.Schema(
 
 );
 
+// Indexes for common lookups
+PayslipSchema.index({ employeeId: 1 });
+PayslipSchema.index({ month: 1 });
+
 // Auto-increment plugin for payslipId
 PayslipSchema.plugin(mongooseSequence(mongoose), { inc_field: 'payslipId' });
 

@@ -20,18 +20,37 @@ const EmployeeList = () => {
 
     useEffect(() => {
         setIsLoading(true);
+        const controller = new AbortController();
+        const { signal } = controller;
 
         const fetchEmployees = async () => {
-            const response = await axios.get(`${API_BASE_URL}/api/employee`);
-            if (response.status === 201) {
-                const allEmployees = response.data.employees;
-                const filteredEmployees = allEmployees.filter(emp => emp.details !== undefined);
-                setEmployees(filteredEmployees);
+            try {
+                // Request without document buffers - they'll be loaded on-demand when downloading
+                const response = await axios.get(`${API_BASE_URL}/api/employee`, {
+                    params: {
+                        excludeDocuments: "true",
+                        limit: 200
+                    },
+                    signal
+                });
+                if (response.status === 201 || response.status === 200) {
+                    const allEmployees = response.data.employees;
+                    const filteredEmployees = allEmployees.filter(emp => emp.details !== undefined);
+                    setEmployees(filteredEmployees);
+                }
+            } catch (err) {
+                if (axios.isCancel?.(err)) return;
+                console.error("Error fetching employees:", err);
+                setToastErrorMessage("Failed to load employees");
+                setToastErrorVisible(true);
+                setTimeout(() => setToastErrorVisible(false), 3500);
+            } finally {
                 setIsLoading(false);
             }
         }
 
         fetchEmployees();
+        return () => controller.abort();
     }, []);
 
     const toggleRow = (id) => {
@@ -139,25 +158,38 @@ const EmployeeList = () => {
         </div>
     );
 
-    const handleDownload = (employee, doc) => {
-        'PAN Card', 'Aadhar Card', 'Degree Certificate', 'Experience Certificate'
-        if (doc === 'PAN Card') {
-            downloadDocument(employee.name, doc, employee.details.documentsPanCard);
-        }
-        else if (doc === 'Aadhar Card') {
-            downloadDocument(employee.name, doc, employee.details.documentsAadhar);
-
-        }
-        else if (doc === 'Degree Certificate') {
-            downloadDocument(employee.name, doc, employee.details.documentsDegree);
-
-        }
-        else if (doc === 'Experience Certificate') {
-            downloadDocument(employee.name, doc, employee.details.documentsExperience);
-
-
+    const handleDownload = async (employee, doc) => {
+        // Fetch document on-demand to avoid loading all documents upfront
+        try {
+            const response = await axios.get(`${API_BASE_URL}/api/employee/${employee._id}`, {
+                params: { includeDocuments: "true" }
+            });
+            
+            if (response.status === 200) {
+                const fullEmployee = response.data.employee;
+                
+                if (doc === 'PAN Card') {
+                    downloadDocument(employee.name, doc, fullEmployee.details.documentsPanCard);
+                }
+                else if (doc === 'Aadhar Card') {
+                    downloadDocument(employee.name, doc, fullEmployee.details.documentsAadhar);
+                }
+                else if (doc === 'Degree Certificate') {
+                    downloadDocument(employee.name, doc, fullEmployee.details.documentsDegree);
+                }
+                else if (doc === 'Experience Certificate') {
+                    downloadDocument(employee.name, doc, fullEmployee.details.documentsExperience);
+                }
+            } else {
+                throw new Error('Failed to fetch employee documents');           }
+        } catch (err) {
+            console.error('Error downloading document:', err);
+            setToastErrorMessage('Failed to download document');
+                      setToastErrorVisible(true);
+            setTimeout(() => setToastErrorVisible(false), 3500);
         }
     }
+
 
     function downloadDocument(name, doc, buffer) {
         // Check if we have a valid Buffer and convert it to ArrayBuffer

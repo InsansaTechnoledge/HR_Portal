@@ -1,7 +1,6 @@
+import mongoose from "mongoose";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
-import { ObjectId } from "mongodb";
-
 
 //create user
 export const createUser=async(req,res) => {
@@ -34,14 +33,22 @@ export const createUser=async(req,res) => {
 
 //get user
 export const getUser = async (req,res) => {
-    try{
-        const users = await User.find();
-        res.status(200).send(users);
-    }
-    catch(err){
-        console.log(err)
-        res.status(500).json({message: err})
-    }
+  try{
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 200, 1), 500);
+    const fields = req.query.fields || "userName userEmail role"; // keep response light by default
+
+    const users = await User.find({}, fields.split(",").join(" "))
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean({ defaults: true, getters: false });
+
+    res.status(200).send(users);
+  }
+  catch(err){
+    console.log(err)
+    res.status(500).json({message: err})
+  }
 }
 
 //delete user
@@ -172,7 +179,44 @@ export const editLoginInfo = async (req, res) => {
 export const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
-    const user = await User.findById(id);
+    const { from, to } = req.query; // optional ISO date strings for leaveHistory range filtering
+
+    const matchId = new mongoose.Types.ObjectId(id);
+
+    // When date filters are provided, use aggregation to trim leaveHistory server-side
+    if (from || to) {
+      const fromDate = from ? new Date(from) : null;
+      const toDate = to ? new Date(to) : null;
+
+      const pipeline = [
+        { $match: { _id: matchId } },
+        {
+          $project: {
+            password: 0,
+            leaveHistory: {
+              $filter: {
+                input: "$leaveHistory",
+                as: "leave",
+                cond: {
+                  $and: [
+                    fromDate ? { $gte: ["$$leave.startDate", fromDate] } : true,
+                    toDate ? { $lte: ["$$leave.endDate", toDate] } : true,
+                  ],
+                },
+              },
+            },
+          },
+        },
+      ];
+
+      const result = await User.aggregate(pipeline).exec();
+      if (!result.length) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      return res.status(200).json({ message: "User fetched", user: result[0] });
+    }
+
+    const user = await User.findById(id).select("-password").lean({ defaults: true, getters: false });
     
     if (!user) {
       return res.status(404).json({ message: "User not found" });

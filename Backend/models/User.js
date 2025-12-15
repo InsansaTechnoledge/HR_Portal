@@ -28,6 +28,10 @@ const UserSchema = new mongoose.Schema({
   leaveHistory: [LeaveSchema]
 });
 
+// Useful indexes for lookup and filters
+UserSchema.index({ userEmail: 1 }, { unique: true });
+UserSchema.index({ role: 1 });
+
 // Hash the password before saving it
 UserSchema.pre('save', async function (next) {
   if (this.isModified('password')) {

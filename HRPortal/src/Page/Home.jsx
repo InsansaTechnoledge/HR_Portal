@@ -16,199 +16,157 @@ const Dashboard = () => {
   const { user } = useContext(userContext);
   const navigate = useNavigate();
 
-  const categories = [
-    
-    /* --------------------------------------
-     * 2. Employee Only Section
-     * -------------------------------------- */
-    ...(user.role === "employee"
-      ? [
-          {
-            title: "Employee Services",
-            items: [
-              {
-                icon: <Users className="h-6 w-6" />,
-                title: "Employee Information",
-                description: "Your personal as well as professional details",
-                path: "/user-profile",
-                color: "bg-indigo-500",
-              },
-              {
-                icon: <FolderOpen className="h-6 w-6" />,
-                title: "Employee Documents",
-                description: "Employee documentation and records",
-                path: "/docs",
-                color: "bg-blue-500",
-              },
-              {
-                icon: <Calendar className="h-6 w-6" />,
-                title: "Leave Tracker",
-                description: "Track and generate leave requests",
-                path: "/leave-tracker",
-                color: "bg-green-500",
-              },
-              {
-                icon: <FileText className="h-6 w-6" />,
-                title: "Employee Payslip",
-                description: "View your payslips and salary slips",
-                path: "/pay-slip",
-                color: "bg-green-500",
-              },
-            ],
-          },
-        ]
-      : []),
+  let categories = [];
 
-    /* --------------------------------------
-     * 3. Admin / SuperAdmin (NOT accountant)
-     * -------------------------------------- */
-    ...(user.role !== "user" && user.role !== "accountant" && user.role !== 'employee'
-      ? [
+  if (user.role === "user") {
+    categories = [
+      {
+        title: "Employee Services",
+        items: [
           {
-            title: "Recruitment",
-            items: [
-              {
-                icon: <Briefcase className="h-6 w-6" />,
-                title: "Job Postings",
-                description: "Create and manage job openings",
-                path: "/post-job",
-                color: "bg-purple-500",
-              },
-              {
-                icon: <ClipboardList className="h-6 w-6" />,
-                title: "Applications",
-                description: "Review and manage job applications",
-                path: "/application",
-                color: "bg-orange-500",
-              },
-            ],
+            icon: <Users className="h-6 w-6" />,
+            title: "Employee Information",
+            description: "Your personal as well as professional details",
+            path: "/user-profile",
+            color: "bg-indigo-500",
           },
           {
-            title: "Talent Management",
-            items: [
-              {
-                icon: <UserPlus className="h-6 w-6" />,
-                title: "Candidate Registration",
-                description: "Register new candidates",
-                path: "/register-candidate",
-                color: "bg-pink-500",
-              },
-              {
-                icon: <Users className="h-6 w-6" />,
-                title: "Candidate Roster",
-                description: "View and manage candidate database",
-                path: "/candidate-detail",
-                color: "bg-indigo-500",
-              },
-            ],
+            icon: <FolderOpen className="h-6 w-6" />,
+            title: "Employee Documents",
+            description: "Employee documentation and records",
+            path: "/docs",
+            color: "bg-blue-500",
           },
           {
-            title: "Administration",
-            items: [
-              {
-                icon: <Shield className="h-6 w-6" />,
-                title: "Authentication",
-                description: "Manage user access and permissions",
-                path: "/auth",
-                color: "bg-red-500",
-              },
-            ],
+            icon: <Calendar className="h-6 w-6" />,
+            title: "Leave Tracker",
+            description: "Track and generate leave requests",
+            path: "/leave-tracker",
+            color: "bg-green-500",
           },
-        ]
-      : []),
-  ].filter(Boolean);
-
-  /* --------------------------------------
-   * 4. Handle Accountant Role
-   * -------------------------------------- */
-  if (user.role === "accountant") {
-    categories[0].items = [
-      {
-        icon: <ClipboardList className="h-6 w-6" />,
-        title: "Employee Details",
-        description: "Get details of all employees at one place",
-        path: "/emp-list",
-        color: "bg-purple-500",
-      },
-      {
-        icon: <FileText className="h-6 w-6" />,
-        title: "Payslip Generation",
-        description: "Easily generate payslips for employees",
-        path: "/payslip",
-        color: "bg-red-500",
-      },
-      {
-        icon: <Briefcase className="h-6 w-6" />,
-        title: "Payslip Tracker",
-        description: "Track and view employee payslips",
-        path: "/payslip-tracker",
-        color: "bg-orange-500",
+          {
+            icon: <FileText className="h-6 w-6" />,
+            title: "Employee Payslip",
+            description: "View your payslips and salary slips",
+            path: "/payslip-tracker",
+            color: "bg-green-500",
+          },
+        ],
       },
     ];
-  }
-
-  /* --------------------------------------
-   * 5. SuperAdmin Extra Options
-   * -------------------------------------- */
-  if (user.role === "superAdmin") {
-    categories[0].items.push(
+  } else if (user.role === "accountant") {
+    categories = [
       {
-        icon: <ClipboardList className="h-6 w-6" />,
-        title: "Employee Details",
-        description: "Get details of all employees at one place",
-        path: "/emp-list",
-        color: "bg-purple-500",
+        title: "Accounting",
+        items: [
+          {
+            icon: <ClipboardList className="h-6 w-6" />,
+            title: "Employee Details",
+            description: "Get details of all employees at one place",
+            path: "/emp-list",
+            color: "bg-purple-500",
+          },
+          {
+            icon: <FileText className="h-6 w-6" />,
+            title: "Payslip Generation",
+            description: "Easily generate payslips for employees",
+            path: "/payslip",
+            color: "bg-red-500",
+          },
+          {
+            icon: <Briefcase className="h-6 w-6" />,
+            title: "Payslip Tracker",
+            description: "Track and view employee payslips",
+            path: "/payslip-tracker",
+            color: "bg-orange-500",
+          },
+        ],
+      },
+    ];
+  } else if (user.role !== "user") {
+    // Admin / SuperAdmin / other internal roles
+    categories = [
+      {
+        title: "Recruitment",
+        items: [
+          {
+            icon: <Briefcase className="h-6 w-6" />,
+            title: "Job Postings",
+            description: "Create and manage job openings",
+            path: "/post-job",
+            color: "bg-purple-500",
+          },
+          {
+            icon: <ClipboardList className="h-6 w-6" />,
+            title: "Applications",
+            description: "Review and manage job applications",
+            path: "/application",
+            color: "bg-orange-500",
+          },
+        ],
       },
       {
-        icon: <FileText className="h-6 w-6" />,
-        title: "Payslip Generation",
-        description: "Generate payslips for employees",
-        path: "/payslip",
-        color: "bg-red-500",
-      }
-    ),
-    /* --------------------------------------
-     * 1. Default User Services (Always Shown)
-     * -------------------------------------- */
-    {
-      title: "User Services",
-      items: [
-        {
-          icon: <Users className="h-6 w-6" />,
-          title: "User Information",
-          description: "Your personal as well as professional details",
-          path: "/user-profile",
-          color: "bg-indigo-500",
-        },
-        {
-          icon: <FolderOpen className="h-6 w-6" />,
-          title: "User Documents",
-          description: "User documentation and records",
-          path: "/docs",
-          color: "bg-blue-500",
-        },
-        {
-          icon: <Calendar className="h-6 w-6" />,
-          title: "Leave Tracker",
-          description: "Track and generate leave requests",
-          path: "/leave-tracker",
-          color: "bg-green-500",
-        },
-      ],
-    };
-  }
+        title: "Talent Management",
+        items: [
+          {
+            icon: <UserPlus className="h-6 w-6" />,
+            title: "Candidate Registration",
+            description: "Register new candidates",
+            path: "/register-candidate",
+            color: "bg-pink-500",
+          },
+          {
+            icon: <Users className="h-6 w-6" />,
+            title: "Candidate Roster",
+            description: "View and manage candidate database",
+            path: "/candidate-detail",
+            color: "bg-indigo-500",
+          },
+        ],
+      },
+      {
+        title: "Administration",
+        items: [
+          {
+            icon: <Shield className="h-6 w-6" />,
+            title: "Authentication",
+            description: "Manage user access and permissions",
+            path: "/auth",
+            color: "bg-red-500",
+          },
+        ],
+      },
+    ];
 
-  /* --------------------------------------
-   * 6. Add Employee Info for non-user roles
-   * -------------------------------------- */
-  if (user.role !== "user" ) {
-    categories[0].items.unshift({
-      icon: <Users className="h-6 w-6" />,
-      title: "Employee Information",
-      description: "Employee profile and details",
-      path: "/user-profile",
-      color: "bg-red-500",
-    });
+    if (user.role === "superAdmin") {
+      categories[0].items.push(
+        {
+          icon: <ClipboardList className="h-6 w-6" />,
+          title: "Employee Details",
+          description: "Get details of all employees at one place",
+          path: "/emp-list",
+          color: "bg-purple-500",
+        },
+        {
+          icon: <FileText className="h-6 w-6" />,
+          title: "Payslip Generation",
+          description: "Generate payslips for employees",
+          path: "/payslip",
+          color: "bg-red-500",
+        }
+      );
+    }
+
+    // Prepend Employee Information card if there is at least one category
+    if (categories.length > 0 && categories[0]?.items) {
+      categories[0].items.unshift({
+        icon: <Users className="h-6 w-6" />,
+        title: "Employee Information",
+        description: "Employee profile and details",
+        path: "/user-profile",
+        color: "bg-red-500",
+      });
+    }
   }
 
   /* --------------------------------------

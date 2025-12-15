@@ -25,17 +25,31 @@ const PayslipGenerator = () => {
         const [toastErrorVisible, setToastErrorVisible] = useState(false);
 
     useEffect(() => {
+        const controller = new AbortController();
+        const { signal } = controller;
 
         const fetchEmployees = async () => {
-            const response = await axios.get(`${API_BASE_URL}/api/employee/`);
-
-            if(response.status===201){
-                setEmployees(response.data.employees);
+            try {
+                const response = await axios.get(`${API_BASE_URL}/api/employee/`, {
+                    params: { 
+                        fields: "name,empId,department,details.designation,details.accountNumber,details.panNumber,details.salary,details.uanNumber", 
+                        limit: 200 
+                    },
+                    signal,
+                });
+                if(response.status===200 || response.status===201){
+                    setEmployees(response.data.employees);
+                }
+            } catch (err) {
+                if (axios.isCancel?.(err)) return;
+                console.error("Error fetching employees for payslip generator:", err);
+            } finally {
                 setLoading(false);
             }
         }
 
         fetchEmployees();
+        return () => controller.abort();
     }, [])
     const [employeeData, setEmployeeData] = useState({
         name: '',

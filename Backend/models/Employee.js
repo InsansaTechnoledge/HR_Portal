@@ -59,6 +59,10 @@ const EmployeeSchema = new mongoose.Schema({
   }
 );
 
+// Useful indexes for queries
+EmployeeSchema.index({ email: 1 }, { unique: true });
+EmployeeSchema.index({ department: 1 });
+
 EmployeeSchema.plugin(mongooseSequence(mongoose), { inc_field: "empId" });
 
 const Employee = mongoose.model("Employee", EmployeeSchema);
