@@ -1,5 +1,6 @@
 import express from "express";
-import multer from "multer";
+import upload from "../middleware/upload.js";
+
 import {
   uploadDocument,
   deleteDocument,
@@ -9,10 +10,6 @@ import {
 } from "../controller/DocumentUploadController.js";
 
 const router = express.Router();
-
-// Multer for file uploads
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
 
 router.post("/upload", upload.single("document"), uploadDocument);
 router.delete("/delete/:id", deleteDocument);

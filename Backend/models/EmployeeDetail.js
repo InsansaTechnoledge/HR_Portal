@@ -109,18 +109,29 @@ const EmployeeDetailSchema = new mongoose.Schema({
         required: true
     },
     documentsPanCard: {
-        type: Buffer,
-        required: true
+        url:String,
+        publicId:String,
+        originalName:String,
+        format:String,
+      
     },
     documentsAadhar: {
-        type: Buffer,
-        required: true
+        url: String,
+        publicId: String,
+        originalName:String,
+        format:String,
     },
     documentsDegree: {
-        type: Buffer
+        url:String,
+        publicId:String,
+        originalName:String,
+        format:String,
     },
     documentsExperience: {
-        type: Buffer
+        url:String,
+        publicId:String,
+        originalName:String,
+        format:String,
     }
 
 });

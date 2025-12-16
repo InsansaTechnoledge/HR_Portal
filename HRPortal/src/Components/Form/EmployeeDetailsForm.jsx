@@ -86,11 +86,9 @@ function EmployeeDetailsForm(props) {
         // Look up employee by the email entered in the form to avoid overwriting admin's record
         const empResponse = await axios.get(`${API_BASE_URL}/api/employee/fetchEmployeeByEmail/${newEmployee.email}`);
 
-        if (empResponse.status === 201) {
-            const empEmail = empResponse.data.email;
-
+        if (empResponse.status === 200) {
             const formData = new FormData();
-            formData.append("empEmail", empEmail);
+            // Backend reads email from newEmployee payload; no need to send empEmail separately
             formData.append("newEmployee", JSON.stringify(newEmployee));
             if (newEmployee.documentsPanCard) {
                 formData.append("documentsPanCard", newEmployee.documentsPanCard);

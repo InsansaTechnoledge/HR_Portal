@@ -1,6 +1,31 @@
 import Document from "../models/DocumentUpload.js";
 
 // Upload a document
+// export const uploadDocument = async (req, res) => {
+//   try {
+//     const { name, type, uploadedBy, employee, size } = req.body;
+
+//     if (!req.file) {
+//       return res.status(400).json({ message: "Document file is required" });
+//     }
+
+//     const newDocument = new Document({
+//       name,
+//       type,
+//       uploadedBy,
+//       employee,
+//       document: req.file.buffer,
+//       size,
+//     });
+
+//     await newDocument.save();
+
+//     res.status(201).json({ message: "Document uploaded successfully", data: newDocument });
+//   } catch (err) {
+//     res.status(500).json({ message: "Server Error", error: err.message });
+//   }
+// };
+
 export const uploadDocument = async (req, res) => {
   try {
     const { name, type, uploadedBy, employee, size } = req.body;
@@ -9,37 +34,83 @@ export const uploadDocument = async (req, res) => {
       return res.status(400).json({ message: "Document file is required" });
     }
 
+    // multer-storage-cloudinary provides these
+    const {
+      originalname,
+      path,        
+      filename,    
+      mimetype
+    } = req.file;
+
     const newDocument = new Document({
-      name,
-      type,
+      name: name || originalname,
+      type: type || mimetype,
       uploadedBy,
       employee,
-      document: req.file.buffer,
       size,
+      url: path,          
+      publicId: filename, 
     });
 
     await newDocument.save();
 
-    res.status(201).json({ message: "Document uploaded successfully", data: newDocument });
+    res.status(201).json({
+      message: "Document uploaded successfully",
+      data: newDocument,
+    });
+
   } catch (err) {
-    res.status(500).json({ message: "Server Error", error: err.message });
+    console.error("Upload error:", err);
+    res.status(500).json({
+      message: "Server Error",
+      error: err.message,
+    });
   }
 };
 
+
 // Delete a document
+// export const deleteDocument = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+
+//     const document = await Document.findByIdAndDelete(id);
+
+//     if (!document) {
+//       return res.status(404).json({ message: "Document not found" });
+//     }
+
+//     res.status(200).json({ message: "Document deleted successfully" });
+//   } catch (err) {
+//     res.status(500).json({ message: "Server Error", error: err.message });
+//   }
+// };
+
 export const deleteDocument = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const document = await Document.findByIdAndDelete(id);
+    const document = await Document.findById(id);
 
     if (!document) {
       return res.status(404).json({ message: "Document not found" });
     }
 
+
+    if (document.publicId) {
+      await cloudinary.uploader.destroy(document.publicId, {
+        resource_type: "raw", // IMPORTANT for PDFs/DOCs
+      });
+    }
+
+    await Document.findByIdAndDelete(id);
+
     res.status(200).json({ message: "Document deleted successfully" });
   } catch (err) {
-    res.status(500).json({ message: "Server Error", error: err.message });
+    res.status(500).json({
+      message: "Server Error",
+      error: err.message,
+    });
   }
 };
 

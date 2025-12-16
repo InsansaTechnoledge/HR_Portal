@@ -34,6 +34,10 @@ export const fetchEmployeeById = async (req,res) => {
         const {id} = req.params;
         const { from, to, includeDocuments } = req.query; // optional date range filter and document inclusion
 
+        // Validate Mongo ObjectId
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid employee id format" });
+        }
         const matchId = new mongoose.Types.ObjectId(id);
 
         // Build projection - exclude documents by default unless explicitly requested
@@ -170,39 +174,89 @@ export const addLeave = async (req,res) => {
 }
 
 export const uploadDetails = async (req,res) => {
-    const details = JSON.parse(req.body.newEmployee);
-    const email = req.body.empEmail;
+    try {
 
-    const documents = {
-        documentsPanCard: req.files.documentsPanCard ? req.files.documentsPanCard[0].buffer : null,
-        documentsAadhar: req.files.documentsAadhar ? req.files.documentsAadhar[0].buffer : null,
-        documentsDegree: req.files.documentsDegree ? req.files.documentsDegree[0].buffer : null,
-        documentsExperience: req.files.documentsExperience ? req.files.documentsExperience[0].buffer : null,
-    };
+        if (!req.body.newEmployee) {
+            console.error("Missing newEmployee in body");
+            return res.status(400).json({message: "Employee details are required"});
+        }
 
-    const empId = stringTo6DigitNumber(email);
+        const details = JSON.parse(req.body.newEmployee);
+        const email = details.email;
 
-    const newDetails = {
-        employeeDetailId:empId,
-        ...details,
-        ...documents
+        if (!email) {
+            return res.status(400).json({message: "Email is required in employee details"});
+        }
+
+        // Check if employee exists
+        const existingEmployee = await Employee.findOne({email: email});
+        if (!existingEmployee) {
+            console.error("Employee not found:", email);
+            return res.status(404).json({message: "Employee not found with this email"});
+        }
+
+        // Helper to map Cloudinary file → schema object
+        const mapCloudinaryFile = (file) => {
+            console.log("Mapping file:", {
+                originalname: file.originalname,
+                path: file.path,
+                filename: file.filename,
+                mimetype: file.mimetype
+            });
+            return {
+                url: file.path,
+                publicId: file.filename,
+                originalName: file.originalname,
+                format: file.mimetype ? file.mimetype.split('/')[1] : (file.originalname?.split('.').pop() || 'unknown')
+            };
+        };
+
+        const documents = {};
+        if (req.files?.documentsPanCard?.[0]) {
+            documents.documentsPanCard = mapCloudinaryFile(req.files.documentsPanCard[0]);
+        }
+        if (req.files?.documentsAadhar?.[0]) {
+            documents.documentsAadhar = mapCloudinaryFile(req.files.documentsAadhar[0]);
+        }
+        if (req.files?.documentsDegree?.[0]) {
+            documents.documentsDegree = mapCloudinaryFile(req.files.documentsDegree[0]);
+        }
+        if (req.files?.documentsExperience?.[0]) {
+            documents.documentsExperience = mapCloudinaryFile(req.files.documentsExperience[0]);
+        }
+
+        const empId = stringTo6DigitNumber(email);
+
+        const newDetails = {
+            employeeDetailId: empId,
+            ...details,
+            ...documents
+        };
+
+        const updatedEmp = await Employee.findOneAndUpdate(
+            {email: email},
+            {details: newDetails},
+            {new: true}
+        );
+
+        if (!updatedEmp) {
+            console.error("Update failed for:", email);
+            return res.status(404).json({message: "Failed to update employee"});
+        }
+
+        return res.status(201).json({message: "Details uploaded", updatedEmp});
+    } catch(err) {
+        console.error("[uploadDetails] Error:", err);
+        return res.status(500).json({message: err.message || "Failed to upload details"});
     }
-
-    
-
-    const updatedEmp = await Employee.findOneAndUpdate({email: email},
-        {details: newDetails},
-        {new: true}
-    )
-
-    res.status(201).json({message: "Details uploaded", updatedEmp});
 }
 
 export const fetchEmployeeByEmail = async (req, res) => {
   try {
     const { email } = req.params;
+    console.log(req.params)
    
-    const emp = await Employee.findOne({"details.email" : email});
+    const emp = await Employee.findOne({email : email})
 
     if (!emp) {
       return res.status(404).json({ message: "Employee not found" });
@@ -234,5 +288,70 @@ export const updateSalary = async (req,res) => {
     }
     catch(err){
         console.log(err);
+    }
+}
+
+
+export const updateEmployee = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const employee = await Employee.findById(id);
+    if (!employee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    if (!employee.details || typeof employee.details !== "object") {
+      employee.details = {};
+    }
+
+        // ✅ Parse payload properly (accepts string or object; fails fast on bad input)
+        let payload = req.body?.newEmployee !== undefined ? req.body.newEmployee : req.body;
+
+        if (typeof payload === "string") {
+                try {
+                        payload = JSON.parse(payload);
+                } catch (parseErr) {
+                        console.error("Update Employee JSON parse error:", parseErr);
+                        return res.status(400).json({ message: "Invalid payload format" });
+                }
+        }
+
+        // Guard against null/undefined after parse
+        if (!payload || typeof payload !== "object") {
+                return res.status(400).json({ message: "Invalid payload content" });
+        }
+
+    //Update ONLY allowed fields
+    Object.entries(payload).forEach(([key, value]) => {
+      employee.details[key] = value;
+    });
+
+    await employee.save();
+
+    res.status(200).json({
+      message: "Employee details updated successfully",
+      employee
+    });
+  } catch (err) {
+    console.error("Update Employee Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+
+
+
+export const deleteEmployee = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deleted = await Employee.findByIdAndDelete(id);
+        if (!deleted) return res.status(404).json({ message: "Employee not found" });
+        return res.status(200).json({ message: "Employee deleted" });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ message: err.message || err });
     }
 }
