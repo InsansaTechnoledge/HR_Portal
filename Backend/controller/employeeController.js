@@ -305,7 +305,7 @@ export const updateEmployee = async (req, res) => {
       employee.details = {};
     }
 
-        // ✅ Parse payload properly (accepts string or object; fails fast on bad input)
+        //Parse payload properly (accepts string or object; fails fast on bad input)
         let payload = req.body?.newEmployee !== undefined ? req.body.newEmployee : req.body;
 
         if (typeof payload === "string") {

@@ -17,7 +17,7 @@ const applicantSchema = new mongoose.Schema({
         type: Number,
     },
     resume: {
-        type: Buffer,
+        type: String,
     },
     applications:[
         {
@@ -37,6 +37,8 @@ const applicantSchema = new mongoose.Schema({
     }
 
 });
+
+applicantSchema.index({email:1},{unique:true});
 
 const Applicant = mongoose.model("Applicant", applicantSchema);
 export default Applicant;

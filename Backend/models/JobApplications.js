@@ -36,12 +36,13 @@ const jobApplicationSchema = new mongoose.Schema({
     },
 
     resume:{
-        type:Buffer,
+        type:String,
         required:true,
     }
     
-
 });
+
+jobApplicationSchema.index({jobId:1,applicantId:1});
 
 const JobApplication = mongoose.model("JobApplication", jobApplicationSchema);
 export default JobApplication;

@@ -1,16 +1,35 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import * as XLSX from "xlsx";
+import { toast, Toaster } from "react-hot-toast";
 import API_BASE_URL from "../config";
-import { Eye, FileText, Search, Check, X, Clock, Mail, Phone, Linkedin, Github, User, X as XIcon } from "lucide-react";
+import {
+  Eye,
+  FileText,
+  Search,
+  Check,
+  X,
+  Clock,
+  Mail,
+  Phone,
+  Linkedin,
+  Github,
+  User,
+  X as XIcon,
+} from "lucide-react";
 
 const JobApplication = () => {
   const [applications, setApplications] = useState([]);
   const [selectedApplicant, setSelectedApplicant] = useState(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
- const [filteredApplications, setFilteredApplications] = useState([]);
+  const [filteredApplications, setFilteredApplications] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [excelFile, setExcelFile] = useState(null);
+  const [failedRows, setFailedRows] = useState([]);
+  const [error, setError] = useState(null);
 
   const fetchApplications = async () => {
     try {
@@ -24,11 +43,9 @@ const JobApplication = () => {
     }
   };
 
-   useEffect(() => {
+  useEffect(() => {
     fetchApplications();
   }, []);
-
-
 
   const statusStyles = {
     "Under Review": {
@@ -70,16 +87,17 @@ const JobApplication = () => {
     }
   };
 
- 
-
   useEffect(() => {
     if (applications && applications.length > 0) {
       const filtered = applications.filter(
         (app) =>
           (searchTerm === "" ||
-            (app.name && app.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (app.email && app.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (app.position && app.position.toLowerCase().includes(searchTerm.toLowerCase()))) &&
+            (app.name &&
+              app.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (app.email &&
+              app.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (app.position &&
+              app.position.toLowerCase().includes(searchTerm.toLowerCase()))) &&
           (statusFilter === "" || app.status === statusFilter)
       );
       setFilteredApplications(filtered);
@@ -101,10 +119,10 @@ const JobApplication = () => {
       const response = await axios.get(
         `${API_BASE_URL}/api/career-portal/profile/${applicantId}`
       );
-      
+
       console.log("Full response:", response);
       console.log("Response data:", response.data);
-      
+
       if (response.status === 200 && response.data) {
         const applicantData = response.data.applicant || response.data;
         console.log("Setting applicant data:", applicantData);
@@ -120,43 +138,204 @@ const JobApplication = () => {
     }
   };
 
+  const uploadExcelFiles = async () => {
+    try {
+      if (!excelFile) {
+        toast.error("Please select an Excel file to upload.");
+        return;
+      }
+
+      // File type validation
+      const allowedTypes = [
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel",
+      ];
+
+      if (!allowedTypes.includes(excelFile.type)) {
+        toast.error("Only Excel files (.xlsx, .xls) are allowed");
+        return;
+      }
+
+      setLoading(true);
+
+      const formData = new FormData();
+      formData.append("file", excelFile);
+
+      const response = await axios.post(
+        `${API_BASE_URL}/api/bulk-upload/applications`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        const {
+          successCount = 0,
+          failedCount = 0,
+          failedRows = [],
+        } = response.data;
+
+        //  Handle full / partial success
+        if (failedCount > 0) {
+         toast.error("Bulk upload completed with some failures.");
+         setError("Some rows failed to upload.");
+          setFailedRows(failedRows);
+        } else {
+          toast.success("Bulk upload successful!");
+          setFailedRows([]);
+          setError(null);
+        }
+
+        // Reset input
+        setExcelFile(null);
+        document.getElementById("excelFileInput").value = "";
+
+        // Refresh list
+        await fetchApplications();
+      }
+    } catch (error) {
+      console.error("Error uploading Excel file:", error);
+      const errorMsg =
+        error.response?.data?.message ||
+        "Failed to upload Excel file. Please try again.";
+      toast.error(errorMsg);
+      setError(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadFailedRows = () => {
+    if (!failedRows || failedRows.length === 0) {
+      alert("No failed rows to download");
+      return;
+    }
+
+    // Convert failed rows to flat structure
+    const excelData = failedRows.map((item) => ({
+      name: item.row?.name || "",
+      email: item.row?.email || "",
+      phone: item.row?.phone || "",
+      jobTitle: item.row?.jobTitle || "",
+      failureReason: item.reason || "Unknown error",
+    }));
+
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+    worksheet["!cols"] = [
+      { wch: 20 },
+      { wch: 30 },
+      { wch: 15 },
+      { wch: 25 },
+      { wch: 40 },
+    ];
+
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "FailedRows");
+
+    // Download file
+    XLSX.writeFile(workbook, "failed_job_applications.xlsx");
+  };
+
+  const handleDownloadTemplate = () => {
+    // Define Excel headers
+    const worksheetData = [
+      {
+        name: "",
+        email: "",
+        phone: "",
+        jobTitle: "",
+      },
+    ];
+
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "JobApplications");
+
+    // Download file
+    XLSX.writeFile(workbook, "job_applications_bulk_upload_template.xlsx");
+  };
+
   const closeProfileModal = () => {
     setShowProfileModal(false);
     setSelectedApplicant(null);
   };
 
-
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
+      <Toaster position="top-right" reverseOrder={false} />
       <div className="bg-white shadow-md rounded-lg p-6">
         <h1 className="text-xl font-bold text-gray-700 mb-4">
           Job Applications
         </h1>
 
         {/* Search and Filter */}
-        <div className="flex flex-col md:flex-row md:space-x-4 mb-6">
-          <div className="flex-grow flex items-center mb-4 md:mb-0">
-            <Search className="mr-2 text-gray-500" />
+        <div className="flex flex-col gap-4 md:gap-3 md:flex-row md:items-center mb-6">
+          <div className="flex-grow flex items-center bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm hover:border-blue-500 transition">
+            <Search className="mx-3 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Search applicants..."
+              placeholder="Search applicants by name, email or position..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full border rounded-lg p-2 bg-gray-100 focus:outline-none"
+              className="w-full py-2.5 px-2 bg-white focus:outline-none text-gray-700"
             />
           </div>
-          <div>
-            <select
-              className="border rounded-lg p-2 bg-gray-100 focus:outline-none"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+          
+          <select
+            className="py-2.5 px-4 border border-gray-300 rounded-lg bg-white text-gray-700 font-medium hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-sm"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">All Statuses</option>
+            <option value="Under Review">Under Review</option>
+            <option value="Selected">Selected</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+
+          <div className="flex items-center gap-2">
+            <label className="relative cursor-pointer">
+              <input
+                id="excelFileInput"
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
+                className="hidden"
+              />
+              <span className="px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 font-medium hover:border-blue-500 hover:bg-gray-50 transition cursor-pointer inline-block shadow-sm">
+                {excelFile ? excelFile.name.substring(0, 15) + "..." : "Choose File"}
+              </span>
+            </label>
+            <button
+              className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
+              onClick={uploadExcelFiles}
+              disabled={loading || !excelFile}
             >
-              <option value="">All Statuses</option>
-              <option value="Under Review">Under Review</option>
-              <option value="Selected">Selected</option>
-              <option value="Rejected">Rejected</option>
-            </select>
+              {loading ? "Uploading..." : "Bulk Upload"}
+            </button>
           </div>
+
+          <button
+            onClick={handleDownloadTemplate}
+            className="px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white font-medium rounded-lg hover:from-green-700 hover:to-green-800 transition shadow-sm"
+          >
+            Download Template
+          </button>
+
+          {failedRows.length > 0 && (
+            <button onClick={handleDownloadFailedRows}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+              Download Failed Rows
+            </button>
+          )}
         </div>
 
         {/* Applications Table */}
@@ -244,7 +423,9 @@ const JobApplication = () => {
       </div>
 
       {/* Applicant Profile Modal */}
-      {showProfileModal && selectedApplicant && typeof selectedApplicant === 'object' ? (
+      {showProfileModal &&
+      selectedApplicant &&
+      typeof selectedApplicant === "object" ? (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-auto max-h-[90vh] overflow-hidden flex flex-col animate-fadeIn">
             {/* Modal Header with Gradient Background */}
@@ -252,7 +433,7 @@ const JobApplication = () => {
               {/* Decorative elements */}
               <div className="absolute top-0 right-0 w-40 h-40 bg-white opacity-10 rounded-full -mr-20 -mt-20"></div>
               <div className="absolute bottom-0 left-0 w-32 h-32 bg-white opacity-10 rounded-full -ml-16 -mb-16"></div>
-              
+
               <div className="relative z-10 flex items-start justify-between">
                 <div className="flex items-center space-x-5">
                   <div className="bg-white rounded-full p-4 shadow-lg">
@@ -262,7 +443,9 @@ const JobApplication = () => {
                     <h2 className="text-3xl font-bold text-white">
                       {selectedApplicant?.name || "Profile"}
                     </h2>
-                    <p className="text-blue-100 text-sm mt-1">Professional Profile</p>
+                    <p className="text-blue-100 text-sm mt-1">
+                      Professional Profile
+                    </p>
                   </div>
                 </div>
                 <button
@@ -282,7 +465,9 @@ const JobApplication = () => {
                     <div className="flex justify-center mb-4">
                       <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-4 border-t-blue-600"></div>
                     </div>
-                    <p className="text-gray-600 font-medium">Loading profile...</p>
+                    <p className="text-gray-600 font-medium">
+                      Loading profile...
+                    </p>
                   </div>
                 ) : (
                   <>
@@ -298,7 +483,9 @@ const JobApplication = () => {
                         <div className="flex items-start space-x-4 p-4 bg-gradient-to-br from-blue-50 to-transparent rounded-xl border border-blue-100 hover:shadow-md transition">
                           <Mail className="h-6 w-6 text-blue-600 mt-1 flex-shrink-0" />
                           <div className="flex-1">
-                            <p className="text-sm text-gray-600 font-semibold">Email Address</p>
+                            <p className="text-sm text-gray-600 font-semibold">
+                              Email Address
+                            </p>
                             <p className="text-gray-800 font-medium break-all">
                               {selectedApplicant?.email || "Not provided"}
                             </p>
@@ -307,7 +494,9 @@ const JobApplication = () => {
                         <div className="flex items-start space-x-4 p-4 bg-gradient-to-br from-green-50 to-transparent rounded-xl border border-green-100 hover:shadow-md transition">
                           <Phone className="h-6 w-6 text-green-600 mt-1 flex-shrink-0" />
                           <div className="flex-1">
-                            <p className="text-sm text-gray-600 font-semibold">Phone Number</p>
+                            <p className="text-sm text-gray-600 font-semibold">
+                              Phone Number
+                            </p>
                             <p className="text-gray-800 font-medium">
                               {selectedApplicant?.phone || "Not provided"}
                             </p>
@@ -326,7 +515,9 @@ const JobApplication = () => {
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="p-5 bg-gradient-to-br from-purple-50 to-transparent rounded-xl border border-purple-100 hover:shadow-md transition">
-                          <p className="text-sm text-gray-600 font-semibold mb-2">Gender</p>
+                          <p className="text-sm text-gray-600 font-semibold mb-2">
+                            Gender
+                          </p>
                           <div className="flex items-center space-x-2">
                             <div className="h-3 w-3 bg-purple-600 rounded-full"></div>
                             <p className="text-gray-800 font-medium">
@@ -358,7 +549,9 @@ const JobApplication = () => {
                                 <Linkedin className="h-5 w-5 text-white" />
                               </div>
                               <div>
-                                <p className="text-sm text-gray-600 font-semibold">LinkedIn</p>
+                                <p className="text-sm text-gray-600 font-semibold">
+                                  LinkedIn
+                                </p>
                                 <p className="text-blue-600 font-medium truncate text-sm">
                                   {selectedApplicant.linkedIn}
                                 </p>
@@ -379,7 +572,9 @@ const JobApplication = () => {
                                 <Github className="h-5 w-5 text-white" />
                               </div>
                               <div>
-                                <p className="text-sm text-gray-600 font-semibold">GitHub</p>
+                                <p className="text-sm text-gray-600 font-semibold">
+                                  GitHub
+                                </p>
                                 <p className="text-gray-700 font-medium truncate text-sm">
                                   {selectedApplicant.github}
                                 </p>
@@ -388,11 +583,14 @@ const JobApplication = () => {
                             <X className="h-5 w-5 text-gray-400" />
                           </a>
                         )}
-                        {!selectedApplicant?.linkedIn && !selectedApplicant?.github && (
-                          <div className="p-5 text-center bg-gray-50 rounded-xl border border-gray-200">
-                            <p className="text-gray-500 font-medium">No social profiles added</p>
-                          </div>
-                        )}
+                        {!selectedApplicant?.linkedIn &&
+                          !selectedApplicant?.github && (
+                            <div className="p-5 text-center bg-gray-50 rounded-xl border border-gray-200">
+                              <p className="text-gray-500 font-medium">
+                                No social profiles added
+                              </p>
+                            </div>
+                          )}
                       </div>
                     </div>
                   </>

@@ -6,7 +6,8 @@ import user from "./user.js"
 import employee from "./employee.js"
 import payslip from "./paySlip.js";
 import careerPortal from "./careerPortal.js";
-
+import jobApplication from "./jobApplication.js";
+import bulkUpload from "./bulkUpload.js";
 
 const routes = (app) => {
     app.use("/api/auth", auth);
@@ -17,6 +18,8 @@ const routes = (app) => {
     app.use("/api/employee",employee);
     app.use("/api/payslip", payslip);
     app.use("/api/career-portal", careerPortal);
+    app.use("/api/job-application",jobApplication);
+    app.use("/api/bulk-upload",bulkUpload)
 
 };
 
