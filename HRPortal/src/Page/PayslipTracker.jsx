@@ -170,7 +170,7 @@ const PayslipTracker = () => {
             <div className="flex flex-wrap gap-4 bg-white p-4 rounded-lg shadow">
                 <div className="flex-1 min-w-[200px]">
                     {
-                        user && (user.role==="user" || user.role ==="admin" || user.role === "employee")
+                        user && (user.role==="user" || user.role === "employee")
                         ?
                         null
                         : 

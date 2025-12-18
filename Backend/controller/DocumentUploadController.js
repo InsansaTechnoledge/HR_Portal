@@ -28,7 +28,7 @@ import Document from "../models/DocumentUpload.js";
 
 export const uploadDocument = async (req, res) => {
   try {
-    const { name, type, uploadedBy, employee, size } = req.body;
+    const { name, type, uploadedBy, employee, email, size } = req.body;
 
     if (!req.file) {
       return res.status(400).json({ message: "Document file is required" });
@@ -47,6 +47,7 @@ export const uploadDocument = async (req, res) => {
       type: type || mimetype,
       uploadedBy,
       employee,
+      employeeEmail: email,
       size,
       url: path,          
       publicId: filename, 
@@ -132,21 +133,20 @@ export const viewDocument = async (req, res) => {
     const { id } = req.params;
 
     const document = await Document.findById(id);
-
     if (!document) {
       return res.status(404).json({ message: "Document not found" });
     }
 
-    res.setHeader("Content-Type", "application/octet-stream");
-    res.setHeader("Content-Disposition", `inline; filename="${document.name}"`);
+    // Cloudinary preview
+    return res.redirect(document.url);
 
-    res.send(document.document);
   } catch (err) {
     res.status(500).json({ message: "Server Error", error: err.message });
   }
 };
 
-// Download a document
+
+
 export const downloadDocument = async (req, res) => {
   try {
     const { id } = req.params;
@@ -157,11 +157,19 @@ export const downloadDocument = async (req, res) => {
       return res.status(404).json({ message: "Document not found" });
     }
 
-    res.setHeader("Content-Type", "application/octet-stream");
-    res.setHeader("Content-Disposition", `attachment; filename="${document.name}"`);
+    res.set({
+      "Content-Type": document.mimeType, // ✅ CRITICAL
+      "Content-Disposition": `attachment; filename="${document.name}"`,
+      "Content-Length": document.document.length
+    });
 
-    res.send(document.document);
+    res.end(document.document); // ✅ binary-safe
   } catch (err) {
-    res.status(500).json({ message: "Server Error", error: err.message });
+    res.status(500).json({
+      message: "Server Error",
+      error: err.message,
+    });
   }
 };
+
+

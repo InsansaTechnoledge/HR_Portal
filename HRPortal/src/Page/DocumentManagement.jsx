@@ -16,33 +16,46 @@ const DocumentManagement = () => {
     const [fileName, setFileName] = useState("No file choosen")
     const {user} = useContext(userContext);
     const [employees,setEmployees] = useState([]);
+
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [selectedId, setSelectedId] = useState("");
+
     // Upload form state
     const [formData, setFormData] = useState({
         name: '',
         type: '',
         uploadedBy: user.userName,
-        employee: '',
+        email: '',
         document: null
     });
 
+
     useEffect(() => {
+        if (!user || user.role === "user") return;
+
         const fetchEmployees = async () => {
             const response = await axios.get(`${API_BASE_URL}/api/employee`);
-            if(response.status===201){
-                setEmployees(response.data.employees);
-                if(response.data.employees.length>0){
-                    setFormData(prev =>({
+            const empList = response.data.employees;
+            console.log("Response: ", response.data.employees);
+            setEmployees(empList);
+
+            if(response.status===200){
+                if (response.data.employees.length > 0) {
+                    setFormData(prev => ({
                         ...prev,
-                        employee: response.data.employees[0].name
-                    })
-                ); 
-            }
+                        employeeEmail: response.data.employees[0].email
+                    }));
+                }
+
             }
         }
 
-        user && user.role!=="user" ? fetchEmployees() : null;
-    },[]);
+        fetchEmployees();
+    },[user]);
 
+    const selectedEmployee = employees.find(
+        emp => emp.email === formData.employeeEmail
+    );
 
     const handleDrop = (event) => {
         event.preventDefault();
@@ -83,10 +96,9 @@ const DocumentManagement = () => {
             setLoading(true);
             const response = await axios.get(`${API_BASE_URL}/api/documents/all`);
             const data = Array.isArray(response.data.data) ? response.data.data : [];
-            
 
             if (user && user.role === "user") {
-                const filteredData = data.filter(doc => doc.employee.toLowerCase().trim() === user.userName.toLowerCase().trim());
+                const filteredData = data.filter(doc => doc.employeeEmail === user.userEmail);
                 setDocuments(filteredData);
             } else {
                 setDocuments(data);
@@ -126,8 +138,9 @@ const DocumentManagement = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        console.log("FormData: ", formData);
         // Check if all fields are filled
-        if (!formData.document || !formData.employee || !formData.type) {
+        if (!formData.document || !formData.employeeEmail || !formData.type){
             setError("Please fill in all required fields");
             return;
         }
@@ -137,7 +150,8 @@ const DocumentManagement = () => {
         uploadData.append('name', formData.name);
         uploadData.append('type', formData.type);
         uploadData.append('uploadedBy', formData.uploadedBy);
-        uploadData.append('employee', formData.employee);
+        uploadData.append('employee', selectedEmployee?.name);
+        uploadData.append('email', selectedEmployee?.email);
         uploadData.append('size', formData.document.size);
 
         try {
@@ -148,7 +162,12 @@ const DocumentManagement = () => {
                 }
             });
 
-            setFormData({ name: '', type: '', uploadedBy: user.userName, employee: employees[0], document: null });
+           setFormData(prev => ({
+            ...prev,
+            name: '',
+            type: '',
+            document: null
+            }));
             setShowUploadForm(false);
             fetchDocuments();
             setLoading(false);
@@ -161,17 +180,26 @@ const DocumentManagement = () => {
 
 
     // Handle document deletion
-    const handleDeleteDocument = async (id) => {
-        try {
-            setLoading(true);
-            await axios.delete(`${API_BASE_URL}/api/documents/delete/${id}`);
-            fetchDocuments();
-            setLoading(false);
-        } catch (err) {
-            setError("Failed to delete document");
-            setLoading(false);
-        }
-    };
+    const openDeleteModal = (id) => {
+            setSelectedId(id);
+            setShowDeleteModal(true);
+        };
+
+        const confirmDelete = async () => {
+            if (!selectedId) return;
+
+            try {
+                setLoading(true);
+                await axios.delete(`${API_BASE_URL}/api/documents/delete/${selectedId}`);
+                setShowDeleteModal(false);
+                setSelectedId("");
+                fetchDocuments();
+            } catch (err) {
+                setError("Failed to delete document");
+            } finally {
+                setLoading(false);
+            }
+        };
 
     // Add this state for search functionality
     const [searchTerm, setSearchTerm] = useState("");
@@ -185,29 +213,16 @@ const DocumentManagement = () => {
     );
     const viewDocument = async (doc) => {
         try {
-            // Fetch the document data as a buffer array from the API
-            const response = await fetch(`${API_BASE_URL}/api/documents/view/${doc._id}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/pdf', // Specify the expected document type
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`Failed to fetch document: ${response.statusText}`);
-            }
-
-            const blob = await response.blob();
-
-            const url = URL.createObjectURL(blob);
-
-            window.open(url, "_blank");
-
-            setTimeout(() => URL.revokeObjectURL(url), 10000); // Revoke after 10 seconds
+            window.open(
+                `${API_BASE_URL}/api/documents/view/${doc._id}`,
+                "_blank"
+            );
         } catch (error) {
-            console.error("Error viewing the document:", error);
+            console.error(error);
+            setError("Unable to preview document");
         }
-    }
+    };
+
 
     return (
 
@@ -327,11 +342,25 @@ const DocumentManagement = () => {
 
                             <div>
                                 <label className="block text-gray-700 mb-2">Employee Name</label>
-                                <select name="employee" onChange={handleInputChange} value={formData.employee} className="w-full p-2 border rounded-lg">
-                                    {employees.map(emp => {
-                                        return <option value={emp.name}>{emp.name}</option>
-                                    })}
+                                <select
+                                    value={formData.employeeEmail}
+                                    onChange={(e) =>
+                                        setFormData(prev => ({
+                                        ...prev,
+                                        employeeEmail: e.target.value
+                                        }))
+                                    }
+                                    className="w-full p-2 border rounded-lg"
+                                    >
+                                    <option value="">Select employee</option>
+
+                                    {employees.map(emp => (
+                                        <option key={emp._id} value={emp.email}>
+                                        {emp.name}
+                                        </option>
+                                    ))}
                                 </select>
+
                                 {/* <input
                                     type="text"
                                     name="employee"
@@ -394,21 +423,27 @@ const DocumentManagement = () => {
                                     <td className="p-2">{doc.employee}</td>
                                     <td className="p-2 text-right flex space-x-2 justify-end">
                                         <button
-                                            disabled
-                                            onClick={() => { viewDocument(doc) }}
-                                            className="cursor-not-allowed flex items-center px-3 py-1 bg-gray-100 rounded-lg hover:bg-gray-200">
+                                            onClick={() => viewDocument(doc)}
+                                            className="flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
+                                        >
                                             <Eye className="mr-1 h-4 w-4" /> View
                                         </button>
-                                        <a href={`${API_BASE_URL}/api/documents/download/${doc._id}`}
-                                            className="flex items-center px-3 py-1 bg-gray-100 rounded-lg hover:bg-gray-200">
+
+                                        <a
+                                            href={`${API_BASE_URL}/api/documents/download/${doc._id}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200"
+                                        >
                                             <Download className="mr-1 h-4 w-4" /> Download
                                         </a>
+
                                         {
                                             user && user.role==="user"
                                             ?
                                             null
                                             :
-                                            <button onClick={() => handleDeleteDocument(doc._id)}
+                                            <button onClick={() => openDeleteModal(doc._id)}
                                                 className="flex items-center px-3 py-1 bg-red-100 text-red-600 rounded-lg hover:bg-red-200">
                                                 <Trash2 className="mr-1 h-4 w-4" /> Delete
                                             </button>
@@ -431,9 +466,41 @@ const DocumentManagement = () => {
                     :
                     null    
                 }
+                {showDeleteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 animate-scale-in">
+                        <h2 className="text-xl font-bold text-gray-800 mb-2">
+                            Delete Document?
+                        </h2>
+
+                        <p className="text-gray-600 mb-6">
+                            Are you sure you want to delete this file?  
+                            This action cannot be undone.
+                        </p>
+
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                onClick={confirmDelete}
+                                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
 
     );
 };
 
 export default DocumentManagement;
+

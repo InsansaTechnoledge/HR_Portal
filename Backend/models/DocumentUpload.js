@@ -35,6 +35,11 @@ const documentSchema = new mongoose.Schema(
       required: true,
     },
 
+    employeeEmail: {
+      type: String,
+      required: true,
+    },
+
     url: {
       type: String,
       required: true,

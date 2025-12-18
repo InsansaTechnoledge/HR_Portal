@@ -33,6 +33,10 @@ const initialForm = { type: "", startDate: "", endDate: "" };
 const LeaveTracker = () => {
   const { user } = useContext(userContext);
 
+  const authUser = user;
+
+  const role = authUser?.role;
+
   // lists
   const [employees, setEmployees] = useState([]); // from employee collection (admin view)
   const [users, setUsers] = useState([]); // from user collection
@@ -51,6 +55,7 @@ const LeaveTracker = () => {
   const [newLeave, setNewLeave] = useState(initialForm);
   const [activeFilterOnlyApplied, setActiveFilterOnlyApplied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   // toasts
   const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
@@ -64,7 +69,6 @@ const LeaveTracker = () => {
     const { signal } = controller;
 
     const fetchLists = async () => {
-      if (!user) return;
       setLoading(true);
       try {
         if (user.role === "admin" || user.role === "superAdmin") {
@@ -148,82 +152,65 @@ const LeaveTracker = () => {
     return () => {
       controller.abort();
     };
-  }, [user]);
+  }, [authUser]);
 
   // --- Unified fetch for details when a selection changes ---
   // Whenever selectedEmployeeId or selectedUserId changes, we should fetch details for that person
-  useEffect(() => {
-    // If both are empty -> clear current person and months
-    if (!selectedEmployeeId && !selectedUserId) {
-      setCurrentPerson(null);
-      setSelectedMonth(null);
-      return;
-    }
+useEffect(() => {
+  if (!selectedEmployeeId && !selectedUserId) {
+    setCurrentPerson(null);
+    setSelectedMonth(null);
+    return;
+  }
 
-    // If both somehow set, prefer selectedUserId (but we keep mutual exclusion in handlers)
-    const id = selectedUserId || selectedEmployeeId;
-    const isUser = Boolean(selectedUserId);
+  const id = selectedUserId || selectedEmployeeId;
+  const isUser = Boolean(selectedUserId);
 
-    // For non-admin roles, default to user API even if selectedEmployeeId was set via restore
-    const shouldForceUserApi = !isUser && user && user.role !== "admin" && user.role !== "superAdmin";
-    const effectiveIsUser = isUser || shouldForceUserApi;
-    const effectiveId = shouldForceUserApi ? (selectedUserId || selectedEmployeeId) : id;
+  const controller = new AbortController();
+  const { signal } = controller;
 
-    // Avoid refetching if we already have the same person cached
-    if (currentPerson && currentPerson.empId && String(currentPerson.empId) === String(effectiveId)) {
-      setSelectedMonth(null);
-      return;
-    }
-
-    const controller = new AbortController();
-    const { signal } = controller;
-
-    const fetchDetails = async () => {
-      setLoading(true);
-      try {
-        if (effectiveIsUser) {
-          const resp = await axios.get(`${API_BASE_URL}/api/user/${effectiveId}`, { signal });
-          const u = resp?.data?.user;
-          const person = u
-            ? {
-                empId: u._id || u.userId,
-                name: u.userName || u.name,
-                email: u.userEmail || u.email,
-                department: u.role || "User",
-                leaveHistory: u.leaveHistory || [],
-              }
-            : null;
-          setCurrentPerson(person);
-        } else {
-          const resp = await axios.get(`${API_BASE_URL}/api/employee/${effectiveId}`, { signal });
-          const e = resp?.data?.employee;
-          const person = e
-            ? {
-                empId: e._id,
-                name: e.name,
-                email: e.email,
-                department: e.department || "User",
-                leaveHistory: e.leaveHistory,
-              }
-            : null;
-
-          setCurrentPerson(person);
+  const fetchDetails = async () => {
+    setLoading(true);
+    try {
+      if (isUser) {
+        const resp = await axios.get(`${API_BASE_URL}/api/user/${id}`, { signal });
+        const u = resp?.data?.user;
+        if (u) {
+          setCurrentPerson({
+            empId: u._id || u.userId,
+            name: u.userName || u.name,
+            email: u.userEmail || u.email,
+            department: u.role || "User",
+            leaveHistory: u.leaveHistory || [],
+          });
         }
-      } catch (err) {
-        if (axios.isCancel?.(err)) return;
-        console.error("Error fetching details:", err);
-        setCurrentPerson(null);
-      } finally {
-        setLoading(false);
-        setSelectedMonth(null); // reset month when selection changes
+      } else {
+        const resp = await axios.get(`${API_BASE_URL}/api/employee/${id}`, { signal });
+        const e = resp?.data?.employee;
+        if (e) {
+          setCurrentPerson({
+            empId: e._id,
+            name: e.name,
+            email: e.email,
+            department: e.department || "User",
+            leaveHistory: e.leaveHistory || [],
+          });
+        }
       }
-    };
+    } catch (err) {
+      if (!axios.isCancel(err)) {
+        console.error("Error fetching details:", err);
+      }
+    } finally {
+      setLoading(false);
+      setSelectedMonth(null);
+    }
+  };
 
-    fetchDetails();
-    return () => {
-      controller.abort();
-    };
-  }, [selectedEmployeeId, selectedUserId, currentPerson, user]);
+  fetchDetails();
+  return () => controller.abort();
+}, [selectedEmployeeId, selectedUserId]);
+
 
   // --- Helper to compute available months and per-month lookup maps ---
   const { availableLeaveMonths, leaveLookupByMonth } = useMemo(() => {
@@ -302,52 +289,57 @@ const LeaveTracker = () => {
   // --- Add Leave flow ---
   // Clicking the Add Leave button resets both dropdowns to placeholders (per requirement)
   const handleOpenAddLeave = () => {
-    setSelectedEmployeeId("");
-    setSelectedUserId("");
-    setSelectedMonth(null);
+    // Note: The UI resets the dropdowns, but the saving logic must target the logged-in user.
+    if(authUser.role === 'admin'){
+      setSelectedEmployeeId("");
+      setSelectedUserId("");
+    }
+    // setSelectedEmployeeId("");
+    // setSelectedUserId("");
+    // setSelectedMonth(null);
     setNewLeave(initialForm);
     setOneDayLeave(false);
     setShowAddLeaveModal(true);
   };
 
-  // Save a leave: determine target ID and endpoint, post, then refresh lists & show success
-  const handleSaveLeave = async () => {
-    // basic validation
-    if (!newLeave.type || !newLeave.startDate || !newLeave.endDate) {
-      setToastErrorMessage("Please fill all details");
-      setToastErrorVisible(true);
-      setTimeout(() => setToastErrorVisible(false), 3000);
-      return;
-    }
-    if (new Date(newLeave.startDate) > new Date(newLeave.endDate)) {
-      setToastErrorMessage("End date can't be before start date");
-      setToastErrorVisible(true);
-      setTimeout(() => setToastErrorVisible(false), 3000);
-      return;
-    }
+  // Save a leave: NOW ALWAYS TARGETS THE LOGGED-IN USER (user._id)
+ const handleSaveLeave = async () => {
+  // Validation
+  if (!newLeave.type || !newLeave.startDate || !newLeave.endDate) {
+    setToastErrorMessage("Please fill all details");
+    setToastErrorVisible(true);
+    setTimeout(() => setToastErrorVisible(false), 3000);
+    return;
+  }
 
-    // Choose target: user selection -> employee selection -> fallback logged-in user
-    const targetId = selectedUserId || selectedEmployeeId || (user && user._id);
-    if (!targetId) {
-      setToastErrorMessage("No target user/employee to add leave");
-      setToastErrorVisible(true);
-      setTimeout(() => setToastErrorVisible(false), 3000);
-      return;
-    }
+  if (new Date(newLeave.startDate) > new Date(newLeave.endDate)) {
+    setToastErrorMessage("End date can't be before start date");
+    setToastErrorVisible(true);
+    setTimeout(() => setToastErrorVisible(false), 3000);
+    return;
+  }
 
-    // Decide path: if selectedUserId used or fallback to logged-in user, call user API
-    // otherwise call employee API
-    const useUserApi = Boolean(selectedUserId) || (!selectedEmployeeId && (!selectedUserId || user?.role === "user"));
+  // SAFETY CHECK
+  if (!authUser._id) {
+    setToastErrorMessage("Session expired. Please login again.");
+    setToastErrorVisible(true);
+    return;
+  }
 
-    // console.log("Adding leave for ID:", targetId, "via", useUserApi ? "User API" : "Employee API");
-    // Build endpoint names (update names if your backend uses different endpoints)
-    const userEndpoint = `${API_BASE_URL}/api/user/addLeave/${targetId}`; // adjust if your backend path differs
-    const employeeEndpoint = `${API_BASE_URL}/api/employee/addLeave/${targetId}`;
+  // ALWAYS USE AUTH USER ID
+  const targetId = authUser._id;
 
-    const apiEndpoint = useUserApi ? userEndpoint : employeeEndpoint;
+  // API DECISION BASED ON AUTH USER ROLE
+  let resp;
+  try {
+    resp =
+    authUser.role === 'user' || authUser.role === 'admin' || authUser.role === 'superadmin' || authUser.role === 'accountant' ?
+      resp = await axios.post(`${API_BASE_URL}/api/user/addLeave/${targetId}`, newLeave)
+    :
+      resp = await axios.post(`${API_BASE_URL}/api/employee/addLeave/${targetId}`, newLeave);
 
     try {
-      const resp = await axios.post(apiEndpoint, newLeave);
+      // const resp = await axios.post(apiEndpoint, newLeave);
       if (resp.status === 201 || resp.status === 200) {
         setToastSuccessMessage("Leave added successfully!");
         setToastSuccessVisible(true);
@@ -361,7 +353,7 @@ const LeaveTracker = () => {
         });
 
         // Refresh lists & current person:
-        await refreshAfterSave(targetId, useUserApi);
+        // await refreshAfterSave(targetId, useUserApi);
       } else {
         throw new Error("Unexpected response while adding leave");
       }
@@ -372,65 +364,79 @@ const LeaveTracker = () => {
       setTimeout(() => setToastErrorVisible(false), 3500);
     } finally {
       setShowAddLeaveModal(false);
-      setNewLeave(initialForm);
-      setOneDayLeave(false);
     }
-  };
+  } catch (err) {
+    console.error("Error adding leave:", err);
+    setToastErrorMessage("Error adding leave. Please try again.");
+    setToastErrorVisible(true);
+    setTimeout(() => setToastErrorVisible(false), 3000);
+  } finally {
+    setNewLeave(initialForm);
+    setOneDayLeave(false);
+  }
+};
+
 
   // helper to refresh data after save: refetch only the updated person
-  const refreshAfterSave = async (targetId, wasUser) => {
-    setLoading(true);
-    try {
-      if (wasUser) {
-        const det = await axios.get(`${API_BASE_URL}/api/user/${targetId}`);
-        const u = det?.data?.user;
-        if (u) {
-          const updated = {
-            empId: u._id || u.userId,
-            name: u.userName || u.name,
-            email: u.userEmail || u.email,
-            department: u.role || "User",
-            leaveHistory: u.leaveHistory || [],
-          };
-          setCurrentPerson(updated);
-          setSelectedUserId(updated.empId);
-          setSelectedEmployeeId("");
-          setUsers((prev) =>
-            prev.length
-              ? prev.map((p) => (String(p.empId) === String(updated.empId) ? updated : p))
-              : prev
-          );
-          localStorage.setItem("leaveTracker:lastSelection", JSON.stringify({ type: "user", id: updated.empId }));
-        }
-      } else {
-        const det = await axios.get(`${API_BASE_URL}/api/employee/${targetId}`);
-        const e = det?.data?.employee;
-        if (e) {
-          const updated = {
-            empId: e._id || e.empId,
-            name: e.name || e.userName,
-            email: e.email || e.userEmail,
-            department: e.department || e.role || "User",
-            leaveHistory: e.leaveHistory || [],
-          };
-          setCurrentPerson(updated);
-          setSelectedEmployeeId(updated.empId);
-          setSelectedUserId("");
-          setEmployees((prev) =>
-            prev.length
-              ? prev.map((p) => (String(p.empId) === String(updated.empId) ? updated : p))
-              : prev
-          );
-          localStorage.setItem("leaveTracker:lastSelection", JSON.stringify({ type: "employee", id: updated.empId }));
-        }
-      }
-      setSelectedMonth(null);
-    } catch (err) {
-      console.error("Error refreshing after save:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const refreshAfterSave = async (targetId, wasUser) => {
+  //   setLoading(true);
+  //   try {
+  //     if (wasUser) {
+  //       const det = await axios.get(`${API_BASE_URL}/api/user/${targetId}`);
+  //       const u = det?.data?.user;
+  //       if (u) {
+  //         const updated = {
+  //           empId: u._id || u.userId,
+  //           name: u.userName || u.name,
+  //           email: u.userEmail || u.email,
+  //           department: u.role || "User",
+  //           leaveHistory: u.leaveHistory || [],
+  //         };
+  //         setCurrentPerson(updated);
+  //         setSelectedUserId(updated.empId);
+  //         setSelectedEmployeeId("");
+  //         setUsers((prev) =>
+  //           prev.length
+  //             ? prev.map((p) => (String(p.empId) === String(updated.empId) ? updated : p))
+  //             : prev
+  //         );
+  //         localStorage.setItem("leaveTracker:lastSelection", JSON.stringify({ type: "user", id: updated.empId }));
+  //       }
+  //     } else {
+  //       const det = await axios.get(`${API_BASE_URL}/api/employee/${targetId}`);
+  //       const e = det?.data?.employee;
+  //       if (e) {
+  //         const updated = {
+  //           empId: e._id || e.empId,
+  //           name: e.name || e.userName,
+  //           email: e.email || e.userEmail,
+  //           department: e.department || e.role || "User",
+  //           leaveHistory: e.leaveHistory || [],
+  //         };
+  //         setCurrentPerson(updated);
+  //         setSelectedEmployeeId(updated.empId);
+  //         setSelectedUserId("");
+  //         setEmployees((prev) =>
+  //           prev.length
+  //             ? prev.map((p) => (String(p.empId) === String(updated.empId) ? updated : p))
+  //             : prev
+  //         );
+  //         localStorage.setItem("leaveTracker:lastSelection", JSON.stringify({ type: "employee", id: updated.empId }));
+  //       }
+
+  //       if (person) setCurrentPerson(person);
+  //       setSelectedUserId(restoreIsUser ? restoreId : "");
+  //       setSelectedEmployeeId(!restoreIsUser ? restoreId : "");
+  //     }
+  //     // *** MODIFICATION END ***
+      
+  //     setSelectedMonth(null); // Clear selected month to force month list re-render
+  //   } catch (err) {
+  //     console.error("Error refreshing after save:", err);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   // Add leave modal open/reset behavior already handled in handleOpenAddLeave
   // small UI helpers:
@@ -462,7 +468,7 @@ const LeaveTracker = () => {
 
           {/* Employee Selector (admins only) */}
           <div className="mb-6">
-            {user && user.role !== "user" && user.role !== 'employee' && (
+            {authUser && role !== "user" && role !== 'employee' && role !== 'accountant' && (
               <>
                 <div className="flex justify-start space-x-1 mb-3">
                   <input
@@ -510,10 +516,10 @@ const LeaveTracker = () => {
                     </option>
                   ))}
                 </select>
-            </div>
-            </>
-        )}
-      </div>
+              </div>
+              </>
+            )}
+          </div>
 
 
           {/* Add Leave Button */}
@@ -580,7 +586,11 @@ const LeaveTracker = () => {
                   ?.filter((leave) => {
                     const start = new Date(leave.startDate);
                     const [year, month] = selectedMonth.split("-");
-                    return start.getFullYear() === parseInt(year) && start.getMonth() + 1 === parseInt(month);
+                    // Filter leaves that span or start in the selected month
+                    return (
+                        (start.getFullYear() === parseInt(year) && start.getMonth() + 1 === parseInt(month)) ||
+                        (new Date(leave.endDate).getFullYear() === parseInt(year) && new Date(leave.endDate).getMonth() + 1 === parseInt(month))
+                    );
                   })
                   .map((leave, idx) => (
                     <div key={idx} className={`p-4 rounded-lg shadow-md ${LeaveTypeColors[leave.type] || ""}`}>
@@ -667,8 +677,10 @@ const LeaveTracker = () => {
                   <button onClick={() => setShowAddLeaveModal(false)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
                     Cancel
                   </button>
-                  <button onClick={handleSaveLeave} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
-                    Save
+                  <button onClick={handleSaveLeave} className={`px-4 py-2 rounded ${
+                      saving ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
+                    } text-white`}>
+                    {saving ? "Saving..." : "Save"}
                   </button>
                 </div>
               </div>

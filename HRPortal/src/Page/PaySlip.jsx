@@ -9,6 +9,11 @@ import Loader from '../Components/Loader/Loader';
 import ErrorToast from '../Components/Toaster/ErrorToaster';
 import SuccessToast from '../Components/Toaster/SuccessToaser';
 import { companyDetails } from '../Constant/constant';
+import TemplateClassic from '../templates/TemplateClassic';
+import TemplateCorporate from '../templates/TemplateCorporate';
+import TemplateMinimal from '../templates/TemplateMinimal';
+import TemplateModern from '../templates/TemplateModern';
+import TemplateDefault from '../templates/TemplateDefault';
 
 const PayslipGenerator = () => {
     const payslipRef = useRef();
@@ -20,9 +25,15 @@ const PayslipGenerator = () => {
     const [taxType, setTaxType] = useState("Professional Tax");
     const [loading, setLoading] = useState(true);
     const [toastSuccessMessage, setToastSuccessMessage] = useState();
-        const [toastErrorMessage, setToastErrorMessage] = useState();
-        const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
-        const [toastErrorVisible, setToastErrorVisible] = useState(false);
+    const [toastErrorMessage, setToastErrorMessage] = useState();
+    const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
+    const [toastErrorVisible, setToastErrorVisible] = useState(false);
+    
+    // NEW: state to show template selection after clicking generate
+    const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+    const [activeTemplate, setActiveTemplate] = useState("classic");
+    const [finalTemplate, setFinalTemplate] = useState(null);
+    const [showPayslipPreview, setShowPayslipPreview] = useState(false);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -51,6 +62,7 @@ const PayslipGenerator = () => {
         fetchEmployees();
         return () => controller.abort();
     }, [])
+
     const [employeeData, setEmployeeData] = useState({
         name: '',
         employeeId: '',
@@ -68,7 +80,40 @@ const PayslipGenerator = () => {
         uanNumber: '',
     });
 
-    const [showPayslip, setShowPayslip] = useState(false);
+    const renderTemplate = (template) => {
+        if (!template) return null;
+
+        const calculations = {
+            totalEarnings: calculateTotalEarnings().toFixed(2),
+            totalDeductions: Object.values(calculateDeductions())
+                .reduce((a, b) => a + b, 0)
+                .toFixed(2),
+            netSalary: calculateNetSalary().toFixed(2),
+            deductions: calculateDeductions(),
+        };
+
+        const props = {
+            data: employeeData,
+            company: companyDetails,
+            calculations,
+        };
+
+        switch (template) {
+            case "classic":
+                return <TemplateClassic {...props} />;
+            case "modern":
+                return <TemplateModern {...props} />;
+            case "minimal":
+                return <TemplateMinimal {...props} />;
+            case "corporate":
+                return <TemplateCorporate {...props} />;
+            case "Default":
+                return <TemplateDefault {...props} />;
+            default:
+                return null;
+        }
+    };
+
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -99,40 +144,23 @@ const PayslipGenerator = () => {
             });
         }
         else{
-            // alert("employee detail not available");
             setToastErrorMessage("employee detail not available");
-                setToastErrorVisible(true);
-                setTimeout(() => setToastErrorVisible(false), 3500);
+            setToastErrorVisible(true);
+            setTimeout(() => setToastErrorVisible(false), 3500);
         }
     };
 
-    // const calculateDeductions = () => {
-    //     const salary = parseFloat(employeeData.salary) || 0;
-    //     const pf = salary * 0.12;
-    //     const professionalTax = 200;
-    //     const incomeTax = salary * 0.1;
-    //     return { pf, professionalTax, incomeTax };
-    // };
     const calculateDeductions = () => {
         const salary = parseFloat(employeeData.salary) || 0;
-        const incomeTax = 0;
         if(taxType==='Professional Tax'){
             return { professionalTax };
         }
         else{
             return { TDS: salary * 0.1 };
         }
-        // if(taxType==='Professional Tax'){
-        //     return { professionalTax, incomeTax };
-        // }
-        // else{
-        //     return { TDS: salary * 0.1, incomeTax };
-        // }
     };
 
     const calculateTotalEarnings = () => {
-        
-
         return (
             (parseFloat(employeeData.salary) || 0) +
             (parseFloat(employeeData.hra) || 0) +
@@ -142,100 +170,32 @@ const PayslipGenerator = () => {
         );
     };
 
-    // const calculateNetSalary = () => {
-    //     const totalEarnings = calculateTotalEarnings();
-    //     const { pf, professionalTax, incomeTax } = calculateDeductions();
-    //     return totalEarnings - (pf + professionalTax + incomeTax);
-    // };
-
     const calculateNetSalary = () => {
         const totalEarnings = calculateTotalEarnings();
         if(taxType==="Professional Tax"){
-            const { professionalTax, incomeTax } = calculateDeductions();
-            // return totalEarnings - (professionalTax + incomeTax);
-            return totalEarnings - (professionalTax);
+            const { professionalTax } = calculateDeductions();
+            return totalEarnings - professionalTax;
         }
         else{
-            const { TDS, incomeTax } = calculateDeductions();
-            // return totalEarnings - (professionalTax + incomeTax);
-            return totalEarnings - (TDS);
-
+            const { TDS } = calculateDeductions();
+            return totalEarnings - TDS;
         }
     };
 
-    const handleGeneratePayslip = async (e) => {
+    const handleGeneratePayslip = (e) => {
         e.preventDefault();
-        setLoading(true);
-        const taxName = document.querySelector('input[name="tax"]:checked');
-        if (taxName) {
-            setTaxType(taxName.value); // This will set the value of the selected radio button
+
+        // validation (optional)
+        if (!employeeData.name || !employeeData.month) {
+            setToastErrorMessage("Please fill required fields");
+            setToastErrorVisible(true);
+            setTimeout(() => setToastErrorVisible(false), 3000);
+            return;
         }
 
-        setPayslip({
-            name: employeeData.name,
-            employeeId: employeeData.employeeId,
-            department: employeeData.department,
-            designation: employeeData.designation,
-            month: employeeData.month,
-            salary: employeeData.salary,
-            hra: employeeData.hra,
-            conveyanceAllowance: employeeData.conveyanceAllowance,
-            medicalAllowance: employeeData.medicalAllowance,
-            specialAllowance: employeeData.specialAllowance,
-            bankAccount: employeeData.bankAccount,
-            panNumber: employeeData.panNumber,
-            uanNumber: employeeData.uanNumber,
-            professionalTax: professionalTax,
-            incomeTax: employeeData.salary * 0.1,
-            totalEarnings: calculateTotalEarnings().toFixed(2),
-            netSalary: calculateNetSalary().toFixed(2),
-            totalDeductions: Object.values(calculateDeductions())
-                .reduce((acc, cur) => acc + cur, 0)
-                .toFixed(2),
-            generatedBy: user.userName,
-            taxType: taxName.value
-            }
-        );
-
-
-        const response = await axios.post(`${API_BASE_URL}/api/payslip/generate`,{
-            name: employeeData.name,
-            employeeId: employeeData.employeeId,
-            department: employeeData.department,
-            designation: employeeData.designation,
-            month: employeeData.month,
-            salary: employeeData.salary,
-            hra: employeeData.hra,
-            conveyanceAllowance: employeeData.conveyanceAllowance,
-            medicalAllowance: employeeData.medicalAllowance,
-            specialAllowance: employeeData.specialAllowance,
-            bankAccount: employeeData.bankAccount,
-            panNumber: employeeData.panNumber,
-            uanNumber: employeeData.uanNumber,
-            professionalTax: professionalTax,
-            incomeTax: employeeData.salary * 0.1,
-            totalEarnings: calculateTotalEarnings().toFixed(2),
-            netSalary: calculateNetSalary().toFixed(2),
-            totalDeductions: Object.values(calculateDeductions())
-                .reduce((acc, cur) => acc + cur, 0)
-                .toFixed(2),
-            generatedBy: user.userName,
-            taxType: taxName.value
-            },
-        {
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            withCredentials: true
-        });
-
-        if(response.status===201){
-            console.log("Payslip saved");
-            setLoading(false);
-        }
-
-        setShowPayslip(true);
+        setShowTemplateDialog(true);
     };
+
 
     const handleReset = () => {
         setEmployeeData({
@@ -254,7 +214,10 @@ const PayslipGenerator = () => {
             panNumber: '',
             uanNumber: '',
         });
-        setShowPayslip(false);
+        setShowPayslipPreview(false);
+        
+        setTemplateForPDF(null);
+        setShowTemplateSelection(false);
     };
 
     const generatePDF = async () => {
@@ -263,25 +226,30 @@ const PayslipGenerator = () => {
         setIsGeneratingPDF(true);
         try {
             const canvas = await html2canvas(payslipRef.current, {
-                scale: 2,
+                scale: 3,
+                useCORS: true,
                 logging: false,
-                useCORS: true
             });
 
-            const imgWidth = 208; // A4 width in mm
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = 210;
+            const pdfHeight = 297;
+            const imgWidth = pdfWidth;
+            const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-            pdf.addImage(
-                canvas.toDataURL('image/png'),
-                'PNG',
-                0,
-                0,
-                imgWidth,
-                imgHeight,
-                undefined,
-                'FAST'
-            );
+            let position = 0;
+            let remainingHeight = imgHeight;
+
+            while (remainingHeight > 0) {
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                remainingHeight -= pdfHeight;
+
+                if (remainingHeight > 0) {
+                    pdf.addPage();
+                    position = -pdfHeight * (imgHeight / pdfHeight);
+                }
+            }
 
             pdf.save(`payslip-${employeeData.name}-${employeeData.month}.pdf`);
         } catch (error) {
@@ -292,9 +260,7 @@ const PayslipGenerator = () => {
     };
 
     if(loading){
-        return (
-            <Loader/>
-        )
+        return <Loader/>
     }
 
     return (
@@ -410,7 +376,7 @@ const PayslipGenerator = () => {
                             </div>
                         ))}
                     </div>
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 justify-end">
                         <button
                             type="submit"
                             className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
@@ -428,142 +394,92 @@ const PayslipGenerator = () => {
                 </form>
             </div>
 
-            {showPayslip && (
+            {/* NEW: Template selection dialog after clicking generate */}
+            {showTemplateDialog && (
+                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+                    <div className="bg-white rounded-xl w-[90%] max-w-4xl max-h-[90vh] p-5 flex flex-col">
+
+                        {/* HEADER */}
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-semibold">Select Payslip Template</h3>
+                            <button
+                                onClick={() => setShowTemplateDialog(false)}
+                                className="text-gray-500 hover:text-gray-800"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* TABS */}
+                        <div className="flex gap-3 mb-4">
+                            {["classic", "modern", "minimal", "corporate", "Default"].map(tpl => (
+                                <button
+                                    key={tpl}
+                                    onClick={() => setActiveTemplate(tpl)}
+                                    className={`px-3 py-1.5 rounded-md text-sm font-medium
+                                        ${activeTemplate === tpl
+                                            ? "bg-indigo-600 text-white"
+                                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                                >
+                                    {tpl.charAt(0).toUpperCase() + tpl.slice(1)}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* PREVIEW */}
+                        <div className="border rounded-lg p-3 h-[420px] overflow-auto bg-gray-50">
+                            {renderTemplate(activeTemplate)}
+                        </div>
+
+                        {/* ACTION */}
+                        <div className="flex justify-end gap-4 mt-6">
+                            <button
+                                onClick={() => setShowTemplateDialog(false)}
+                                className="px-5 py-2 rounded-lg bg-gray-200 text-gray-700"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    setFinalTemplate(activeTemplate);
+                                    setShowTemplateDialog(false);
+                                    setShowPayslipPreview(true);
+
+                                    setToastSuccessMessage("Payslip generated successfully");
+                                    setToastSuccessVisible(true);
+                                    setTimeout(() => setToastSuccessVisible(false), 3000);
+                                }}
+                                className="px-6 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+                            >
+                                Select Template
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+
+            {/* Show Payslip preview after selecting template */}
+            {showPayslipPreview && finalTemplate && (
                 <>
                     <div className="flex justify-end mb-4">
                         <button
                             onClick={generatePDF}
                             disabled={isGeneratingPDF}
-                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center gap-2 px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                         >
-                            <Download size={20} />
-                            {isGeneratingPDF ? 'Generating PDF...' : 'Download PDF'}
+                            <Download size={18} />
+                            {isGeneratingPDF ? "Generating..." : "Download PDF"}
                         </button>
                     </div>
 
-                    <div ref={payslipRef} className="bg-white shadow-md rounded-lg p-6 mt-6">
-                        <div className="border-b pb-6 mb-6">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <h1 className="text-2xl font-bold text-indigo-600 mb-2">{companyDetails.name}</h1>
-                                    <p className="text-gray-600">{companyDetails.address}</p>
-                                    <p className="text-gray-600">{companyDetails.city}</p>
-                                    <div className="mt-2 text-sm">
-                                        <p><span className="font-medium">GST:</span> {companyDetails.gst}</p>
-                                        <p><span className="font-medium">CIN:</span> {companyDetails.cin}</p>
-                                    </div>
-                                </div>
-                                <div className="text-right text-sm">
-                                    <p className="flex items-center justify-end gap-2">
-                                        <Phone size={16} />
-                                        {companyDetails.phone}
-                                    </p>
-                                    <p className="flex items-center justify-end gap-2">
-                                        <Mail size={16} />
-                                        {companyDetails.email}
-                                    </p>
-                                    <p className="text-gray-600">{companyDetails.website}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-2 gap-8">
-                                <div className="bg-gray-50 p-4 rounded-lg">
-                                    <h3 className="text-lg font-semibold mb-3">Employee Details</h3>
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                        <div>
-                                            <p className="font-medium">Name:</p>
-                                            <p>{employeeData.name}</p>
-                                        </div>
-                                        <div>
-                                            <p className="font-medium">Employee ID:</p>
-                                            <p>{employeeData.employeeId}</p>
-                                        </div>
-                                        <div>
-                                            <p className="font-medium">Department:</p>
-                                            <p>{employeeData.department}</p>
-                                        </div>
-                                        <div>
-                                            <p className="font-medium">Designation:</p>
-                                            <p>{employeeData.designation}</p>
-                                        </div>
-                                        <div>
-                                            <p className="font-medium">PAN:</p>
-                                            <p>{employeeData.panNumber}</p>
-                                        </div>
-                                        <div>
-                                            <p className="font-medium">UAN:</p>
-                                            <p>{employeeData.uanNumber}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-gray-50 p-4 rounded-lg">
-                                    <h3 className="text-lg font-semibold mb-3">Payment Details</h3>
-                                    <div className="space-y-2 text-sm">
-                                        <p><span className="font-medium">Bank Account:</span> {employeeData.bankAccount}</p>
-                                        <p><span className="font-medium">Payment Month:</span> {employeeData.month}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-8">
-                                <div>
-                                    <h3 className="text-lg font-semibold mb-3">Earnings</h3>
-                                    <div className="space-y-2 bg-gray-50 p-4 rounded-lg">
-                                        {[
-                                            { label: 'Basic Salary', key: 'salary' },
-                                            // { label: 'HRA', key: 'hra' },
-                                            // { label: 'Conveyance Allowance', key: 'conveyanceAllowance' },
-                                            // { label: 'Medical Allowance', key: 'medicalAllowance' },
-                                            // { label: 'Special Allowance', key: 'specialAllowance' },
-                                        ].map(({ label, key }) => (
-                                            <div key={key} className="flex justify-between">
-                                                <span>{label}</span>
-                                                <span>₹{parseFloat(employeeData[key] || 0).toFixed(2)}</span>
-                                            </div>
-                                        ))}
-                                        <div className="border-t pt-2 mt-2 font-semibold">
-                                            <div className="flex justify-between">
-                                                <span>Total Earnings</span>
-                                                <span>₹{calculateTotalEarnings().toFixed(2)}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h3 className="text-lg font-semibold mb-3">Deductions</h3>
-                                    <div className="space-y-2 bg-gray-50 p-4 rounded-lg">
-                                        {Object.entries(calculateDeductions()).map(([key, value]) => (
-                                            <div key={key} className="flex justify-between">
-                                                <span>{key.replace(/([A-Z])/g, ' $1')}</span>
-                                                <span>₹{value.toFixed(2)}</span>
-                                            </div>
-                                        ))}
-                                        <div className="border-t pt-2 mt-2 font-semibold">
-                                            <div className="flex justify-between">
-                                                <span>Total Deductions</span>
-                                                <span>₹{Object.values(calculateDeductions())
-                                                    .reduce((acc, cur) => acc + cur, 0)
-                                                    .toFixed(2)}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="mt-6 p-4 bg-indigo-50 rounded-lg">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xl font-bold">Net Salary</span>
-                                    <span className="text-xl font-bold">₹{calculateNetSalary().toFixed(2)}</span>
-                                </div>
-                            </div>
-                        </div>
+                    <div ref={payslipRef}>
+                        {renderTemplate(finalTemplate)}
                     </div>
                 </>
             )}
+
         </div>
         </>
     );
