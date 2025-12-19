@@ -11,6 +11,8 @@
   "author": "Bhadrika Raval",
   "license": "ISC",
   "dependencies": {
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "axios": "^1.13.2",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^1.41.3",
@@ -22,7 +24,9 @@
     "dotenv": "^16.4.7",
     "express": "^4.22.1",
     "express-session": "^1.18.1",
+    "fs-extra": "^11.3.2",
     "helmet": "^8.0.0",
+    "isomorphic-fetch": "^3.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.21.0",
     "mongoose": "^8.9.2",
@@ -33,6 +37,7 @@
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "sequence": "^3.0.0",
+    "unzipper": "^0.12.3",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

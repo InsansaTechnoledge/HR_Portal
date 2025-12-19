@@ -1,9 +1,12 @@
 import express from "express";
-import upload from "../middleware/upload.js";
-import { uploadResume } from "../controller/jobApplicationController.js";
+//Middleware
+import uploadResume from "../middleware/uploadResume.js";
+
+//Controller
+import {uploadResumeController} from "../controller/jobApplicationController.js";
 
 const router = express.Router();
 
-router.post("/:applicationId/resume", upload.single("resume"), uploadResume);
+router.post("/:applicationId/resume", uploadResume.single("resume"), uploadResumeController);
 
 export default router;

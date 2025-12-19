@@ -30,6 +30,11 @@ const JobApplication = () => {
   const [excelFile, setExcelFile] = useState(null);
   const [failedRows, setFailedRows] = useState([]);
   const [error, setError] = useState(null);
+  const [resumeModalOpen, setResumeModalOpen] = useState(false);
+  const [resumeFile, setResumeFile] = useState(null);
+  const [resumeUploading, setResumeUploading] = useState(false);
+  const [resumeTarget, setResumeTarget] = useState(null);
+  const [zipFile, setZipFile] = useState(null);
 
   const fetchApplications = async () => {
     try {
@@ -40,6 +45,60 @@ const JobApplication = () => {
     } catch (err) {
       console.error("Error fetching applications:", err);
       setApplications([]);
+    }
+  };
+
+  const openResumeModal = (application) => {
+    setResumeTarget(application);
+    setResumeFile(null);
+    setResumeModalOpen(true);
+  };
+
+  const closeResumeModal = () => {
+    setResumeModalOpen(false);
+    setResumeTarget(null);
+    setResumeFile(null);
+  };
+
+  const handleResumeUpload = async () => {
+    try {
+      if (!resumeTarget?._id) {
+        toast.error("No application selected");
+        return;
+      }
+      if (!resumeFile) {
+        toast.error("Please choose a resume file (PDF/Doc)");
+        return;
+      }
+
+      setResumeUploading(true);
+      const formData = new FormData();
+      formData.append("resume", resumeFile);
+
+      const resp = await axios.post(
+        `${API_BASE_URL}/api/job-application/${resumeTarget._id}/resume`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      const newUrl = resp.data?.resumeUrl;
+      if (newUrl) {
+        setApplications((prev) =>
+          prev.map((app) =>
+            app._id === resumeTarget._id ? { ...app, resume: newUrl } : app
+          )
+        );
+      }
+
+      toast.success(resp.data?.message || "Resume uploaded successfully");
+      closeResumeModal();
+    } catch (err) {
+      console.error("Resume upload failed", err);
+      toast.error(err.response?.data?.message || "Failed to upload resume");
+    } finally {
+      setResumeUploading(false);
     }
   };
 
@@ -180,8 +239,8 @@ const JobApplication = () => {
 
         //  Handle full / partial success
         if (failedCount > 0) {
-         toast.error("Bulk upload completed with some failures.");
-         setError("Some rows failed to upload.");
+          toast.error("Bulk upload completed with some failures.");
+          setError("Some rows failed to upload.");
           setFailedRows(failedRows);
         } else {
           toast.success("Bulk upload successful!");
@@ -269,6 +328,17 @@ const JobApplication = () => {
     setSelectedApplicant(null);
   };
 
+  const uploadBulkResumes = async () => {
+    if (!zipFile) return alert("Upload ZIP file");
+
+    const formData = new FormData();
+    formData.append("zip", zipFile);
+
+    await axios.post(`${API_BASE_URL}/api/bulk-upload/resumes`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  };
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <Toaster position="top-right" reverseOrder={false} />
@@ -289,7 +359,7 @@ const JobApplication = () => {
               className="w-full py-2.5 px-2 bg-white focus:outline-none text-gray-700"
             />
           </div>
-          
+
           <select
             className="py-2.5 px-4 border border-gray-300 rounded-lg bg-white text-gray-700 font-medium hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-sm"
             value={statusFilter}
@@ -311,7 +381,9 @@ const JobApplication = () => {
                 className="hidden"
               />
               <span className="px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 font-medium hover:border-blue-500 hover:bg-gray-50 transition cursor-pointer inline-block shadow-sm">
-                {excelFile ? excelFile.name.substring(0, 15) + "..." : "Choose File"}
+                {excelFile
+                  ? excelFile.name.substring(0, 15) + "..."
+                  : "Choose File"}
               </span>
             </label>
             <button
@@ -320,6 +392,20 @@ const JobApplication = () => {
               disabled={loading || !excelFile}
             >
               {loading ? "Uploading..." : "Bulk Upload"}
+            </button>
+          </div>
+          <div>
+            <input
+              type="file"
+              accept=".zip"
+              onChange={(e) => setZipFile(e.target.files[0])}
+            />
+
+            <button
+              className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium rounded-lg hover:from-purple-700 hover:to-purple-800 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
+              onClick={uploadBulkResumes}
+            >
+              Upload Resume Zip
             </button>
           </div>
 
@@ -331,57 +417,82 @@ const JobApplication = () => {
           </button>
 
           {failedRows.length > 0 && (
-            <button onClick={handleDownloadFailedRows}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+            <button
+              onClick={handleDownloadFailedRows}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
               Download Failed Rows
             </button>
           )}
         </div>
 
         {/* Applications Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse bg-white">
+        <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-200">
+          <table className="w-full border-collapse">
             <thead>
-              <tr className="border-b">
-                <th className="p-2 text-left font-semibold text-gray-700">
-                  Name
+              <tr className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 text-white">
+                <th className="px-6 py-4 text-left font-semibold text-sm uppercase tracking-wider">
+                  👤 Name
                 </th>
-                <th className="p-2 text-left font-semibold text-gray-700">
-                  Email
+                <th className="px-6 py-4 text-left font-semibold text-sm uppercase tracking-wider">
+                  ✉️ Email
                 </th>
-                <th className="p-2 text-left font-semibold text-gray-700">
-                  Phone
+                <th className="px-6 py-4 text-left font-semibold text-sm uppercase tracking-wider">
+                  📞 Phone
                 </th>
-                <th className="p-2 text-left font-semibold text-gray-700">
-                  Position
+                <th className="px-6 py-4 text-left font-semibold text-sm uppercase tracking-wider">
+                  💼 Position
                 </th>
-                <th className="p-2 text-left font-semibold text-gray-700">
-                  Applied Date
+                <th className="px-6 py-4 text-left font-semibold text-sm uppercase tracking-wider">
+                  📊 Status
                 </th>
-                <th className="p-2 text-left font-semibold text-gray-700">
-                  Status
+                <th className="px-6 py-4 text-left font-semibold text-sm uppercase tracking-wider">
+                  📄 Resume
                 </th>
-                <th className="p-2 text-right font-semibold text-gray-700">
-                  Actions
+                <th className="px-6 py-4 text-center font-semibold text-sm uppercase tracking-wider">
+                  ⚙️ Actions
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white">
               {filteredApplications &&
                 filteredApplications.length !== 0 &&
-                filteredApplications.map((app) => (
-                  <tr key={app._id} className="border-b hover:bg-gray-100">
+                filteredApplications.map((app, index) => (
+                  <tr 
+                    key={app._id} 
+                    className={`border-b transition-all hover:shadow-md ${
+                      index % 2 === 0 ? "bg-white" : "bg-blue-50/50"
+                    } hover:bg-blue-100/40`}
+                  >
                     {console.log(app)}
-                    <td className="p-2 text-gray-700">{app.name}</td>
-                    <td className="p-2 text-gray-700">{app.email}</td>
-                    <td className="p-2 text-gray-700">{app.phone}</td>
-                    <td className="p-2 text-gray-700">{app.position}</td>
-                    <td className="p-2 text-gray-700">{app.applicationDate}</td>
-                    <td className="p-2">
+                    <td className="px-6 py-4 text-gray-800 font-medium">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                          {app.name?.charAt(0).toUpperCase()}
+                        </div>
+                        <span>{app.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-gray-600 text-sm hover:text-blue-600 cursor-pointer">
+                      {app.email}
+                    </td>
+                    <td className="px-6 py-4 text-gray-600 font-medium">
+                      {app.phone}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-block px-4 py-2 bg-gradient-to-r from-purple-100 to-purple-50 text-purple-800 rounded-lg font-semibold text-sm border border-purple-200">
+                        {app.jobTitle}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
                       <select
-                        className={`border rounded-lg p-2 ${
-                          statusStyles[app.status]?.color || "text-gray-600"
-                        } focus:outline-none`}
+                        className={`px-4 py-2 rounded-lg font-semibold text-sm border-2 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all ${
+                          app.status === "Under Review"
+                            ? "border-yellow-300 bg-yellow-50 text-yellow-700 focus:ring-yellow-500"
+                            : app.status === "Selected"
+                            ? "border-green-300 bg-green-50 text-green-700 focus:ring-green-500"
+                            : "border-red-300 bg-red-50 text-red-700 focus:ring-red-500"
+                        }`}
                         value={app.status}
                         onChange={(e) =>
                           handleStatusChange(app._id, e.target.value)
@@ -394,29 +505,51 @@ const JobApplication = () => {
                         ))}
                       </select>
                     </td>
-                    <td className="p-2 text-right">
-                      <div className="flex space-x-2 justify-end">
+
+                    <td className="px-6 py-4">
+                      {!app.resume || app.resume === "BULK_UPLOAD_PENDING" ? (
                         <button
-                          className="flex items-center px-3 py-1 text-sm bg-gray-100 rounded-lg hover:bg-gray-200"
-                          onClick={() => handleViewProfile(app.applicantId)}
+                          className="inline-flex items-center px-4 py-2 text-sm font-semibold bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 hover:shadow-md transition-all transform hover:scale-105"
+                          onClick={() => openResumeModal(app)}
                         >
-                          <Eye className="mr-1 h-4 w-4" /> View Profile
+                          Upload
                         </button>
-                        <button
-                          className="flex items-center px-3 py-1 text-sm bg-gray-100 rounded-lg hover:bg-gray-200"
-                          onClick={() => window.open(app.resumeLink, "_blank")}
+                      ) : (
+                        <a
+                          className="inline-flex items-center px-4 py-2 text-sm font-semibold bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 rounded-lg hover:shadow-md hover:from-green-200 hover:to-emerald-200 transition-all transform hover:scale-105"
+                          href={app.resume}
+                          target="_blank"
+                          rel="noopener noreferrer"
                         >
-                          <FileText className="mr-1 h-4 w-4" /> View Resume
-                        </button>
-                      </div>
+                          <FileText className="mr-2 h-4 w-4" />
+                          View
+                        </a>
+                      )}
+                    </td>
+
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        className="inline-flex items-center px-4 py-2 text-sm font-semibold bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:shadow-lg hover:from-blue-600 hover:to-blue-700 transition-all transform hover:scale-105 active:scale-95"
+                        onClick={() => handleViewProfile(app.applicantId)}
+                      >
+                        <Eye className="mr-2 h-4 w-4" /> View Profile
+                      </button>
                     </td>
                   </tr>
                 ))}
             </tbody>
           </table>
           {filteredApplications && filteredApplications.length === 0 && (
-            <div className="text-center py-6 text-gray-500">
-              No job applications found
+            <div className="text-center py-12 bg-gradient-to-br from-gray-50 to-blue-50">
+              <div className="flex flex-col items-center space-y-3">
+                <FileText className="h-12 w-12 text-gray-300" />
+                <p className="text-lg font-semibold text-gray-500">
+                  No job applications found
+                </p>
+                <p className="text-sm text-gray-400">
+                  Try adjusting your search or filters
+                </p>
+              </div>
             </div>
           )}
         </div>
@@ -605,6 +738,59 @@ const JobApplication = () => {
                 className="px-8 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition transform hover:scale-105 active:scale-95"
               >
                 Close Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Resume Upload Modal */}
+      {resumeModalOpen && resumeTarget ? (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-800">
+                Upload Resume
+              </h3>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={closeResumeModal}
+              >
+                <XIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-600">
+              Candidate:{" "}
+              <span className="font-medium">{resumeTarget.name}</span>
+            </p>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Resume File
+              </label>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+                className="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-2">
+              <button
+                className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
+                onClick={closeResumeModal}
+                disabled={resumeUploading}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                onClick={handleResumeUpload}
+                disabled={resumeUploading}
+              >
+                {resumeUploading ? "Uploading..." : "Upload"}
               </button>
             </div>
           </div>
