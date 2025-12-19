@@ -427,72 +427,45 @@ const JobApplication = () => {
         </div>
 
         {/* Applications Table */}
-        <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-200">
-          <table className="w-full border-collapse">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse bg-white">
             <thead>
-              <tr className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 text-white">
-                <th className="px-6 py-4 text-left font-semibold text-sm uppercase tracking-wider">
-                  👤 Name
+              <tr className="border-b">
+                <th className="p-2 text-left font-semibold text-gray-700">
+                  Name
                 </th>
-                <th className="px-6 py-4 text-left font-semibold text-sm uppercase tracking-wider">
-                  ✉️ Email
+                <th className="p-2 text-left font-semibold text-gray-700">
+                  Email
                 </th>
-                <th className="px-6 py-4 text-left font-semibold text-sm uppercase tracking-wider">
-                  📞 Phone
+                <th className="p-2 text-left font-semibold text-gray-700">
+                  Phone
                 </th>
-                <th className="px-6 py-4 text-left font-semibold text-sm uppercase tracking-wider">
-                  💼 Position
+                <th className="p-2 text-left font-semibold text-gray-700">
+                  Position
                 </th>
-                <th className="px-6 py-4 text-left font-semibold text-sm uppercase tracking-wider">
-                  📊 Status
+                <th className="p-2 text-left font-semibold text-gray-700">
+                  Status
                 </th>
-                <th className="px-6 py-4 text-left font-semibold text-sm uppercase tracking-wider">
-                  📄 Resume
-                </th>
-                <th className="px-6 py-4 text-center font-semibold text-sm uppercase tracking-wider">
-                  ⚙️ Actions
+                <th className="p-2 text-right font-semibold text-gray-700">
+                  Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white">
+            <tbody>
               {filteredApplications &&
                 filteredApplications.length !== 0 &&
-                filteredApplications.map((app, index) => (
-                  <tr 
-                    key={app._id} 
-                    className={`border-b transition-all hover:shadow-md ${
-                      index % 2 === 0 ? "bg-white" : "bg-blue-50/50"
-                    } hover:bg-blue-100/40`}
-                  >
+                filteredApplications.map((app) => (
+                  <tr key={app._id} className="border-b hover:bg-gray-100">
                     {console.log(app)}
-                    <td className="px-6 py-4 text-gray-800 font-medium">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
-                          {app.name?.charAt(0).toUpperCase()}
-                        </div>
-                        <span>{app.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600 text-sm hover:text-blue-600 cursor-pointer">
-                      {app.email}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600 font-medium">
-                      {app.phone}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-block px-4 py-2 bg-gradient-to-r from-purple-100 to-purple-50 text-purple-800 rounded-lg font-semibold text-sm border border-purple-200">
-                        {app.jobTitle}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
+                    <td className="p-2 text-gray-700">{app.name}</td>
+                    <td className="p-2 text-gray-700">{app.email}</td>
+                    <td className="p-2 text-gray-700">{app.phone}</td>
+                    <td className="p-2 text-gray-700">{app.jobTitle}</td>
+                    <td className="p-2">
                       <select
-                        className={`px-4 py-2 rounded-lg font-semibold text-sm border-2 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all ${
-                          app.status === "Under Review"
-                            ? "border-yellow-300 bg-yellow-50 text-yellow-700 focus:ring-yellow-500"
-                            : app.status === "Selected"
-                            ? "border-green-300 bg-green-50 text-green-700 focus:ring-green-500"
-                            : "border-red-300 bg-red-50 text-red-700 focus:ring-red-500"
-                        }`}
+                        className={`border rounded-lg p-2 ${
+                          statusStyles[app.status]?.color || "text-gray-600"
+                        } focus:outline-none`}
                         value={app.status}
                         onChange={(e) =>
                           handleStatusChange(app._id, e.target.value)
@@ -505,51 +478,29 @@ const JobApplication = () => {
                         ))}
                       </select>
                     </td>
-
-                    <td className="px-6 py-4">
-                      {!app.resume || app.resume === "BULK_UPLOAD_PENDING" ? (
+                    <td className="p-2 text-right">
+                      <div className="flex space-x-2 justify-end">
                         <button
-                          className="inline-flex items-center px-4 py-2 text-sm font-semibold bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 hover:shadow-md transition-all transform hover:scale-105"
-                          onClick={() => openResumeModal(app)}
+                          className="flex items-center px-3 py-1 text-sm bg-gray-100 rounded-lg hover:bg-gray-200"
+                          onClick={() => handleViewProfile(app.applicantId)}
                         >
-                          Upload
+                          <Eye className="mr-1 h-4 w-4" /> View Profile
                         </button>
-                      ) : (
-                        <a
-                          className="inline-flex items-center px-4 py-2 text-sm font-semibold bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 rounded-lg hover:shadow-md hover:from-green-200 hover:to-emerald-200 transition-all transform hover:scale-105"
-                          href={app.resume}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 border border-slate-200"
+                          onClick={() => handleViewProfile(app.applicantId)}
                         >
-                          <FileText className="mr-2 h-4 w-4" />
-                          View
-                        </a>
-                      )}
-                    </td>
-
-                    <td className="px-6 py-4 text-center">
-                      <button
-                        className="inline-flex items-center px-4 py-2 text-sm font-semibold bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:shadow-lg hover:from-blue-600 hover:to-blue-700 transition-all transform hover:scale-105 active:scale-95"
-                        onClick={() => handleViewProfile(app.applicantId)}
-                      >
-                        <Eye className="mr-2 h-4 w-4" /> View Profile
-                      </button>
+                          <Eye className="h-4 w-4" /> View Profile
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
             </tbody>
           </table>
           {filteredApplications && filteredApplications.length === 0 && (
-            <div className="text-center py-12 bg-gradient-to-br from-gray-50 to-blue-50">
-              <div className="flex flex-col items-center space-y-3">
-                <FileText className="h-12 w-12 text-gray-300" />
-                <p className="text-lg font-semibold text-gray-500">
-                  No job applications found
-                </p>
-                <p className="text-sm text-gray-400">
-                  Try adjusting your search or filters
-                </p>
-              </div>
+            <div className="text-center py-6 text-gray-500">
+              No job applications found
             </div>
           )}
         </div>
