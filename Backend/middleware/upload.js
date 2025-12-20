@@ -6,7 +6,7 @@ import cloudinary from "../config/cloudinary.js";
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: "empl oyees/documents",
+    folder: "employees/documents",
     resource_type: "raw", // IMPORTANT for PDFs
     allowed_formats: ["pdf", "png", "jpg", "jpeg"],
     public_id: (req, file) => `${Date.now()}-${file.originalname}`,

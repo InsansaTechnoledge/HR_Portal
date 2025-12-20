@@ -1,12 +1,17 @@
+import dotenv from "dotenv";
+dotenv.config();
 import XLSX from "xlsx";
 import fs from "fs-extra";
 import bcrypt from "bcryptjs";
+import unzipper from "unzipper";
+import path from "path";
+import uploadToGoogleDrive from "../utils/googleDriveUpload.js";
 import Job from "../models/Job.js";
 import Applicant from "../models/Applicant.js";
 import JobApplication from "../models/JobApplications.js";
-import unzipper from "unzipper";
-import path from "path";
-import {uploadToOneDrive} from "../utils/oneDriveUpload.js";
+import User from "../models/User.js";
+import getOrCreateFolder from "../utils/googleDriveFolder.js";
+
 
 //Helper to recursively get all files in a directory
 const getAllFiles = async (dirPath, arrayOfFiles = []) => {
@@ -25,7 +30,6 @@ const getAllFiles = async (dirPath, arrayOfFiles = []) => {
 
   return arrayOfFiles;
 };
-
 
 export const bulkUploadJobApplications = async (req, res) => {
   try {
@@ -131,84 +135,81 @@ export const bulkUploadJobApplications = async (req, res) => {
   }
 };
 
+// Google Drive Bulk Upload
 export const bulkResumeUpload = async (req, res) => {
   try {
-    console.log("Controller reach");
     if (!req.file) {
       return res.status(400).json({ message: "ZIP file required" });
     }
 
-    console.log(req.file);
-
     const extractPath = path.join(process.cwd(), "temp_resumes");
-    console.log("Extracted", extractPath);
-    //Ensure temp directory
     await fs.ensureDir(extractPath);
 
-    //Extract ZIP
     await fs
       .createReadStream(req.file.path)
       .pipe(unzipper.Extract({ path: extractPath }))
       .promise();
 
-    //Read extracted files
     const files = await getAllFiles(extractPath);
-    console.log("All files:", files);
 
-    console.log("Files:", files);
     let successCount = 0;
     const failed = [];
+
+    const user = await User.findById(req.user.id).select(
+      "+googleDrive.refreshToken"
+    );
+
+    if (!user?.googleDrive?.refreshToken) {
+      return res.status(400).json({
+        message: "Google Drive not connected",
+      });
+    }
+
+    // CREATE FOLDER ONCE
+    const folderId = await getOrCreateFolder(
+      "Bulk_Resumes",
+      user.googleDrive.refreshToken
+    );
 
     for (const filePath of files) {
       const fileName = path.basename(filePath);
       const mobile = fileName.split(".")[0];
 
       if (!/^\d{10}$/.test(mobile)) {
-        failed.push({
-          file: fileName,
-          reason: "Invalid filename (mobile number)",
-        });
+        failed.push({ file: fileName, reason: "Invalid filename" });
         continue;
       }
 
       const application = await JobApplication.findOne({ phone: mobile });
       if (!application) {
-        failed.push({
-          file: fileName,
-          reason: "No application found for mobile",
-        });
+        failed.push({ file: fileName, reason: "No application found" });
         continue;
       }
 
-      const buffer = await fs.readFile(filePath);
-
-      const oneDriveUrl = await uploadToOneDrive(
-        req.oneDriveToken,
-        buffer,
-        fileName
+      const driveUrl = await uploadToGoogleDrive(
+        filePath,
+        fileName,
+        user.googleDrive.refreshToken,
+        folderId 
       );
-      
-     console.log("OneDrive Token:", req.oneDriveToken ? "EXISTS" : "MISSING");
-      console.log("OneDrive URL:", oneDriveUrl);
 
-      application.resume = oneDriveUrl;
-      application.resumeStorage = "BULK_RESUME_UPLOAD";
+      application.resume = driveUrl;
+      application.resumeStorage = "GOOGLE_DRIVE";
       await application.save();
 
       successCount++;
     }
 
-    // Cleanup
     await fs.remove(extractPath);
     await fs.remove(req.file.path);
 
-    res.status(200).json({
+    res.json({
       message: "Bulk resume upload completed",
       successCount,
       failed,
     });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
   }
 };

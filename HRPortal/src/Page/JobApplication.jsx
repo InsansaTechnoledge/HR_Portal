@@ -17,6 +17,7 @@ import {
   User,
   X as XIcon,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const JobApplication = () => {
   const [applications, setApplications] = useState([]);
@@ -35,6 +36,7 @@ const JobApplication = () => {
   const [resumeUploading, setResumeUploading] = useState(false);
   const [resumeTarget, setResumeTarget] = useState(null);
   const [zipFile, setZipFile] = useState(null);
+  const navigate = useNavigate();
 
   const fetchApplications = async () => {
     try {
@@ -124,6 +126,42 @@ const JobApplication = () => {
     },
   };
 
+  const connectGoogleDrive = async () => {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/api/google-drive/connect`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      // Redirect user to Google's OAuth consent page
+      window.location.href = response.data.url;
+    } catch (err) {
+      console.error("Error connecting Google Drive:", err);
+      toast.error(
+        err.response?.data?.message || "Failed to connect Google Drive"
+      );
+    }
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("connected");
+    const error = params.get("error");
+
+    if (connected === "google") {
+      toast.success("Google Drive connected successfully");
+      navigate("/application", { replace: true });
+    } else if (error) {
+      toast.error("Failed to connect Google Drive");
+      navigate("/application", { replace: true });
+    }
+  }, [navigate]);
+  
+
   const handleStatusChange = async (id, newStatus) => {
     try {
       // Update the API with the new status
@@ -143,6 +181,18 @@ const JobApplication = () => {
     } catch (error) {
       console.error("Error updating status:", error);
       alert("Failed to update status. Please try again.");
+    }
+  };
+
+  const handleViewResume = (app) => {
+    const resumeUrl = app?.resume;
+    const hasResume = resumeUrl && resumeUrl !== "BULK_UPLOAD_PENDING";
+
+    if (hasResume) {
+      window.open(resumeUrl, "_blank", "noopener,noreferrer");
+    } else {
+      toast.error("Resume not uploaded yet. Upload now?");
+      openResumeModal(app);
     }
   };
 
@@ -329,180 +379,249 @@ const JobApplication = () => {
   };
 
   const uploadBulkResumes = async () => {
-    if (!zipFile) return alert("Upload ZIP file");
+    if (!zipFile) return toast.error("Please select a ZIP file");
 
-    const formData = new FormData();
-    formData.append("zip", zipFile);
+    try {
+      toast.loading("Uploading resumes...");
+      
+      const formData = new FormData();
+      formData.append("zip", zipFile);
 
-    await axios.post(`${API_BASE_URL}/api/bulk-upload/resumes`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+      const response = await axios.post(
+        `${API_BASE_URL}/api/bulk-upload/resumes`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      toast.dismiss();
+      toast.success(
+        `${response.data.successCount} resumes uploaded successfully!`
+      );
+      
+      // Reset zip file
+      setZipFile(null);
+      
+      // Refresh applications
+      fetchApplications();
+    } catch (err) {
+      console.error("Resume upload error:", err);
+      toast.dismiss();
+      
+      // Check if error is due to Google Drive not connected
+      if (
+        err.response?.status === 400 &&
+        err.response?.data?.message?.includes("Google Drive")
+      ) {
+        toast.error("Google Drive not connected. Connecting now...");
+        setTimeout(() => {
+          connectGoogleDrive();
+        }, 1500);
+        return;
+      }
+      
+      toast.error(
+        err.response?.data?.message || "Failed to upload resumes. Please try again."
+      );
+    }
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
       <Toaster position="top-right" reverseOrder={false} />
-      <div className="bg-white shadow-md rounded-lg p-6">
-        <h1 className="text-xl font-bold text-gray-700 mb-4">
-          Job Applications
-        </h1>
+      
+      {/* Header Section */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+            Job Applications
+          </h1>
+        </div>
+        <p className="text-slate-400 text-lg">Manage and track all job applicants</p>
+      </div>
 
-        {/* Search and Filter */}
-        <div className="flex flex-col gap-4 md:gap-3 md:flex-row md:items-center mb-6">
-          <div className="flex-grow flex items-center bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm hover:border-blue-500 transition">
-            <Search className="mx-3 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search applicants by name, email or position..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full py-2.5 px-2 bg-white focus:outline-none text-gray-700"
-            />
-          </div>
+      {/* Main Container */}
+      <div className="space-y-6">
+        {/* Tools Section */}
+        <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-6 shadow-2xl">
+          <h2 className="text-lg font-semibold text-slate-100 mb-5 flex items-center">
+            <div className="h-1 w-1 bg-blue-400 rounded-full mr-3"></div>
+            Tools & Uploads
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Bulk Upload */}
+            <div className="flex items-center gap-2">
+              <label className="relative cursor-pointer flex-1">
+                <input
+                  id="excelFileInput"
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
+                  className="hidden"
+                />
+                <span className="block px-4 py-2.5 border border-slate-600 rounded-xl bg-slate-700/50 text-slate-200 font-medium hover:border-blue-500 hover:bg-slate-700 transition cursor-pointer text-center text-sm truncate">
+                  {excelFile ? excelFile.name.substring(0, 12) + "..." : "📁 Excel File"}
+                </span>
+              </label>
+              <button
+                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg hover:shadow-blue-500/50 whitespace-nowrap"
+                onClick={uploadExcelFiles}
+                disabled={loading || !excelFile}
+              >
+                {loading ? "⏳" : "📤"}
+              </button>
+            </div>
 
-          <select
-            className="py-2.5 px-4 border border-gray-300 rounded-lg bg-white text-gray-700 font-medium hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-sm"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">All Statuses</option>
-            <option value="Under Review">Under Review</option>
-            <option value="Selected">Selected</option>
-            <option value="Rejected">Rejected</option>
-          </select>
+            {/* Bulk Resume Upload */}
+            <div className="flex items-center gap-2">
+              <label className="relative cursor-pointer flex-1">
+                <input
+                  type="file"
+                  accept=".zip"
+                  onChange={(e) => setZipFile(e.target.files[0])}
+                  className="hidden"
+                />
+                <span className="block px-4 py-2.5 border border-slate-600 rounded-xl bg-slate-700/50 text-slate-200 font-medium hover:border-purple-500 hover:bg-slate-700 transition cursor-pointer text-center text-sm truncate">
+                  📦 Resume ZIP
+                </span>
+              </label>
+               <button
+                className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium rounded-xl hover:from-purple-700 hover:to-purple-800 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg hover:shadow-purple-500/50"
+                onClick={uploadBulkResumes}
+                disabled={!zipFile}
+              >
+                📤
+              </button>
+            </div>
 
-          <div className="flex items-center gap-2">
-            <label className="relative cursor-pointer">
-              <input
-                id="excelFileInput"
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
-                className="hidden"
-              />
-              <span className="px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 font-medium hover:border-blue-500 hover:bg-gray-50 transition cursor-pointer inline-block shadow-sm">
-                {excelFile
-                  ? excelFile.name.substring(0, 15) + "..."
-                  : "Choose File"}
-              </span>
-            </label>
+            {/* Download Template */}
             <button
-              className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
-              onClick={uploadExcelFiles}
-              disabled={loading || !excelFile}
+              onClick={handleDownloadTemplate}
+              className="px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white font-medium rounded-xl hover:from-green-700 hover:to-green-800 transition shadow-lg hover:shadow-green-500/50 flex items-center justify-center gap-2"
             >
-              {loading ? "Uploading..." : "Bulk Upload"}
+              <span>📋</span> Template
+            </button>
+
+            {/* Google Drive Connection */}
+            <button
+              className="px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white font-medium rounded-xl hover:from-red-700 hover:to-red-800 transition shadow-lg hover:shadow-red-500/50 flex items-center justify-center gap-2"
+              onClick={connectGoogleDrive}
+            >
+              <span>☁️</span> Google Drive
             </button>
           </div>
-          <div>
-            <input
-              type="file"
-              accept=".zip"
-              onChange={(e) => setZipFile(e.target.files[0])}
-            />
-
-            <button
-              className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium rounded-lg hover:from-purple-700 hover:to-purple-800 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
-              onClick={uploadBulkResumes}
-            >
-              Upload Resume Zip
-            </button>
-          </div>
-
-          <button
-            onClick={handleDownloadTemplate}
-            className="px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white font-medium rounded-lg hover:from-green-700 hover:to-green-800 transition shadow-sm"
-          >
-            Download Template
-          </button>
 
           {failedRows.length > 0 && (
-            <button
-              onClick={handleDownloadFailedRows}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-            >
-              Download Failed Rows
-            </button>
+            <div className="mt-4">
+              <button
+                onClick={handleDownloadFailedRows}
+                className="w-full px-4 py-3 bg-red-600/20 text-red-300 border border-red-500/50 rounded-xl hover:bg-red-600/30 transition font-medium"
+              >
+                ⚠️ Download Failed Rows ({failedRows.length})
+              </button>
+            </div>
           )}
         </div>
 
-        {/* Applications Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse bg-white">
-            <thead>
-              <tr className="border-b">
-                <th className="p-2 text-left font-semibold text-gray-700">
-                  Name
-                </th>
-                <th className="p-2 text-left font-semibold text-gray-700">
-                  Email
-                </th>
-                <th className="p-2 text-left font-semibold text-gray-700">
-                  Phone
-                </th>
-                <th className="p-2 text-left font-semibold text-gray-700">
-                  Position
-                </th>
-                <th className="p-2 text-left font-semibold text-gray-700">
-                  Status
-                </th>
-                <th className="p-2 text-right font-semibold text-gray-700">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredApplications &&
-                filteredApplications.length !== 0 &&
-                filteredApplications.map((app) => (
-                  <tr key={app._id} className="border-b hover:bg-gray-100">
-                    {console.log(app)}
-                    <td className="p-2 text-gray-700">{app.name}</td>
-                    <td className="p-2 text-gray-700">{app.email}</td>
-                    <td className="p-2 text-gray-700">{app.phone}</td>
-                    <td className="p-2 text-gray-700">{app.jobTitle}</td>
-                    <td className="p-2">
-                      <select
-                        className={`border rounded-lg p-2 ${
-                          statusStyles[app.status]?.color || "text-gray-600"
-                        } focus:outline-none`}
-                        value={app.status}
-                        onChange={(e) =>
-                          handleStatusChange(app._id, e.target.value)
-                        }
-                      >
-                        {Object.keys(statusStyles).map((status) => (
-                          <option key={status} value={status}>
-                            {statusStyles[status].label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="p-2 text-right">
-                      <div className="flex space-x-2 justify-end">
-                        <button
-                          className="flex items-center px-3 py-1 text-sm bg-gray-100 rounded-lg hover:bg-gray-200"
-                          onClick={() => handleViewProfile(app.applicantId)}
-                        >
-                          <Eye className="mr-1 h-4 w-4" /> View Profile
-                        </button>
-                        <button
-                          className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 border border-slate-200"
-                          onClick={() => handleViewProfile(app.applicantId)}
-                        >
-                          <Eye className="h-4 w-4" /> View Profile
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-          {filteredApplications && filteredApplications.length === 0 && (
-            <div className="text-center py-6 text-gray-500">
-              No job applications found
+        {/* Search & Filter Section */}
+        <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-6 shadow-2xl">
+          <div className="flex flex-col gap-4">
+            <div className="flex-grow flex items-center bg-slate-700/30 border border-slate-600 rounded-xl overflow-hidden hover:border-blue-500 transition shadow-lg">
+              <Search className="mx-4 text-slate-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search applicants..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full py-3 px-2 bg-transparent focus:outline-none text-slate-100 placeholder-slate-500"
+              />
             </div>
-          )}
+
+            <select
+              className="py-3 px-4 border border-slate-600 rounded-xl bg-slate-700/30 text-slate-100 font-medium hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-lg"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">All Statuses</option>
+              <option value="Under Review">Under Review</option>
+              <option value="Selected">Selected</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Applications Table */}
+        <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 overflow-hidden shadow-2xl">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-700 bg-slate-900/50">
+                  <th className="p-4 text-left font-semibold text-slate-300">Name</th>
+                  <th className="p-4 text-left font-semibold text-slate-300">Email</th>
+                  <th className="p-4 text-left font-semibold text-slate-300">Phone</th>
+                  <th className="p-4 text-left font-semibold text-slate-300">Position</th>
+                  <th className="p-4 text-left font-semibold text-slate-300">Status</th>
+                  <th className="p-4 text-right font-semibold text-slate-300">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredApplications &&
+                  filteredApplications.length !== 0 &&
+                  filteredApplications.map((app) => (
+                    <tr key={app._id} className="border-b border-slate-700 hover:bg-slate-700/30 transition">
+                      {console.log(app)}
+                      <td className="p-4 text-slate-100 font-medium">{app.name}</td>
+                      <td className="p-4 text-slate-400 text-sm">{app.email}</td>
+                      <td className="p-4 text-slate-400 text-sm">{app.phone}</td>
+                      <td className="p-4 text-slate-300">{app.jobTitle}</td>
+                      <td className="p-4">
+                        <select
+                          className={`border rounded-lg p-2 text-xs font-medium transition ${
+                            statusStyles[app.status]?.color || "text-gray-600"
+                          } bg-slate-700/30 border-slate-600 hover:border-slate-500 focus:outline-none`}
+                          value={app.status}
+                          onChange={(e) =>
+                            handleStatusChange(app._id, e.target.value)
+                          }
+                        >
+                          {Object.keys(statusStyles).map((status) => (
+                            <option key={status} value={status}>
+                              {statusStyles[status].label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex space-x-3 justify-end">
+                          <button
+                            className="flex items-center gap-1 px-3 py-2 text-xs font-medium bg-blue-600/20 text-blue-300 border border-blue-500/50 rounded-lg hover:bg-blue-600/30 transition"
+                            onClick={() => handleViewProfile(app.applicantId)}
+                            title="View profile details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button
+                            className="flex items-center gap-1 px-3 py-2 text-xs font-medium bg-cyan-600/20 text-cyan-300 border border-cyan-500/50 rounded-lg hover:bg-cyan-600/30 transition"
+                            onClick={() => handleViewResume(app)}
+                            title="View or upload resume"
+                          >
+                            <FileText className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+            {filteredApplications && filteredApplications.length === 0 && (
+              <div className="text-center py-12 text-slate-400">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="font-medium">No job applications found</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -510,11 +629,10 @@ const JobApplication = () => {
       {showProfileModal &&
       selectedApplicant &&
       typeof selectedApplicant === "object" ? (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-auto max-h-[90vh] overflow-hidden flex flex-col animate-fadeIn">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-3xl shadow-2xl max-w-2xl w-full mx-auto max-h-[90vh] overflow-hidden flex flex-col border border-slate-700">
             {/* Modal Header with Gradient Background */}
-            <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-800 p-8 relative overflow-hidden">
-              {/* Decorative elements */}
+            <div className="bg-gradient-to-br from-blue-600 via-cyan-500 to-teal-600 p-8 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-40 h-40 bg-white opacity-10 rounded-full -mr-20 -mt-20"></div>
               <div className="absolute bottom-0 left-0 w-32 h-32 bg-white opacity-10 rounded-full -ml-16 -mb-16"></div>
 
@@ -528,13 +646,13 @@ const JobApplication = () => {
                       {selectedApplicant?.name || "Profile"}
                     </h2>
                     <p className="text-blue-100 text-sm mt-1">
-                      Professional Profile
+                      Candidate Information
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={closeProfileModal}
-                  className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-full transition duration-200 transform hover:scale-110"
+                  className="text-white hover:bg-white/20 p-2 rounded-full transition duration-200"
                 >
                   <XIcon className="h-6 w-6" />
                 </button>
@@ -547,9 +665,9 @@ const JobApplication = () => {
                 {profileLoading ? (
                   <div className="text-center py-16">
                     <div className="flex justify-center mb-4">
-                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-4 border-t-blue-600"></div>
+                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-slate-700 border-t-4 border-t-blue-500"></div>
                     </div>
-                    <p className="text-gray-600 font-medium">
+                    <p className="text-slate-400 font-medium">
                       Loading profile...
                     </p>
                   </div>
@@ -558,30 +676,30 @@ const JobApplication = () => {
                     {/* Contact Information Section */}
                     <div>
                       <div className="flex items-center space-x-3 mb-5">
-                        <div className="h-1 w-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full"></div>
-                        <h3 className="text-xl font-bold text-gray-800">
+                        <div className="h-1 w-8 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"></div>
+                        <h3 className="text-xl font-bold text-slate-100">
                           Contact Information
                         </h3>
                       </div>
                       <div className="space-y-3">
-                        <div className="flex items-start space-x-4 p-4 bg-gradient-to-br from-blue-50 to-transparent rounded-xl border border-blue-100 hover:shadow-md transition">
-                          <Mail className="h-6 w-6 text-blue-600 mt-1 flex-shrink-0" />
+                        <div className="flex items-start space-x-4 p-4 bg-gradient-to-br from-blue-900/30 to-transparent rounded-xl border border-blue-700/50 hover:border-blue-600 transition">
+                          <Mail className="h-6 w-6 text-blue-400 mt-1 flex-shrink-0" />
                           <div className="flex-1">
-                            <p className="text-sm text-gray-600 font-semibold">
+                            <p className="text-sm text-slate-400 font-semibold">
                               Email Address
                             </p>
-                            <p className="text-gray-800 font-medium break-all">
+                            <p className="text-slate-100 font-medium break-all">
                               {selectedApplicant?.email || "Not provided"}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-start space-x-4 p-4 bg-gradient-to-br from-green-50 to-transparent rounded-xl border border-green-100 hover:shadow-md transition">
-                          <Phone className="h-6 w-6 text-green-600 mt-1 flex-shrink-0" />
+                        <div className="flex items-start space-x-4 p-4 bg-gradient-to-br from-green-900/30 to-transparent rounded-xl border border-green-700/50 hover:border-green-600 transition">
+                          <Phone className="h-6 w-6 text-green-400 mt-1 flex-shrink-0" />
                           <div className="flex-1">
-                            <p className="text-sm text-gray-600 font-semibold">
+                            <p className="text-sm text-slate-400 font-semibold">
                               Phone Number
                             </p>
-                            <p className="text-gray-800 font-medium">
+                            <p className="text-slate-100 font-medium">
                               {selectedApplicant?.phone || "Not provided"}
                             </p>
                           </div>
@@ -592,19 +710,19 @@ const JobApplication = () => {
                     {/* Personal Information Section */}
                     <div>
                       <div className="flex items-center space-x-3 mb-5">
-                        <div className="h-1 w-8 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full"></div>
-                        <h3 className="text-xl font-bold text-gray-800">
+                        <div className="h-1 w-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+                        <h3 className="text-xl font-bold text-slate-100">
                           Personal Details
                         </h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-5 bg-gradient-to-br from-purple-50 to-transparent rounded-xl border border-purple-100 hover:shadow-md transition">
-                          <p className="text-sm text-gray-600 font-semibold mb-2">
+                        <div className="p-5 bg-gradient-to-br from-purple-900/30 to-transparent rounded-xl border border-purple-700/50 hover:border-purple-600 transition">
+                          <p className="text-sm text-slate-400 font-semibold mb-2">
                             Gender
                           </p>
                           <div className="flex items-center space-x-2">
-                            <div className="h-3 w-3 bg-purple-600 rounded-full"></div>
-                            <p className="text-gray-800 font-medium">
+                            <div className="h-3 w-3 bg-purple-500 rounded-full"></div>
+                            <p className="text-slate-100 font-medium">
                               {selectedApplicant?.gender || "Not specified"}
                             </p>
                           </div>
@@ -615,8 +733,8 @@ const JobApplication = () => {
                     {/* Social Profiles Section */}
                     <div>
                       <div className="flex items-center space-x-3 mb-5">
-                        <div className="h-1 w-8 bg-gradient-to-r from-pink-600 to-red-600 rounded-full"></div>
-                        <h3 className="text-xl font-bold text-gray-800">
+                        <div className="h-1 w-8 bg-gradient-to-r from-pink-500 to-red-500 rounded-full"></div>
+                        <h3 className="text-xl font-bold text-slate-100">
                           Social Profiles
                         </h3>
                       </div>
@@ -626,22 +744,22 @@ const JobApplication = () => {
                             href={selectedApplicant.linkedIn}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center justify-between p-5 bg-gradient-to-br from-blue-50 to-transparent rounded-xl border border-blue-200 hover:shadow-lg hover:border-blue-400 transition transform hover:scale-105"
+                            className="flex items-center justify-between p-5 bg-gradient-to-br from-blue-900/40 to-transparent rounded-xl border border-blue-700/50 hover:border-blue-500 hover:bg-blue-900/50 transition transform hover:scale-105"
                           >
                             <div className="flex items-center space-x-4">
                               <div className="p-3 bg-blue-600 rounded-lg">
                                 <Linkedin className="h-5 w-5 text-white" />
                               </div>
                               <div>
-                                <p className="text-sm text-gray-600 font-semibold">
+                                <p className="text-sm text-slate-400 font-semibold">
                                   LinkedIn
                                 </p>
-                                <p className="text-blue-600 font-medium truncate text-sm">
+                                <p className="text-blue-400 font-medium truncate text-sm">
                                   {selectedApplicant.linkedIn}
                                 </p>
                               </div>
                             </div>
-                            <X className="h-5 w-5 text-gray-400" />
+                            <X className="h-5 w-5 text-slate-500" />
                           </a>
                         )}
                         {selectedApplicant?.github && (
@@ -649,28 +767,28 @@ const JobApplication = () => {
                             href={selectedApplicant.github}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center justify-between p-5 bg-gradient-to-br from-gray-50 to-transparent rounded-xl border border-gray-300 hover:shadow-lg hover:border-gray-500 transition transform hover:scale-105"
+                            className="flex items-center justify-between p-5 bg-gradient-to-br from-gray-900/40 to-transparent rounded-xl border border-gray-700/50 hover:border-gray-600 hover:bg-gray-900/50 transition transform hover:scale-105"
                           >
                             <div className="flex items-center space-x-4">
-                              <div className="p-3 bg-gray-800 rounded-lg">
+                              <div className="p-3 bg-gray-700 rounded-lg">
                                 <Github className="h-5 w-5 text-white" />
                               </div>
                               <div>
-                                <p className="text-sm text-gray-600 font-semibold">
+                                <p className="text-sm text-slate-400 font-semibold">
                                   GitHub
                                 </p>
-                                <p className="text-gray-700 font-medium truncate text-sm">
+                                <p className="text-gray-300 font-medium truncate text-sm">
                                   {selectedApplicant.github}
                                 </p>
                               </div>
                             </div>
-                            <X className="h-5 w-5 text-gray-400" />
+                            <X className="h-5 w-5 text-slate-500" />
                           </a>
                         )}
                         {!selectedApplicant?.linkedIn &&
                           !selectedApplicant?.github && (
-                            <div className="p-5 text-center bg-gray-50 rounded-xl border border-gray-200">
-                              <p className="text-gray-500 font-medium">
+                            <div className="p-5 text-center bg-slate-700/30 rounded-xl border border-slate-700">
+                              <p className="text-slate-400 font-medium">
                                 No social profiles added
                               </p>
                             </div>
@@ -683,10 +801,10 @@ const JobApplication = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="bg-gray-50 border-t px-8 py-5 flex justify-end space-x-3">
+            <div className="bg-slate-900/50 border-t border-slate-700 px-8 py-5 flex justify-end space-x-3">
               <button
                 onClick={closeProfileModal}
-                className="px-8 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition transform hover:scale-105 active:scale-95"
+                className="px-8 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-cyan-700 hover:shadow-lg transition transform hover:scale-105 active:scale-95"
               >
                 Close Profile
               </button>
@@ -697,51 +815,60 @@ const JobApplication = () => {
 
       {/* Resume Upload Modal */}
       {resumeModalOpen && resumeTarget ? (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 space-y-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-7 space-y-6 border border-slate-700">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-gray-800">
-                Upload Resume
+              <h3 className="text-xl font-bold text-slate-100">
+                📄 Upload Resume
               </h3>
               <button
-                className="text-gray-500 hover:text-gray-700"
+                className="text-slate-400 hover:text-slate-200 transition"
                 onClick={closeResumeModal}
               >
                 <XIcon className="h-5 w-5" />
               </button>
             </div>
 
-            <p className="text-sm text-gray-600">
-              Candidate:{" "}
-              <span className="font-medium">{resumeTarget.name}</span>
-            </p>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Resume File
-              </label>
-              <input
-                type="file"
-                accept=".pdf,.doc,.docx"
-                onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
-                className="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+            <div className="p-4 bg-blue-900/30 border border-blue-700/50 rounded-xl">
+              <p className="text-sm text-slate-300">
+                Candidate:{" "}
+                <span className="font-bold text-blue-300">{resumeTarget.name}</span>
+              </p>
             </div>
 
-            <div className="flex justify-end space-x-2 pt-2">
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-slate-300">
+                Select Resume File
+              </label>
+              <div className="relative">
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+                  className="w-full border-2 border-dashed border-slate-600 rounded-xl p-4 focus:outline-none focus:border-blue-500 transition text-slate-100 bg-slate-700/30 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                />
+              </div>
+              {resumeFile && (
+                <p className="text-xs text-green-400 flex items-center">
+                  ✓ {resumeFile.name}
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-4">
               <button
-                className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
+                className="px-6 py-2.5 border border-slate-600 rounded-lg text-slate-300 hover:bg-slate-700 transition font-medium"
                 onClick={closeResumeModal}
                 disabled={resumeUploading}
               >
                 Cancel
               </button>
               <button
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium shadow-lg hover:shadow-blue-500/50"
                 onClick={handleResumeUpload}
                 disabled={resumeUploading}
               >
-                {resumeUploading ? "Uploading..." : "Upload"}
+                {resumeUploading ? "⏳ Uploading..." : "📤 Upload"}
               </button>
             </div>
           </div>

@@ -8,6 +8,7 @@ import payslip from "./paySlip.js";
 import careerPortal from "./careerPortal.js";
 import jobApplication from "./jobApplication.js";
 import bulkUpload from "./bulkUpload.js";
+import googleDriveRoute from "./googleDriveRoute.js";
 
 const routes = (app) => {
     app.use("/api/auth", auth);
@@ -20,6 +21,7 @@ const routes = (app) => {
     app.use("/api/career-portal", careerPortal);
     app.use("/api/job-application",jobApplication);
     app.use("/api/bulk-upload",bulkUpload)
+    app.use("/api/google-drive",googleDriveRoute)
 
 };
 
