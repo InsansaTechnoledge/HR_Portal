@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import Employee from "../models/Employee.js"
-import bcrypt from 'bcryptjs';
 import stringTo6DigitNumber from "../utils/stringTo6digitNumber.js";
 
 export const addEmployee = async (req, res) => {
@@ -48,18 +47,19 @@ export const fetchEmployeeById = async (req,res) => {
             empId: 1,
             details: 1,
             totalLeaveBalance: 1,
+            leaveHistory: 1,
             payslips: 1,
             createdAt: 1,
             updatedAt: 1,
         };
 
         // Exclude document buffers unless includeDocuments=true
-        if (includeDocuments !== "true") {
-            baseProjection["details.documentsPanCard"] = 0;
-            baseProjection["details.documentsAadhar"] = 0;
-            baseProjection["details.documentsDegree"] = 0;
-            baseProjection["details.documentsExperience"] = 0;
-        }
+        // if (includeDocuments !== "true") {
+        //     baseProjection["details.documentsPanCard"] = 0;
+        //     baseProjection["details.documentsAadhar"] = 0;
+        //     baseProjection["details.documentsDegree"] = 0;
+        //     baseProjection["details.documentsExperience"] = 0;
+        // }
 
         if (from || to) {
             const fromDate = from ? new Date(from) : null;
@@ -76,10 +76,11 @@ export const fetchEmployeeById = async (req,res) => {
                                 as: "leave",
                                 cond: {
                                     $and: [
-                                        fromDate ? { $gte: ["$$leave.startDate", fromDate] } : true,
-                                        toDate ? { $lte: ["$$leave.endDate", toDate] } : true,
+                                        ...(fromDate ? [{ $gte: ["$$leave.startDate", fromDate] }] : []),
+                                        ...(toDate ? [{ $lte: ["$$leave.endDate", toDate] }] : []),
                                     ],
                                 },
+
                             },
                         },
                     },

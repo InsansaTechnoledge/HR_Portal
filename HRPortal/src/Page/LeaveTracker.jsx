@@ -212,6 +212,7 @@ useEffect(() => {
 }, [selectedEmployeeId, selectedUserId]);
 
 
+
   // --- Helper to compute available months and per-month lookup maps ---
   const { availableLeaveMonths, leaveLookupByMonth } = useMemo(() => {
     if (!currentPerson || !Array.isArray(currentPerson.leaveHistory)) {
@@ -376,68 +377,6 @@ useEffect(() => {
   }
 };
 
-
-  // helper to refresh data after save: refetch only the updated person
-  // const refreshAfterSave = async (targetId, wasUser) => {
-  //   setLoading(true);
-  //   try {
-  //     if (wasUser) {
-  //       const det = await axios.get(`${API_BASE_URL}/api/user/${targetId}`);
-  //       const u = det?.data?.user;
-  //       if (u) {
-  //         const updated = {
-  //           empId: u._id || u.userId,
-  //           name: u.userName || u.name,
-  //           email: u.userEmail || u.email,
-  //           department: u.role || "User",
-  //           leaveHistory: u.leaveHistory || [],
-  //         };
-  //         setCurrentPerson(updated);
-  //         setSelectedUserId(updated.empId);
-  //         setSelectedEmployeeId("");
-  //         setUsers((prev) =>
-  //           prev.length
-  //             ? prev.map((p) => (String(p.empId) === String(updated.empId) ? updated : p))
-  //             : prev
-  //         );
-  //         localStorage.setItem("leaveTracker:lastSelection", JSON.stringify({ type: "user", id: updated.empId }));
-  //       }
-  //     } else {
-  //       const det = await axios.get(`${API_BASE_URL}/api/employee/${targetId}`);
-  //       const e = det?.data?.employee;
-  //       if (e) {
-  //         const updated = {
-  //           empId: e._id || e.empId,
-  //           name: e.name || e.userName,
-  //           email: e.email || e.userEmail,
-  //           department: e.department || e.role || "User",
-  //           leaveHistory: e.leaveHistory || [],
-  //         };
-  //         setCurrentPerson(updated);
-  //         setSelectedEmployeeId(updated.empId);
-  //         setSelectedUserId("");
-  //         setEmployees((prev) =>
-  //           prev.length
-  //             ? prev.map((p) => (String(p.empId) === String(updated.empId) ? updated : p))
-  //             : prev
-  //         );
-  //         localStorage.setItem("leaveTracker:lastSelection", JSON.stringify({ type: "employee", id: updated.empId }));
-  //       }
-
-  //       if (person) setCurrentPerson(person);
-  //       setSelectedUserId(restoreIsUser ? restoreId : "");
-  //       setSelectedEmployeeId(!restoreIsUser ? restoreId : "");
-  //     }
-  //     // *** MODIFICATION END ***
-      
-  //     setSelectedMonth(null); // Clear selected month to force month list re-render
-  //   } catch (err) {
-  //     console.error("Error refreshing after save:", err);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   // Add leave modal open/reset behavior already handled in handleOpenAddLeave
   // small UI helpers:
   const handleToggleOneDay = () => {
@@ -491,9 +430,9 @@ useEffect(() => {
                     className="w-full rounded-md border-gray-300 shadow-sm"
                   >
                     <option value="">Select Employee</option>
-                    {filteredEmployees.length === 0 && <option value="">No employees available</option>}
-                    {filteredEmployees.map((emp) => (
-                      <option key={emp.empId} value={String(emp.empId)}>
+                    {employees.length === 0 && <option value="">No employees available</option>}
+                    {employees.map((emp) => (
+                      <option key={emp.empId} value={emp.empId}>
                         {emp.name} - {emp.department}
                       </option>
                     ))}
