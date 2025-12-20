@@ -6,12 +6,13 @@ import cloudinary from "../config/cloudinary.js";
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: "employees/documents",
+    folder: "empl oyees/documents",
     resource_type: "raw", // IMPORTANT for PDFs
     allowed_formats: ["pdf", "png", "jpg", "jpeg"],
     public_id: (req, file) => `${Date.now()}-${file.originalname}`,
   },
 });
+
 
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } }); // 10 MB limit
 

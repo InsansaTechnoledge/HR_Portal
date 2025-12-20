@@ -72,13 +72,27 @@ export const updateJob = async (req, res) => {
 };
 
 //get job application
-export const getJobApplications= async (req, res) => {
-  const JobApplications= await JobApplication.find();
-  // console.log(JobApplications);
-  
-  res.status(201).json({message:"application fetched successfully",JobApplications: JobApplications});
+export const getJobApplications = async (req, res) => {
+  try {
+    const applications = await JobApplication.find()
+      .populate({ path: "jobId", select: "jobTitle jobId" })
+      .select("name email phone status resume jobId applicantId")
+      .lean();
 
-}
+    const formattedApplications = applications.map((app) => ({
+      ...app,
+      jobTitle: app.jobId?.jobTitle || null,
+      jobNumber: app.jobId?.jobId ?? null,
+    }));
+
+    res
+      .status(200)
+      .json({ message: "Applications fetched successfully", JobApplications: formattedApplications });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch applications", error: err.message });
+  }
+};
 
 //update job application status
 export const updateApplicationStatus = async (req, res) => {

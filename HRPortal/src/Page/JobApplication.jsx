@@ -30,6 +30,11 @@ const JobApplication = () => {
   const [excelFile, setExcelFile] = useState(null);
   const [failedRows, setFailedRows] = useState([]);
   const [error, setError] = useState(null);
+  const [resumeModalOpen, setResumeModalOpen] = useState(false);
+  const [resumeFile, setResumeFile] = useState(null);
+  const [resumeUploading, setResumeUploading] = useState(false);
+  const [resumeTarget, setResumeTarget] = useState(null);
+  const [zipFile, setZipFile] = useState(null);
 
   const fetchApplications = async () => {
     try {
@@ -40,6 +45,60 @@ const JobApplication = () => {
     } catch (err) {
       console.error("Error fetching applications:", err);
       setApplications([]);
+    }
+  };
+
+  const openResumeModal = (application) => {
+    setResumeTarget(application);
+    setResumeFile(null);
+    setResumeModalOpen(true);
+  };
+
+  const closeResumeModal = () => {
+    setResumeModalOpen(false);
+    setResumeTarget(null);
+    setResumeFile(null);
+  };
+
+  const handleResumeUpload = async () => {
+    try {
+      if (!resumeTarget?._id) {
+        toast.error("No application selected");
+        return;
+      }
+      if (!resumeFile) {
+        toast.error("Please choose a resume file (PDF/Doc)");
+        return;
+      }
+
+      setResumeUploading(true);
+      const formData = new FormData();
+      formData.append("resume", resumeFile);
+
+      const resp = await axios.post(
+        `${API_BASE_URL}/api/job-application/${resumeTarget._id}/resume`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      const newUrl = resp.data?.resumeUrl;
+      if (newUrl) {
+        setApplications((prev) =>
+          prev.map((app) =>
+            app._id === resumeTarget._id ? { ...app, resume: newUrl } : app
+          )
+        );
+      }
+
+      toast.success(resp.data?.message || "Resume uploaded successfully");
+      closeResumeModal();
+    } catch (err) {
+      console.error("Resume upload failed", err);
+      toast.error(err.response?.data?.message || "Failed to upload resume");
+    } finally {
+      setResumeUploading(false);
     }
   };
 
@@ -180,8 +239,8 @@ const JobApplication = () => {
 
         //  Handle full / partial success
         if (failedCount > 0) {
-         toast.error("Bulk upload completed with some failures.");
-         setError("Some rows failed to upload.");
+          toast.error("Bulk upload completed with some failures.");
+          setError("Some rows failed to upload.");
           setFailedRows(failedRows);
         } else {
           toast.success("Bulk upload successful!");
@@ -269,6 +328,17 @@ const JobApplication = () => {
     setSelectedApplicant(null);
   };
 
+  const uploadBulkResumes = async () => {
+    if (!zipFile) return alert("Upload ZIP file");
+
+    const formData = new FormData();
+    formData.append("zip", zipFile);
+
+    await axios.post(`${API_BASE_URL}/api/bulk-upload/resumes`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  };
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <Toaster position="top-right" reverseOrder={false} />
@@ -289,7 +359,7 @@ const JobApplication = () => {
               className="w-full py-2.5 px-2 bg-white focus:outline-none text-gray-700"
             />
           </div>
-          
+
           <select
             className="py-2.5 px-4 border border-gray-300 rounded-lg bg-white text-gray-700 font-medium hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-sm"
             value={statusFilter}
@@ -311,7 +381,9 @@ const JobApplication = () => {
                 className="hidden"
               />
               <span className="px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 font-medium hover:border-blue-500 hover:bg-gray-50 transition cursor-pointer inline-block shadow-sm">
-                {excelFile ? excelFile.name.substring(0, 15) + "..." : "Choose File"}
+                {excelFile
+                  ? excelFile.name.substring(0, 15) + "..."
+                  : "Choose File"}
               </span>
             </label>
             <button
@@ -320,6 +392,20 @@ const JobApplication = () => {
               disabled={loading || !excelFile}
             >
               {loading ? "Uploading..." : "Bulk Upload"}
+            </button>
+          </div>
+          <div>
+            <input
+              type="file"
+              accept=".zip"
+              onChange={(e) => setZipFile(e.target.files[0])}
+            />
+
+            <button
+              className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium rounded-lg hover:from-purple-700 hover:to-purple-800 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
+              onClick={uploadBulkResumes}
+            >
+              Upload Resume Zip
             </button>
           </div>
 
@@ -331,8 +417,10 @@ const JobApplication = () => {
           </button>
 
           {failedRows.length > 0 && (
-            <button onClick={handleDownloadFailedRows}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+            <button
+              onClick={handleDownloadFailedRows}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
               Download Failed Rows
             </button>
           )}
@@ -356,9 +444,6 @@ const JobApplication = () => {
                   Position
                 </th>
                 <th className="p-2 text-left font-semibold text-gray-700">
-                  Applied Date
-                </th>
-                <th className="p-2 text-left font-semibold text-gray-700">
                   Status
                 </th>
                 <th className="p-2 text-right font-semibold text-gray-700">
@@ -375,8 +460,7 @@ const JobApplication = () => {
                     <td className="p-2 text-gray-700">{app.name}</td>
                     <td className="p-2 text-gray-700">{app.email}</td>
                     <td className="p-2 text-gray-700">{app.phone}</td>
-                    <td className="p-2 text-gray-700">{app.position}</td>
-                    <td className="p-2 text-gray-700">{app.applicationDate}</td>
+                    <td className="p-2 text-gray-700">{app.jobTitle}</td>
                     <td className="p-2">
                       <select
                         className={`border rounded-lg p-2 ${
@@ -403,10 +487,10 @@ const JobApplication = () => {
                           <Eye className="mr-1 h-4 w-4" /> View Profile
                         </button>
                         <button
-                          className="flex items-center px-3 py-1 text-sm bg-gray-100 rounded-lg hover:bg-gray-200"
-                          onClick={() => window.open(app.resumeLink, "_blank")}
+                          className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 border border-slate-200"
+                          onClick={() => handleViewProfile(app.applicantId)}
                         >
-                          <FileText className="mr-1 h-4 w-4" /> View Resume
+                          <Eye className="h-4 w-4" /> View Profile
                         </button>
                       </div>
                     </td>
@@ -605,6 +689,59 @@ const JobApplication = () => {
                 className="px-8 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition transform hover:scale-105 active:scale-95"
               >
                 Close Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Resume Upload Modal */}
+      {resumeModalOpen && resumeTarget ? (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-800">
+                Upload Resume
+              </h3>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={closeResumeModal}
+              >
+                <XIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-600">
+              Candidate:{" "}
+              <span className="font-medium">{resumeTarget.name}</span>
+            </p>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Resume File
+              </label>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+                className="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-2">
+              <button
+                className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
+                onClick={closeResumeModal}
+                disabled={resumeUploading}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                onClick={handleResumeUpload}
+                disabled={resumeUploading}
+              >
+                {resumeUploading ? "Uploading..." : "Upload"}
               </button>
             </div>
           </div>
