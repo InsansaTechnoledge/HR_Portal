@@ -13,6 +13,8 @@ const DocumentManagement = () => {
     const [showUploadForm, setShowUploadForm] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [success, setSuccess] = useState(null);
+
     const [fileName, setFileName] = useState("No file choosen")
     const {user} = useContext(userContext);
     const [employees,setEmployees] = useState([]);
@@ -168,6 +170,7 @@ const DocumentManagement = () => {
             type: '',
             document: null
             }));
+            setSuccess("Document Uploaded Succesfully!");
             setShowUploadForm(false);
             fetchDocuments();
             setLoading(false);
@@ -192,6 +195,7 @@ const DocumentManagement = () => {
                 setLoading(true);
                 await axios.delete(`${API_BASE_URL}/api/documents/delete/${selectedId}`);
                 setShowDeleteModal(false);
+                setSuccess("Document Deleted Successfully");
                 setSelectedId("");
                 fetchDocuments();
             } catch (err) {
@@ -228,11 +232,22 @@ const DocumentManagement = () => {
 
         <div className="p-6 bg-gray-50 min-h-screen">
             {/* Error Message */}
-            {error && (
+            {error  && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
                     <span className="block sm:inline">{error}</span>
                     <span
                         onClick={() => setError(null)}
+                        className="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer"
+                    >
+                        <X className="h-5 w-5" />
+                    </span>
+                </div>
+            )}
+            {success && (
+                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+                    <span className="block sm:inline">{success}</span>
+                    <span
+                        onClick={() => setSuccess(null)}
                         className="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer"
                     >
                         <X className="h-5 w-5" />

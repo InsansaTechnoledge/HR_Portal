@@ -184,17 +184,74 @@ const PayslipGenerator = () => {
 
     const handleGeneratePayslip = (e) => {
         e.preventDefault();
+    if (!employeeData.name || !employeeData.month) {
+        setToastErrorMessage("Please fill required fields");
+        setToastErrorVisible(true);
+        setTimeout(() => setToastErrorVisible(false), 3000);
+        return;
+    }
 
-        // validation (optional)
-        if (!employeeData.name || !employeeData.month) {
-            setToastErrorMessage("Please fill required fields");
-            setToastErrorVisible(true);
-            setTimeout(() => setToastErrorVisible(false), 3000);
-            return;
-        }
+    setShowTemplateDialog(true);
+};
 
-        setShowTemplateDialog(true);
-    };
+const handleConfirmTemplate = async () => {
+    try {
+        setIsGeneratingPDF(true);
+
+        const payload = {
+            generatedBy: user?.userEmail || "Admin",
+            employeeId: employeeData.employeeId,
+            name: employeeData.name,
+            department: employeeData.department,
+            designation: employeeData.designation,
+            month: employeeData.month,
+            salary: employeeData.salary,
+
+            hra: employeeData.hra,
+            conveyanceAllowance: employeeData.conveyanceAllowance,
+            medicalAllowance: employeeData.medicalAllowance,
+            specialAllowance: employeeData.specialAllowance,
+
+            professionalTax: taxType === "Professional Tax" ? professionalTax : 0,
+            TDS: taxType === "TDS" ? employeeData.salary * 0.1 : 0,
+            incomeTax: 0,
+
+            totalEarnings: calculateTotalEarnings(),
+            totalDeductions: Object.values(calculateDeductions()).reduce((a,b)=>a+b,0),
+            netSalary: calculateNetSalary(),
+
+            bankAccount: employeeData.bankAccount,
+            panNumber: employeeData.panNumber,
+            uanNumber: employeeData.uanNumber,
+            taxType,
+        };
+
+        await axios.post(
+            `${API_BASE_URL}/api/payslip/generate`,
+            payload,
+            { withCredentials: true }
+        );
+
+        setFinalTemplate(activeTemplate);
+        setShowTemplateDialog(false);
+        setShowPayslipPreview(true);
+
+        setToastSuccessMessage("Payslip generated successfully");
+        setToastSuccessVisible(true);
+        setTimeout(() => setToastSuccessVisible(false), 3000);
+
+    } catch (err) {
+        setToastErrorMessage(
+            err.response?.data?.message || "Failed to generate payslip"
+        );
+        setToastErrorVisible(true);
+        setTimeout(() => setToastErrorVisible(false), 3000);
+    } finally {
+        setIsGeneratingPDF(false);
+    }
+};
+
+
 
 
     const handleReset = () => {
@@ -303,46 +360,46 @@ const PayslipGenerator = () => {
                 </div>
 
                 <div className="space-y-4 mt-4 mb-4">
-    <label htmlFor="taxSelect" className="block text-sm font-medium text-gray-700">
-        Select Tax Type
-    </label>
-    <div className="flex items-center space-x-4">
-        <div className="flex items-center">
-            <input
-                id="professionalTax"
-                type="radio"
-                defaultChecked
-                name="tax"
-                value="Professional Tax"
-                className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-            />
-            <label
-                htmlFor="professionalTax"
-                className="ml-2 text-sm text-gray-700"
-            >
-                Professional Tax
-            </label>
-        </div>
-        <div className="flex items-center">
-            <input
-                id="tds"
-                type="radio"
-                name="tax"
-                value="TDS"
-                className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-            />
-            <label
-                htmlFor="tds"
-                className="ml-2 text-sm text-gray-700"
-            >
-                TDS
-            </label>
-        </div>
-    </div>
-</div>
+                    <label htmlFor="taxSelect" className="block text-sm font-medium text-gray-700">
+                        Select Tax Type
+                    </label>
+                    <div className="flex items-center space-x-4">
+                        <div className="flex items-center">
+                            <input
+                                id="professionalTax"
+                                type="radio"
+                                defaultChecked
+                                name="tax"
+                                value="Professional Tax"
+                                className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                            />
+                            <label
+                                htmlFor="professionalTax"
+                                className="ml-2 text-sm text-gray-700"
+                            >
+                                Professional Tax
+                            </label>
+                        </div>
+                        <div className="flex items-center">
+                            <input
+                                id="tds"
+                                type="radio"
+                                name="tax"
+                                value="TDS"
+                                className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                            />
+                            <label
+                                htmlFor="tds"
+                                className="ml-2 text-sm text-gray-700"
+                            >
+                                TDS
+                            </label>
+                        </div>
+                    </div>
+                </div>
 
 
-                <form onSubmit={handleGeneratePayslip} className="space-y-4">
+                <form onSubmit ={handleGeneratePayslip} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {[
                             { label: 'Employee Name', name: 'name' },
@@ -441,15 +498,7 @@ const PayslipGenerator = () => {
                             </button>
 
                             <button
-                                onClick={() => {
-                                    setFinalTemplate(activeTemplate);
-                                    setShowTemplateDialog(false);
-                                    setShowPayslipPreview(true);
-
-                                    setToastSuccessMessage("Payslip generated successfully");
-                                    setToastSuccessVisible(true);
-                                    setTimeout(() => setToastSuccessVisible(false), 3000);
-                                }}
+                                onClick={handleConfirmTemplate}
                                 className="px-6 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
                             >
                                 Select Template

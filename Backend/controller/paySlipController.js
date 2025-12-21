@@ -14,13 +14,27 @@ export const generatePaySlip = async (req, res) => {
       });
     }
 
+    const existingPayslip = await Payslip.findOne({
+      employeeId: payslipData.employeeId,
+      month: payslipData.month,
+      year: payslipData.year,
+    });
+
+    if (existingPayslip) {
+      return res.status(409).json({
+        message: "Payslip already generated for this month",
+      });
+    }
+
     // Create payslip
     const newPayslip = new Payslip(payslipData);
     const savedPayslip = await newPayslip.save();
 
+
     // Push payslip ID into employee.payslips
     employee.payslips.push(savedPayslip._id);
     await employee.save();
+
 
     // Success response
     res.status(201).json({

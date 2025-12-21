@@ -1,4 +1,6 @@
 import Document from "../models/DocumentUpload.js";
+import cloudinary from "../config/cloudinary.js";
+import axios from 'axios';
 
 // Upload a document
 // export const uploadDocument = async (req, res) => {
@@ -106,8 +108,10 @@ export const deleteDocument = async (req, res) => {
 
     await Document.findByIdAndDelete(id);
 
+
     res.status(200).json({ message: "Document deleted successfully" });
   } catch (err) {
+    console.log("ERROR: ", err);
     res.status(500).json({
       message: "Server Error",
       error: err.message,
@@ -145,31 +149,38 @@ export const viewDocument = async (req, res) => {
   }
 };
 
-
-
 export const downloadDocument = async (req, res) => {
   try {
-    const { id } = req.params;
+    const document = await Document.findById(req.params.id);
 
-    const document = await Document.findById(id);
-
-    if (!document) {
+    if (!document || !document.url) {
       return res.status(404).json({ message: "Document not found" });
     }
 
-    res.set({
-      "Content-Type": document.mimeType, // ✅ CRITICAL
-      "Content-Disposition": `attachment; filename="${document.name}"`,
-      "Content-Length": document.document.length
+    // Fetch file from Cloudinary as stream
+    const cloudinaryResponse = await axios({
+      url: document.url,
+      method: "GET",
+      responseType: "stream",
     });
 
-    res.end(document.document); // ✅ binary-safe
-  } catch (err) {
+    // Force browser download
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${document.name}"`
+    );
+    res.setHeader(
+      "Content-Type",
+      cloudinaryResponse.headers["content-type"]
+    );
+
+    // Pipe stream to client
+    cloudinaryResponse.data.pipe(res);
+  } catch (error) {
+    console.error("DOWNLOAD ERROR:", error.message);
     res.status(500).json({
-      message: "Server Error",
-      error: err.message,
+      message: "Download failed",
+      error: error.message,
     });
   }
 };
-
-
