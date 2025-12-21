@@ -255,7 +255,6 @@ export const uploadDetails = async (req,res) => {
 export const fetchEmployeeByEmail = async (req, res) => {
   try {
     const { email } = req.params;
-    console.log(req.params)
    
     const emp = await Employee.findOne({email : email})
 

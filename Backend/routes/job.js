@@ -10,6 +10,4 @@ router.put("/update/:id",updateJob)
 router.get("/applications",getJobApplications)
 router.put("/application/status/:id", updateApplicationStatus)
 
-
-
 export default router;

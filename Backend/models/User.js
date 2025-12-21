@@ -25,6 +25,20 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+
+  // Google Drive integration details
+   googleDrive: {
+    refreshToken: {
+      type: String,
+      select: false 
+    },
+    email: {
+      type: String
+    },
+    connectedAt: {
+      type: Date
+    }
+  },
   leaveHistory: [LeaveSchema]
 });
 
