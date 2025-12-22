@@ -1,6 +1,4 @@
 import express from "express";
-import upload from "../middleware/upload.js";
-
 import {
   uploadDocument,
   deleteDocument,
@@ -8,10 +6,11 @@ import {
   viewDocument,
   downloadDocument,
 } from "../controller/DocumentUploadController.js";
+import uploadDoc from "../middleware/uploadDocument.js";
 
 const router = express.Router();
 
-router.post("/upload", upload.single("document"), uploadDocument);
+router.post("/upload/:email", uploadDoc.single("document"), uploadDocument);
 router.delete("/delete/:id", deleteDocument);
 router.get("/all", getAllDocuments);
 router.get('/view/:id', viewDocument)
