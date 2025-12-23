@@ -158,7 +158,7 @@ const DocumentManagement = () => {
 
         try {
             setLoading(true);
-            await axios.post(`${API_BASE_URL}/api/documents/upload`, uploadData, {
+            await axios.post(`${API_BASE_URL}/api/documents/upload/${selectedEmployee.email}`, uploadData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
