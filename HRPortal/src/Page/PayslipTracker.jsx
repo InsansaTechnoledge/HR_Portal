@@ -8,6 +8,12 @@ import { useNavigate } from 'react-router-dom';
 import ErrorToast from '../Components/Toaster/ErrorToaster';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { companyDetails } from '../Constant/constant';
+import TemplateClassic from '../templates/TemplateClassic';
+import TemplateCorporate from '../templates/TemplateCorporate';
+import TemplateMinimal from '../templates/TemplateMinimal';
+import TemplateModern from '../templates/TemplateModern';
+import TemplateDefault from '../templates/TemplateDefault';
 
 const PayslipTracker = () => {
     const [userRole, setUserRole] = useState('employee'); // 'employee' or 'accountant'
@@ -23,6 +29,42 @@ const PayslipTracker = () => {
     const [activePayslip, setActivePayslip] = useState(null);
     const navigate = useNavigate();
     const payslipRef = useRef(null);
+
+    const renderPayslipTemplate = (template, payslipData) => {
+        if (!template || !payslipData) return null;
+
+        const calculations = {
+            totalEarnings: parseFloat(payslipData.totalEarnings || 0).toFixed(2),
+            totalDeductions: parseFloat(payslipData.totalDeductions || 0).toFixed(2),
+            netSalary: parseFloat(payslipData.netSalary || 0).toFixed(2),
+            deductions: {
+                professionalTax: payslipData.professionalTax || 0,
+                TDS: payslipData.TDS || 0,
+                incomeTax: payslipData.incomeTax || 0,
+            },
+        };
+
+        const props = {
+            data: payslipData,
+            company: companyDetails,
+            calculations,
+        };
+
+        switch (template.toLowerCase()) {
+            case "classic":
+                return <TemplateClassic {...props} />;
+            case "modern":
+                return <TemplateModern {...props} />;
+            case "minimal":
+                return <TemplateMinimal {...props} />;
+            case "corporate":
+                return <TemplateCorporate {...props} />;
+            case "default":
+                return <TemplateDefault {...props} />;
+            default:
+                return <TemplateClassic {...props} />;
+        }
+    };
 
     const handleDownloadPayslip = async (payslipId) => {
         setDownloading(payslipId);
@@ -271,111 +313,7 @@ const PayslipTracker = () => {
         {activePayslip && (
             <div className="fixed -left-[9999px] top-0">
                 <div ref={payslipRef} className="w-[794px] bg-white text-gray-900 p-10 space-y-8 shadow-lg">
-                    {/* Header */}
-                    <div className="flex justify-between items-start">
-                        <div className="space-y-2">
-                            <h1 className="text-2xl font-bold text-[#3554d1] uppercase tracking-wide">Insansa Technologies</h1>
-                            <p className="text-sm text-gray-700 leading-5">
-                                B/321 Monalisa Business Center Manjalpur<br />
-                                Vadodara Gujarat INDIA 390011
-                            </p>
-                            <div className="text-sm text-gray-800 space-y-0.5">
-                                <p><span className="font-semibold">GST:</span> <span className="text-gray-600">—</span></p>
-                                <p><span className="font-semibold">CIN:</span> <span className="text-gray-600">—</span></p>
-                            </div>
-                        </div>
-                        <div className="text-right text-sm text-gray-700 space-y-1">
-                            <p className="flex items-center justify-end gap-2">📞 <span className="font-medium">+91 9724379123</span></p>
-                            <p className="flex items-center justify-end gap-2">✉️ <span className="font-medium">talent@insansa.com</span></p>
-                            <p className="flex items-center justify-end gap-2">🌐 <span className="font-medium">www.insansa.com</span></p>
-                        </div>
-                    </div>
-
-                    <hr className="border-gray-200" />
-
-                    {/* Details Row */}
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-                            <h3 className="text-lg font-semibold text-gray-800">Employee Details</h3>
-                            <div className="grid grid-cols-2 gap-y-2">
-                                <div>
-                                    <p className="font-semibold text-gray-800">Name:</p>
-                                    <p className="text-gray-700">{activePayslip.name || ""}</p>
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-gray-800">Employee ID:</p>
-                                    <p className="text-gray-700">{activePayslip.employeeId || ""}</p>
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-gray-800">Department:</p>
-                                    <p className="text-gray-700">{activePayslip.department || ""}</p>
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-gray-800">Designation:</p>
-                                    <p className="text-gray-700">{activePayslip.designation || ""}</p>
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-gray-800">PAN:</p>
-                                    <p className="text-gray-700">{activePayslip.panNumber || ""}</p>
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-gray-800">UAN:</p>
-                                    <p className="text-gray-700">{activePayslip.uanNumber || ""}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-                            <h3 className="text-lg font-semibold text-gray-800">Payment Details</h3>
-                            <div className="space-y-2">
-                                <p className="font-semibold text-gray-800">Bank Account:</p>
-                                <p className="text-gray-700">{activePayslip.bankAccount || ""}</p>
-                                <p className="font-semibold text-gray-800 mt-2">Payment Month:</p>
-                                <p className="text-gray-700">{activePayslip.month || ""}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Earnings & Deductions */}
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="bg-white border rounded-xl shadow-sm">
-                            <h3 className="text-lg font-semibold text-gray-800 px-4 py-3">Earnings</h3>
-                            <div className="border-t px-4 py-2 flex justify-between">
-                                <span className="text-gray-800">Basic Salary</span>
-                                <span className="text-gray-800">₹{activePayslip.salary?.toLocaleString?.() || "0.00"}</span>
-                            </div>
-                            {activePayslip.allowances && Object.entries(activePayslip.allowances).map(([key, value]) => (
-                                <div key={key} className="border-t px-4 py-2 flex justify-between">
-                                    <span className="text-gray-800">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                    <span className="text-gray-800">₹{value?.toLocaleString?.() || "0.00"}</span>
-                                </div>
-                            ))}
-                            <div className="border-t bg-gray-50 px-4 py-2 flex justify-between font-semibold">
-                                <span>Total Earnings</span>
-                                <span>₹{activePayslip.totalEarnings?.toLocaleString?.() || "0.00"}</span>
-                            </div>
-                        </div>
-
-                        <div className="bg-white border rounded-xl shadow-sm">
-                            <h3 className="text-lg font-semibold text-gray-800 px-4 py-3">Deductions</h3>
-                            {activePayslip.deductions && Object.entries(activePayslip.deductions).map(([key, value]) => (
-                                <div key={key} className="border-t px-4 py-2 flex justify-between">
-                                    <span className="text-gray-800">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                    <span className="text-gray-800">₹{value?.toLocaleString?.() || "0.00"}</span>
-                                </div>
-                            ))}
-                            <div className="border-t bg-gray-50 px-4 py-2 flex justify-between font-semibold">
-                                <span>Total Deductions</span>
-                                <span>₹{activePayslip.totalDeductions?.toLocaleString?.() || "0.00"}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Net Salary */}
-                    <div className="bg-[#e8edff] rounded-xl px-6 py-4 flex justify-between items-center">
-                        <h3 className="text-xl font-semibold text-gray-800">Net Salary</h3>
-                        <p className="text-xl font-bold text-gray-900">₹{activePayslip.netSalary?.toLocaleString?.() || "0.00"}</p>
-                    </div>
+                    {renderPayslipTemplate(activePayslip.template || 'classic', activePayslip)}
                 </div>
             </div>
         )}

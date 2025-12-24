@@ -67,3 +67,49 @@ export const googleCallback = async (req, res) => {
     );
   }
 };
+
+// Returns whether the current user has a stored Google Drive refresh token
+export const googleDriveStatus = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.user?.id || req.userId;
+    
+    if (!userId) {
+      return res.status(400).json({ message: "User ID not found" });
+    }
+    
+    const user = await User.findById(userId).select("googleDrive.refreshToken");
+    const connected = Boolean(user?.googleDrive?.refreshToken);
+    return res.json({ connected });
+  } catch (error) {
+    console.error("Error checking Google Drive status:", error);
+    return res.status(500).json({ message: "Failed to check Google Drive status" });
+  }
+};
+
+// Disconnect Google Drive by removing the stored refresh token
+export const googleDriveDisconnect = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.user?.id || req.userId;
+    
+    if (!userId) {
+      return res.status(400).json({ message: "User ID not found" });
+    }
+
+    const result = await User.findByIdAndUpdate(userId, {
+      $unset: { "googleDrive.refreshToken": 1 },
+      $set: {
+        "googleDrive.email": "Disconnected",
+        "googleDrive.connectedAt": null,
+      },
+    });
+
+    if (!result) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.json({ connected: false, message: "Google Drive disconnected" });
+  } catch (error) {
+    console.error("Error disconnecting Google Drive:", error);
+    return res.status(500).json({ message: "Failed to disconnect Google Drive", error: error.message });
+  }
+};

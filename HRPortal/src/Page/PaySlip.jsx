@@ -224,6 +224,7 @@ const handleConfirmTemplate = async () => {
             panNumber: employeeData.panNumber,
             uanNumber: employeeData.uanNumber,
             taxType,
+            template: activeTemplate,
         };
 
         await axios.post(

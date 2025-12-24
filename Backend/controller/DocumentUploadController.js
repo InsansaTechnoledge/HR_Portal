@@ -31,11 +31,10 @@ import axios from 'axios';
 export const uploadDocument = async (req, res) => {
   try {
     const { name, type, uploadedBy, employee, email, size } = req.body;
-
+    
     if (!req.file) {
       return res.status(400).json({ message: "Document file is required" });
     }
-
     // multer-storage-cloudinary provides these
     const {
       originalname,

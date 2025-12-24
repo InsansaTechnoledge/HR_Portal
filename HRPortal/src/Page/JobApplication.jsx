@@ -36,13 +36,12 @@ const JobApplication = () => {
   const [resumeUploading, setResumeUploading] = useState(false);
   const [resumeTarget, setResumeTarget] = useState(null);
   const [zipFile, setZipFile] = useState(null);
+  const [driveConnected, setDriveConnected] = useState(false);
   const navigate = useNavigate();
 
   const fetchApplications = async () => {
     try {
-      console.log("Fetching applications...");
       const response = await axios.get(`${API_BASE_URL}/api/job/applications`);
-      console.log(response.data.JobApplications);
       setApplications(response.data.JobApplications);
     } catch (err) {
       console.error("Error fetching applications:", err);
@@ -147,20 +146,84 @@ const JobApplication = () => {
     }
   };
 
+  const disconnectGoogleDrive = async () => {
+    console.log("Disconnect function called, current state:", driveConnected);
+    try {
+      setLoading(true);
+      const response = await axios.post(
+        `${API_BASE_URL}/api/google-drive/disconnect`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          withCredentials: true,
+        }
+      );
+
+      console.log("Disconnect response:", response.data);
+
+      // Small delay to ensure DB is updated
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Verify disconnection by checking status
+      const statusResp = await axios.get(
+        `${API_BASE_URL}/api/google-drive/status`,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          withCredentials: true,
+        }
+      );
+
+      console.log("Status after disconnect:", statusResp.data);
+      const newStatus = Boolean(statusResp.data?.connected);
+      console.log("Setting driveConnected to:", newStatus);
+      setDriveConnected(newStatus);
+      toast.success("Google Drive disconnected");
+      setLoading(false);
+    } catch (err) {
+      console.error("Disconnect error:", err);
+      setLoading(false);
+      toast.error(
+        err.response?.data?.message || "Failed to disconnect Google Drive"
+      );
+    }
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const connected = params.get("connected");
     const error = params.get("error");
 
     if (connected === "google") {
+      setDriveConnected(true);
       toast.success("Google Drive connected successfully");
       navigate("/application", { replace: true });
     } else if (error) {
+      setDriveConnected(false);
       toast.error("Failed to connect Google Drive");
       navigate("/application", { replace: true });
     }
   }, [navigate]);
-  
+
+  // Check drive connection status from backend on mount
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const resp = await axios.get(
+          `${API_BASE_URL}/api/google-drive/status`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+            withCredentials: true,
+          }
+        );
+        setDriveConnected(Boolean(resp.data?.connected));
+      } catch (err) {
+        // Keep existing state if status check fails
+      }
+    };
+    checkStatus();
+  }, []);
 
   const handleStatusChange = async (id, newStatus) => {
     try {
@@ -210,7 +273,6 @@ const JobApplication = () => {
           (statusFilter === "" || app.status === statusFilter)
       );
       setFilteredApplications(filtered);
-      console.log("Filtered Applications:", filtered);
     } else {
       setFilteredApplications([]);
     }
@@ -383,7 +445,7 @@ const JobApplication = () => {
 
     try {
       toast.loading("Uploading resumes...");
-      
+
       const formData = new FormData();
       formData.append("zip", zipFile);
 
@@ -399,16 +461,16 @@ const JobApplication = () => {
       toast.success(
         `${response.data.successCount} resumes uploaded successfully!`
       );
-      
+
       // Reset zip file
       setZipFile(null);
-      
+
       // Refresh applications
       fetchApplications();
     } catch (err) {
       console.error("Resume upload error:", err);
       toast.dismiss();
-      
+
       // Check if error is due to Google Drive not connected
       if (
         err.response?.status === 400 &&
@@ -420,97 +482,193 @@ const JobApplication = () => {
         }, 1500);
         return;
       }
-      
+
       toast.error(
-        err.response?.data?.message || "Failed to upload resumes. Please try again."
+        err.response?.data?.message ||
+          "Failed to upload resumes. Please try again."
       );
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+    <div className="min-h-screen bg-slate-950 p-6">
       <Toaster position="top-right" reverseOrder={false} />
-      
+
       {/* Header Section */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold text-slate-100">
             Job Applications
           </h1>
         </div>
-        <p className="text-slate-400 text-lg">Manage and track all job applicants</p>
+        <p className="text-slate-400 text-lg">
+          Manage and track all job applicants
+        </p>
       </div>
 
       {/* Main Container */}
       <div className="space-y-6">
         {/* Tools Section */}
-        <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-6 shadow-2xl">
-          <h2 className="text-lg font-semibold text-slate-100 mb-5 flex items-center">
-            <div className="h-1 w-1 bg-blue-400 rounded-full mr-3"></div>
-            Tools & Uploads
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Bulk Upload */}
-            <div className="flex items-center gap-2">
-              <label className="relative cursor-pointer flex-1">
-                <input
-                  id="excelFileInput"
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
-                  className="hidden"
-                />
-                <span className="block px-4 py-2.5 border border-slate-600 rounded-xl bg-slate-700/50 text-slate-200 font-medium hover:border-blue-500 hover:bg-slate-700 transition cursor-pointer text-center text-sm truncate">
-                  {excelFile ? excelFile.name.substring(0, 12) + "..." : "📁 Excel File"}
-                </span>
-              </label>
+        <div className="bg-slate-900 rounded-2xl border border-slate-700 shadow-xl">
+          <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4 border-b border-slate-700/50">
+            <h2 className="text-lg font-semibold text-slate-200 tracking-wide">
+              Tools & Uploads
+            </h2>
+          </div>
+
+          <div className="p-6 space-y-6">
+            {/* File Uploads Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Bulk Upload */}
+              <div className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/50 hover:border-blue-500/50 transition">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                    <span className="text-lg">📊</span>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-100">
+                      Bulk Application Upload
+                    </h3>
+                    <p className="text-xs text-slate-400">Upload Excel file</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="relative cursor-pointer flex-1">
+                    <input
+                      id="excelFileInput"
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      onChange={(e) =>
+                        setExcelFile(e.target.files?.[0] || null)
+                      }
+                      className="hidden"
+                    />
+                    <span className="block px-4 py-2.5 border border-slate-600 rounded-lg bg-slate-700/50 text-slate-200 font-medium hover:border-blue-500 hover:bg-slate-700 transition cursor-pointer text-center text-sm truncate">
+                      {excelFile
+                        ? excelFile.name.substring(0, 15) + "..."
+                        : "Choose Excel File"}
+                    </span>
+                  </label>
+                  <button
+                    className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg hover:shadow-blue-500/50"
+                    onClick={uploadExcelFiles}
+                    disabled={loading || !excelFile}
+                  >
+                    {loading ? "⏳" : "📤"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Bulk Resume Upload */}
+              <div className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/50 hover:border-purple-500/50 transition">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                    <span className="text-lg">📦</span>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-100">
+                      Bulk Resume Upload
+                    </h3>
+                    <p className="text-xs text-slate-400">Upload ZIP file</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="relative cursor-pointer flex-1">
+                    <input
+                      type="file"
+                      accept=".zip"
+                      onChange={(e) => setZipFile(e.target.files[0])}
+                      className="hidden"
+                    />
+                    <span className="block px-4 py-2.5 border border-slate-600 rounded-lg bg-slate-700/50 text-slate-200 font-medium hover:border-purple-500 hover:bg-slate-700 transition cursor-pointer text-center text-sm truncate">
+                      {zipFile
+                        ? zipFile.name.substring(0, 15) + "..."
+                        : "Choose ZIP File"}
+                    </span>
+                  </label>
+                  <button
+                    className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium rounded-lg hover:from-purple-700 hover:to-purple-800 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg hover:shadow-purple-500/50"
+                    onClick={uploadBulkResumes}
+                    disabled={!zipFile}
+                  >
+                    📤
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Download Template */}
               <button
-                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg hover:shadow-blue-500/50 whitespace-nowrap"
-                onClick={uploadExcelFiles}
-                disabled={loading || !excelFile}
+                onClick={handleDownloadTemplate}
+                className="flex items-center justify-center gap-3 px-5 py-4 bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/50 text-green-100 font-medium rounded-xl hover:from-green-600/30 hover:to-emerald-600/30 hover:border-green-400/70 transition shadow-lg hover:shadow-green-500/30"
               >
-                {loading ? "⏳" : "📤"}
+                <div className="h-10 w-10 rounded-lg bg-green-500/30 flex items-center justify-center">
+                  <span className="text-xl">📋</span>
+                </div>
+                <div className="text-left">
+                  <div className="text-sm font-semibold">Download Template</div>
+                  <div className="text-xs text-green-200/70">Excel format</div>
+                </div>
+              </button>
+
+              {/* Google Drive Connection Toggle */}
+              <button
+                onClick={
+                  driveConnected ? disconnectGoogleDrive : connectGoogleDrive
+                }
+                disabled={loading}
+                className={`flex items-center justify-between px-5 py-4 rounded-xl border transition-all shadow-lg
+                  ${
+                    driveConnected
+                      ? "bg-gradient-to-r from-green-600/20 to-emerald-600/20 border-green-500/50 hover:from-green-600/30 hover:to-emerald-600/30 hover:border-green-400/70 hover:shadow-green-500/30"
+                      : "bg-gradient-to-r from-red-600/15 to-orange-600/15 border-red-500/50 hover:from-red-600/25 hover:to-orange-600/25 hover:border-red-400/70 hover:shadow-red-500/30"
+                  }
+                  ${loading ? "opacity-50 cursor-not-allowed" : ""}
+                `}
+                aria-pressed={driveConnected}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`h-10 w-10 rounded-lg flex items-center justify-center transition-colors
+                    ${driveConnected ? "bg-green-500/30" : "bg-red-500/30"}
+                  `}
+                  >
+                    <span className="text-xl">☁️</span>
+                  </div>
+                  <div className="text-left">
+                    <div
+                      className={`text-sm font-semibold transition-colors ${
+                        driveConnected ? "text-green-100" : "text-red-100"
+                      }`}
+                    >
+                      Google Drive
+                    </div>
+                    <div
+                      className={`text-xs transition-colors ${
+                        driveConnected ? "text-green-200/70" : "text-red-200/70"
+                      }`}
+                    >
+                      {driveConnected ? "Connected" : "Disconnected"}
+                    </div>
+                  </div>
+                </div>
+                <div
+                  className={`relative flex-shrink-0 w-12 h-6 rounded-full transition-all duration-300 shadow-inner
+                    ${driveConnected ? "bg-green-500" : "bg-slate-600"}
+                  `}
+                  role="switch"
+                  aria-checked={driveConnected}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-lg transition-transform duration-300 ease-in-out
+                      ${driveConnected ? "translate-x-6" : "translate-x-0"}
+                    `}
+                  />
+                </div>
               </button>
             </div>
-
-            {/* Bulk Resume Upload */}
-            <div className="flex items-center gap-2">
-              <label className="relative cursor-pointer flex-1">
-                <input
-                  type="file"
-                  accept=".zip"
-                  onChange={(e) => setZipFile(e.target.files[0])}
-                  className="hidden"
-                />
-                <span className="block px-4 py-2.5 border border-slate-600 rounded-xl bg-slate-700/50 text-slate-200 font-medium hover:border-purple-500 hover:bg-slate-700 transition cursor-pointer text-center text-sm truncate">
-                  📦 Resume ZIP
-                </span>
-              </label>
-               <button
-                className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium rounded-xl hover:from-purple-700 hover:to-purple-800 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg hover:shadow-purple-500/50"
-                onClick={uploadBulkResumes}
-                disabled={!zipFile}
-              >
-                📤
-              </button>
-            </div>
-
-            {/* Download Template */}
-            <button
-              onClick={handleDownloadTemplate}
-              className="px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white font-medium rounded-xl hover:from-green-700 hover:to-green-800 transition shadow-lg hover:shadow-green-500/50 flex items-center justify-center gap-2"
-            >
-              <span>📋</span> Template
-            </button>
-
-            {/* Google Drive Connection */}
-            <button
-              className="px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white font-medium rounded-xl hover:from-red-700 hover:to-red-800 transition shadow-lg hover:shadow-red-500/50 flex items-center justify-center gap-2"
-              onClick={connectGoogleDrive}
-            >
-              <span>☁️</span> Google Drive
-            </button>
           </div>
 
           {failedRows.length > 0 && (
@@ -526,7 +684,7 @@ const JobApplication = () => {
         </div>
 
         {/* Search & Filter Section */}
-        <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-6 shadow-2xl">
+        <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-6 shadow-2xl">
           <div className="flex flex-col gap-4">
             <div className="flex-grow flex items-center bg-slate-700/30 border border-slate-600 rounded-xl overflow-hidden hover:border-blue-500 transition shadow-lg">
               <Search className="mx-4 text-slate-400 w-5 h-5" />
@@ -553,28 +711,48 @@ const JobApplication = () => {
         </div>
 
         {/* Applications Table */}
-        <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 overflow-hidden shadow-2xl">
+        <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-700 bg-slate-900/50">
-                  <th className="p-4 text-left font-semibold text-slate-300">Name</th>
-                  <th className="p-4 text-left font-semibold text-slate-300">Email</th>
-                  <th className="p-4 text-left font-semibold text-slate-300">Phone</th>
-                  <th className="p-4 text-left font-semibold text-slate-300">Position</th>
-                  <th className="p-4 text-left font-semibold text-slate-300">Status</th>
-                  <th className="p-4 text-right font-semibold text-slate-300">Actions</th>
+                  <th className="p-4 text-left font-semibold text-slate-300">
+                    Name
+                  </th>
+                  <th className="p-4 text-left font-semibold text-slate-300">
+                    Email
+                  </th>
+                  <th className="p-4 text-left font-semibold text-slate-300">
+                    Phone
+                  </th>
+                  <th className="p-4 text-left font-semibold text-slate-300">
+                    Position
+                  </th>
+                  <th className="p-4 text-left font-semibold text-slate-300">
+                    Status
+                  </th>
+                  <th className="p-4 text-right font-semibold text-slate-300">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredApplications &&
                   filteredApplications.length !== 0 &&
                   filteredApplications.map((app) => (
-                    <tr key={app._id} className="border-b border-slate-700 hover:bg-slate-700/30 transition">
-                      {console.log(app)}
-                      <td className="p-4 text-slate-100 font-medium">{app.name}</td>
-                      <td className="p-4 text-slate-400 text-sm">{app.email}</td>
-                      <td className="p-4 text-slate-400 text-sm">{app.phone}</td>
+                    <tr
+                      key={app._id}
+                      className="border-b border-slate-700 hover:bg-slate-700/30 transition"
+                    >
+                      <td className="p-4 text-slate-100 font-medium">
+                        {app.name}
+                      </td>
+                      <td className="p-4 text-slate-400 text-sm">
+                        {app.email}
+                      </td>
+                      <td className="p-4 text-slate-400 text-sm">
+                        {app.phone}
+                      </td>
                       <td className="p-4 text-slate-300">{app.jobTitle}</td>
                       <td className="p-4">
                         <select
@@ -602,7 +780,8 @@ const JobApplication = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </button>
-                          {app?.resume && app.resume !== "BULK_UPLOAD_PENDING" ? (
+                          {app?.resume &&
+                          app.resume !== "BULK_UPLOAD_PENDING" ? (
                             <button
                               className="flex items-center gap-1 px-3 py-2 text-xs font-medium bg-cyan-600/20 text-cyan-300 border border-cyan-500/50 rounded-lg hover:bg-cyan-600/30 transition"
                               onClick={() => handleViewResume(app)}
@@ -842,7 +1021,9 @@ const JobApplication = () => {
             <div className="p-4 bg-blue-900/30 border border-blue-700/50 rounded-xl">
               <p className="text-sm text-slate-300">
                 Candidate:{" "}
-                <span className="font-bold text-blue-300">{resumeTarget.name}</span>
+                <span className="font-bold text-blue-300">
+                  {resumeTarget.name}
+                </span>
               </p>
             </div>
 
