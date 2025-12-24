@@ -26,8 +26,11 @@ export const generatePaySlip = async (req, res) => {
       });
     }
 
-    // Create payslip
-    const newPayslip = new Payslip(payslipData);
+    // Create payslip with template
+    const newPayslip = new Payslip({
+      ...payslipData,
+      template: payslipData.template || 'classic'
+    });
     const savedPayslip = await newPayslip.save();
 
 
@@ -131,7 +134,7 @@ export const fetchPaySlipbyEmployeeEmail = async(req,res)=>{
     const payslipQuery = { employeeId: String(employee.empId) };
     if (month) payslipQuery.month = month;
 
-    const payslips = await Payslip.find(payslipQuery, "employeeId name department month salary totalEarnings totalDeductions netSalary")
+    const payslips = await Payslip.find(payslipQuery, "employeeId name department month salary totalEarnings totalDeductions netSalary template")
       .skip((Math.max(parseInt(page, 10), 1) - 1) * Math.min(Math.max(parseInt(limit, 10), 1), 500))
       .limit(Math.min(Math.max(parseInt(limit, 10), 1), 500))
       .lean({ defaults: true, getters: false });

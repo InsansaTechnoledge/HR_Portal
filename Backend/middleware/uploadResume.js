@@ -10,7 +10,6 @@ const resumeStorage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => {
     const { applicationId } = req.params;
-    console.log("Application ID:", applicationId);
 
     const application = await JobApplication.findById(applicationId)
       .populate("jobId", "jobId")

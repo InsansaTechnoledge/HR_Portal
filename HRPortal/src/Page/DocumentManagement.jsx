@@ -127,7 +127,24 @@ const DocumentManagement = () => {
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
+            // Validate file type
+            const allowedMimeTypes = [
+                'application/pdf',
+                'application/msword', // .doc
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+                'application/vnd.ms-excel', // .xls
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+                'image/png',
+                'image/jpeg'
+            ];
+            
+            if (!allowedMimeTypes.includes(file.type)) {
+                setError(`File type not allowed. Please upload PDF, DOCX, XLSX, PNG, or JPG files only.`);
+                return;
+            }
+            
             setFileName(file.name)
+            setError("");
         }
         setFormData(prev => ({
             ...prev,
@@ -140,7 +157,6 @@ const DocumentManagement = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        console.log("FormData: ", formData);
         // Check if all fields are filled
         if (!formData.document || !formData.employeeEmail || !formData.type){
             setError("Please fill in all required fields");
@@ -323,7 +339,7 @@ const DocumentManagement = () => {
                                                 (<p class="ml-3 text-sm text-gray-500 "><span class="font-semibold">Click to upload</span> or drag and drop</p>)
                                             }
                                         </div>
-                                        <input id="resume" type="file" class="hidden" onChange={handleFileChange} />
+                                        <input id="resume" type="file" class="hidden" onChange={handleFileChange} accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" />
                                     </label>
 
                                 </div>

@@ -93,6 +93,12 @@ const PayslipSchema = new mongoose.Schema(
         taxType: {
             type: String,
             required: true
+        },
+        template: {
+            type: String,
+            enum: ['classic', 'modern', 'minimal', 'corporate', 'default'],
+            default: 'classic',
+            required: true
         }
     },
 
