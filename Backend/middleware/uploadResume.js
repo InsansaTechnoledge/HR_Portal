@@ -1,43 +1,41 @@
+import fs from "fs-extra";
+import path from "path";
 import multer from "multer";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
-import cloudinary from "../config/cloudinary.js";
-import JobApplication from "../models/JobApplications.js";
 
-const sanitize = (value = "") =>
-  value.replace(/[^a-zA-Z0-9-_]/g, "_");
+const ensureTempDir = async (dir, cb) => {
+  try {
+    await fs.ensureDir(dir);
+    cb(null, dir);
+  } catch (err) {
+    cb(err);
+  }
+};
 
-const resumeStorage = new CloudinaryStorage({
-  cloudinary,
-  params: async (req, file) => {
-    const { applicationId } = req.params;
-
-    const application = await JobApplication.findById(applicationId)
-      .populate("jobId", "jobId")
-      .lean();
-
-    if (!application) {
-      throw new Error("Application not found");
-    }
-
-    const isPDF = file.mimetype === "application/pdf";
-
-    const safeName = sanitize(application.name);
-    const safeEmail = sanitize(application.email);
-    const jobFolder = `job_${application.jobId.jobId}`;
-
-    return {
-      folder: `job_portal/resumes/${jobFolder}`,
-      resource_type: isPDF ? "image" : "raw",
-      format: isPDF ? "pdf" : undefined,
-      public_id: `${safeName}_${safeEmail}_${applicationId}`,
-      access_mode: "public",
-    };
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(process.cwd(), "temp_candidate_resumes");
+    ensureTempDir(dir, cb);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || "";
+    const base = path.basename(file.originalname, ext);
+    const safeBase = base.replace(/[^a-z0-9]+/gi, "_") || "resume";
+    cb(null, `${Date.now()}_${safeBase}${ext}`);
   },
 });
 
+const allowedExtensions = new Set(["pdf", "doc", "docx", "png", "jpg", "jpeg"]);
+
 export const uploadResume = multer({
-  storage: resumeStorage,
+  storage,
   limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ext = (file.originalname.split(".").pop() || "").toLowerCase();
+    if (!allowedExtensions.has(ext)) {
+      return cb(new Error("Unsupported file type"));
+    }
+    cb(null, true);
+  },
 });
 
 export default uploadResume;

@@ -39,10 +39,17 @@ const JobApplication = () => {
   const [driveConnected, setDriveConnected] = useState(false);
   const navigate = useNavigate();
 
+ 
+
   const fetchApplications = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/job/applications`);
-      setApplications(response.data.JobApplications);
+      const response = await axios.get(`${API_BASE_URL}/api/candidate-application`);
+      const apps = Array.isArray(response.data?.applications) ? response.data.applications : [];
+      const normalized = apps.map((a) => ({
+        ...a,
+        position: a.rawJobTitle || "",
+      }));
+      setApplications(normalized);
     } catch (err) {
       console.error("Error fetching applications:", err);
       setApplications([]);
@@ -77,7 +84,7 @@ const JobApplication = () => {
       formData.append("resume", resumeFile);
 
       const resp = await axios.post(
-        `${API_BASE_URL}/api/job-application/${resumeTarget._id}/resume`,
+        `${API_BASE_URL}/api/candidate-application/${resumeTarget._id}/resume`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -227,9 +234,8 @@ const JobApplication = () => {
 
   const handleStatusChange = async (id, newStatus) => {
     try {
-      // Update the API with the new status
       const response = await axios.put(
-        `${API_BASE_URL}/api/job/application/status/${id}`,
+        `${API_BASE_URL}/api/candidate-application/${id}/status`,
         { status: newStatus }
       );
 
@@ -239,11 +245,12 @@ const JobApplication = () => {
             app._id === id ? { ...app, status: newStatus } : app
           )
         );
+        toast.success("Status updated successfully");
         console.log("Status updated successfully:", response.data);
       }
     } catch (error) {
       console.error("Error updating status:", error);
-      alert("Failed to update status. Please try again.");
+      toast.error(error.response?.data?.message || "Failed to update status");
     }
   };
 
@@ -278,162 +285,128 @@ const JobApplication = () => {
     }
   }, [applications, searchTerm, statusFilter]);
 
-  const handleViewProfile = async (applicantId) => {
+  const handleViewProfile = (applicant) => {
     try {
-      if (!applicantId) {
-        alert("Applicant ID not found");
+      if (!applicant) {
+        toast.error("Applicant data not found");
         return;
       }
-
-      setProfileLoading(true);
-      console.log("Fetching applicant profile for ID:", applicantId);
-      const response = await axios.get(
-        `${API_BASE_URL}/api/career-portal/profile/${applicantId}`
-      );
-
-      console.log("Full response:", response);
-      console.log("Response data:", response.data);
-
-      if (response.status === 200 && response.data) {
-        const applicantData = response.data.applicant || response.data;
-        console.log("Setting applicant data:", applicantData);
-        setSelectedApplicant(applicantData);
-        setShowProfileModal(true);
-        console.log("User Profile Data:", applicantData);
-      }
+      setSelectedApplicant(applicant);
+      setShowProfileModal(true);
     } catch (err) {
-      console.error("Error fetching applicant profile:", err);
-      alert("Failed to load applicant profile. Please try again.");
-    } finally {
-      setProfileLoading(false);
+      console.error("Error loading applicant profile:", err);
+      toast.error("Failed to load applicant profile");
     }
   };
 
-  const uploadExcelFiles = async () => {
-    try {
-      if (!excelFile) {
-        toast.error("Please select an Excel file to upload.");
-        return;
-      }
-
-      // File type validation
-      const allowedTypes = [
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "application/vnd.ms-excel",
-      ];
-
-      if (!allowedTypes.includes(excelFile.type)) {
-        toast.error("Only Excel files (.xlsx, .xls) are allowed");
-        return;
-      }
-
-      setLoading(true);
-
-      const formData = new FormData();
-      formData.append("file", excelFile);
-
-      const response = await axios.post(
-        `${API_BASE_URL}/api/bulk-upload/applications`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      if (response.status === 200 || response.status === 201) {
-        const {
-          successCount = 0,
-          failedCount = 0,
-          failedRows = [],
-        } = response.data;
-
-        //  Handle full / partial success
-        if (failedCount > 0) {
-          toast.error("Bulk upload completed with some failures.");
-          setError("Some rows failed to upload.");
-          setFailedRows(failedRows);
-        } else {
-          toast.success("Bulk upload successful!");
-          setFailedRows([]);
-          setError(null);
-        }
-
-        // Reset input
-        setExcelFile(null);
-        document.getElementById("excelFileInput").value = "";
-
-        // Refresh list
-        await fetchApplications();
-      }
-    } catch (error) {
-      console.error("Error uploading Excel file:", error);
-      const errorMsg =
-        error.response?.data?.message ||
-        "Failed to upload Excel file. Please try again.";
-      toast.error(errorMsg);
-      setError(errorMsg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDownloadFailedRows = () => {
-    if (!failedRows || failedRows.length === 0) {
-      alert("No failed rows to download");
+ const uploadExcelFiles = async () => {
+  try {
+    if (!excelFile) {
+      toast.error("Please select an Excel file to upload.");
       return;
     }
 
-    // Convert failed rows to flat structure
-    const excelData = failedRows.map((item) => ({
-      name: item.row?.name || "",
-      email: item.row?.email || "",
-      phone: item.row?.phone || "",
-      jobTitle: item.row?.jobTitle || "",
-      failureReason: item.reason || "Unknown error",
-    }));
 
-    // Create worksheet
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
-
-    worksheet["!cols"] = [
-      { wch: 20 },
-      { wch: 30 },
-      { wch: 15 },
-      { wch: 25 },
-      { wch: 40 },
+    const allowedTypes = [
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
     ];
 
-    // Create workbook
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "FailedRows");
+    if (!allowedTypes.includes(excelFile.type)) {
+      toast.error("Only Excel files (.xlsx, .xls) are allowed");
+      return;
+    }
 
-    // Download file
-    XLSX.writeFile(workbook, "failed_job_applications.xlsx");
-  };
+    setLoading(true);
 
-  const handleDownloadTemplate = () => {
-    // Define Excel headers
-    const worksheetData = [
+    const formData = new FormData();
+    formData.append("file", excelFile);
+
+    const response = await axios.post(
+      `${API_BASE_URL}/api/bulk-upload/applications`,
+      formData,
       {
-        name: "",
-        email: "",
-        phone: "",
-        jobTitle: "",
-      },
-    ];
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
 
-    // Create worksheet
-    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    setExcelFile(null);
+    document.getElementById("excelFileInput").value = "";
+    toast.success(response.data?.message || "Excel file uploaded successfully");
 
-    // Create workbook
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "JobApplications");
+    await fetchApplications(); 
 
-    // Download file
-    XLSX.writeFile(workbook, "job_applications_bulk_upload_template.xlsx");
-  };
+  } catch (error) {
+    console.error("Error uploading Excel file:", error);
+    const errorMsg =
+      error.response?.data?.message ||
+      "Failed to upload Excel file. Please try again.";
+    toast.error(errorMsg);
+    setError(errorMsg);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+  // const handleDownloadFailedRows = () => {
+  //   if (!failedRows || failedRows.length === 0) {
+  //     alert("No failed rows to download");
+  //     return;
+  //   }
+
+  //   // Convert failed rows to flat structure
+  //   const excelData = failedRows.map((item) => ({
+  //     name: item.row?.name || "",
+  //     email: item.row?.email || "",
+  //     phone: item.row?.phone || "",
+  //     jobTitle: item.row?.jobTitle || "",
+  //     failureReason: item.reason || "Unknown error",
+  //   }));
+
+  //   // Create worksheet
+  //   const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+  //   worksheet["!cols"] = [
+  //     { wch: 20 },
+  //     { wch: 30 },
+  //     { wch: 15 },
+  //     { wch: 25 },
+  //     { wch: 40 },
+  //   ];
+
+  //   // Create workbook
+  //   const workbook = XLSX.utils.book_new();
+  //   XLSX.utils.book_append_sheet(workbook, worksheet, "FailedRows");
+
+  //   // Download file
+  //   XLSX.writeFile(workbook, "failed_job_applications.xlsx");
+  // };
+
+
+
+
+  // const handleDownloadTemplate = () => {
+  //   // Define Excel headers
+  //   const worksheetData = [
+  //     {
+  //       name: "",
+  //       email: "",
+  //       phone: "",
+  //       jobTitle: "",
+  //     },
+  //   ];
+
+  //   // Create worksheet
+  //   const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+
+  //   // Create workbook
+  //   const workbook = XLSX.utils.book_new();
+  //   XLSX.utils.book_append_sheet(workbook, worksheet, "JobApplications");
+
+  //   // Download file
+  //   XLSX.writeFile(workbook, "job_applications_bulk_upload_template.xlsx");
+  // };
 
   const closeProfileModal = () => {
     setShowProfileModal(false);
@@ -458,9 +431,35 @@ const JobApplication = () => {
       );
 
       toast.dismiss();
+      
+      const { successCount, failed } = response.data;
+      
+      // Show success message
       toast.success(
-        `${response.data.successCount} resumes uploaded successfully!`
+        `${successCount} resume${successCount !== 1 ? 's' : ''} uploaded successfully!`
       );
+
+      // Show failed uploads if any
+      if (failed && failed.length > 0) {
+        const phoneNotMatched = failed.filter(f => f.reason === "No matching application");
+        const otherFailed = failed.filter(f => f.reason !== "No matching application");
+        
+        if (phoneNotMatched.length > 0) {
+          const fileList = phoneNotMatched.map(f => f.file).join(", ");
+          toast.error(
+            `${phoneNotMatched.length} file${phoneNotMatched.length !== 1 ? 's' : ''} failed: Phone number not found in database. Files: ${fileList}`,
+            { duration: 8000 }
+          );
+        }
+        
+        if (otherFailed.length > 0) {
+          const failureReasons = otherFailed.map(f => `${f.file} (${f.reason})`).join(", ");
+          toast.error(
+            `${otherFailed.length} file${otherFailed.length !== 1 ? 's' : ''} failed: ${failureReasons}`,
+            { duration: 8000 }
+          );
+        }
+      }
 
       // Reset zip file
       setZipFile(null);
@@ -488,6 +487,14 @@ const JobApplication = () => {
           "Failed to upload resumes. Please try again."
       );
     }
+  };
+
+  // Ensure external profile URLs open correctly by adding https:// when missing
+  const normalizeUrl = (url) => {
+    if (!url || typeof url !== "string") return "";
+    const trimmed = url.trim();
+    if (trimmed.length === 0) return "";
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
   };
 
   return (
@@ -600,7 +607,7 @@ const JobApplication = () => {
             {/* Actions Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Download Template */}
-              <button
+              {/* <button
                 onClick={handleDownloadTemplate}
                 className="flex items-center justify-center gap-3 px-5 py-4 bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/50 text-green-100 font-medium rounded-xl hover:from-green-600/30 hover:to-emerald-600/30 hover:border-green-400/70 transition shadow-lg hover:shadow-green-500/30"
               >
@@ -611,7 +618,7 @@ const JobApplication = () => {
                   <div className="text-sm font-semibold">Download Template</div>
                   <div className="text-xs text-green-200/70">Excel format</div>
                 </div>
-              </button>
+              </button> */}
 
               {/* Google Drive Connection Toggle */}
               <button
@@ -671,7 +678,7 @@ const JobApplication = () => {
             </div>
           </div>
 
-          {failedRows.length > 0 && (
+          {/* {failedRows.length > 0 && (
             <div className="mt-4">
               <button
                 onClick={handleDownloadFailedRows}
@@ -680,7 +687,7 @@ const JobApplication = () => {
                 ⚠️ Download Failed Rows ({failedRows.length})
               </button>
             </div>
-          )}
+          )} */}
         </div>
 
         {/* Search & Filter Section */}
@@ -726,8 +733,14 @@ const JobApplication = () => {
                     Phone
                   </th>
                   <th className="p-4 text-left font-semibold text-slate-300">
-                    Position
+                    Skills
                   </th>
+                  <th className="p-4 text-left font-semibold text-slate-300">
+              Experience
+                    </th>
+                    <th className="p-4 text-left font-semibold text-slate-300">
+                      Location
+                    </th>
                   <th className="p-4 text-left font-semibold text-slate-300">
                     Status
                   </th>
@@ -753,7 +766,9 @@ const JobApplication = () => {
                       <td className="p-4 text-slate-400 text-sm">
                         {app.phone}
                       </td>
-                      <td className="p-4 text-slate-300">{app.jobTitle}</td>
+                      <td className="p-4 text-slate-300">{app.skills}</td>
+                       <td className="p-4 text-slate-300">{app.experience}</td>
+                       <td className="p-4 text-slate-300">{app.location}</td>
                       <td className="p-4">
                         <select
                           className={`border rounded-lg p-2 text-xs font-medium transition ${
@@ -775,7 +790,7 @@ const JobApplication = () => {
                         <div className="flex space-x-3 justify-end">
                           <button
                             className="flex items-center gap-1 px-3 py-2 text-xs font-medium bg-blue-600/20 text-blue-300 border border-blue-500/50 rounded-lg hover:bg-blue-600/30 transition"
-                            onClick={() => handleViewProfile(app.applicantId)}
+                            onClick={() => handleViewProfile(app)}
                             title="View profile details"
                           >
                             <Eye className="h-4 w-4" />
@@ -896,28 +911,76 @@ const JobApplication = () => {
                       </div>
                     </div>
 
-                    {/* Personal Information Section */}
+                    {/* Professional Information Section */}
                     <div>
                       <div className="flex items-center space-x-3 mb-5">
                         <div className="h-1 w-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
                         <h3 className="text-xl font-bold text-slate-100">
-                          Personal Details
+                          Professional Details
                         </h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="p-5 bg-gradient-to-br from-purple-900/30 to-transparent rounded-xl border border-purple-700/50 hover:border-purple-600 transition">
                           <p className="text-sm text-slate-400 font-semibold mb-2">
-                            Gender
+                            Position/Job Title
                           </p>
-                          <div className="flex items-center space-x-2">
-                            <div className="h-3 w-3 bg-purple-500 rounded-full"></div>
-                            <p className="text-slate-100 font-medium">
-                              {selectedApplicant?.gender || "Not specified"}
-                            </p>
-                          </div>
+                          <p className="text-slate-100 font-medium">
+                            {selectedApplicant?.rawJobTitle || "Not specified"}
+                          </p>
+                        </div>
+                        <div className="p-5 bg-gradient-to-br from-indigo-900/30 to-transparent rounded-xl border border-indigo-700/50 hover:border-indigo-600 transition">
+                          <p className="text-sm text-slate-400 font-semibold mb-2">
+                            Total Experience
+                          </p>
+                          <p className="text-slate-100 font-medium">
+                            {selectedApplicant?.experience || "Not specified"}
+                          </p>
+                        </div>
+                        <div className="p-5 bg-gradient-to-br from-cyan-900/30 to-transparent rounded-xl border border-cyan-700/50 hover:border-cyan-600 transition">
+                          <p className="text-sm text-slate-400 font-semibold mb-2">
+                            Relevant Experience
+                          </p>
+                          <p className="text-slate-100 font-medium">
+                            {selectedApplicant?.relevantExperience || "Not specified"}
+                          </p>
+                        </div>
+                        <div className="p-5 bg-gradient-to-br from-emerald-900/30 to-transparent rounded-xl border border-emerald-700/50 hover:border-emerald-600 transition">
+                          <p className="text-sm text-slate-400 font-semibold mb-2">
+                            Location
+                          </p>
+                          <p className="text-slate-100 font-medium">
+                            {selectedApplicant?.location || "Not specified"}
+                          </p>
+                        </div>
+                        <div className="p-5 bg-gradient-to-br from-yellow-900/30 to-transparent rounded-xl border border-yellow-700/50 hover:border-yellow-600 transition">
+                          <p className="text-sm text-slate-400 font-semibold mb-2">
+                            Notice Period
+                          </p>
+                          <p className="text-slate-100 font-medium">
+                            {selectedApplicant?.noticePeriod || "Not specified"}
+                          </p>
                         </div>
                       </div>
                     </div>
+
+                    {/* Skills Section */}
+                    {selectedApplicant?.skills && selectedApplicant?.skills.length > 0 && (
+                      <div>
+                        <div className="flex items-center space-x-3 mb-5">
+                          <div className="h-1 w-8 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full"></div>
+                          <h3 className="text-xl font-bold text-slate-100">
+                            Skills
+                          </h3>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedApplicant.skills.map((skill, idx) => (
+                            <span key={idx} className="px-4 py-2 bg-gradient-to-r from-orange-600/30 to-yellow-600/30 text-orange-200 rounded-full text-sm font-medium border border-orange-500/50 hover:border-orange-400/70 transition">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Social Profiles Section */}
                     <div>
@@ -930,9 +993,10 @@ const JobApplication = () => {
                       <div className="space-y-3">
                         {selectedApplicant?.linkedIn && (
                           <a
-                            href={selectedApplicant.linkedIn}
+                            href={normalizeUrl(selectedApplicant.linkedIn)}
                             target="_blank"
                             rel="noopener noreferrer"
+                            title="Open LinkedIn profile"
                             className="flex items-center justify-between p-5 bg-gradient-to-br from-blue-900/40 to-transparent rounded-xl border border-blue-700/50 hover:border-blue-500 hover:bg-blue-900/50 transition transform hover:scale-105"
                           >
                             <div className="flex items-center space-x-4">
@@ -944,11 +1008,11 @@ const JobApplication = () => {
                                   LinkedIn
                                 </p>
                                 <p className="text-blue-400 font-medium truncate text-sm">
-                                  {selectedApplicant.linkedIn}
+                                  {normalizeUrl(selectedApplicant.linkedIn)}
                                 </p>
                               </div>
                             </div>
-                            <X className="h-5 w-5 text-slate-500" />
+                            <span className="text-slate-400 text-sm">Open ↗</span>
                           </a>
                         )}
                         {selectedApplicant?.github && (
