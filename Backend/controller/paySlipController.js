@@ -152,3 +152,29 @@ catch(err){
      });
 }
 }
+
+export const deletePaySlipById = async (req, res) => {
+  try{
+    const {id} = req.params;
+    if(!id){
+      return res.status(400).json({message: "Payslip ID is required"});
+    }
+
+    const payslip = await Payslip.findByIdAndDelete(id);
+    if(!payslip){
+      return res.status(404).json({message: "Payslip not found"});
+    }
+
+    // Also remove payslip reference from Employee
+    await Employee.updateOne(
+      { empId: payslip.employeeId },
+      { $pull: { payslips: payslip._id } }
+    );
+
+    res.status(200).json({message: "Payslip deleted successfully"});
+  }
+  catch(err){
+    res.status(500).json({message: err.message || err});
+    
+  }
+}

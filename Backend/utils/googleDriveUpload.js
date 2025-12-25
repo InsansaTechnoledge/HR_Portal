@@ -3,7 +3,7 @@ import fs from "fs";
 import { google } from "googleapis";
 import oauth2Client from "../config/googleAuth.js";
 
-export const uploadToGoogleDrive = async (filePath, fileName, refreshToken, folderId) => {
+export const uploadToGoogleDrive = async (filePath, driveFileName, refreshToken, folderId) => {
   if (!refreshToken) {
     throw new Error("Google Drive refresh token missing");
   }
@@ -20,7 +20,7 @@ export const uploadToGoogleDrive = async (filePath, fileName, refreshToken, fold
 
   const response = await drive.files.create({
     requestBody: {
-      name: fileName,
+      name: driveFileName,
       parents: folderId ? [folderId] : [],
     },
     media: {

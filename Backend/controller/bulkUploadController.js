@@ -11,6 +11,7 @@ import Applicant from "../models/Applicant.js";
 import JobApplication from "../models/JobApplications.js";
 import User from "../models/User.js";
 import getOrCreateFolder from "../utils/googleDriveFolder.js";
+import CandidateApplication from "../models/candidateApplication.js";
 
 
 //Helper to recursively get all files in a directory
@@ -31,109 +32,61 @@ const getAllFiles = async (dirPath, arrayOfFiles = []) => {
   return arrayOfFiles;
 };
 
+// Excel Bulk Upload
 export const bulkUploadJobApplications = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
+      return res.status(400).json({ message: "Excel file required" });
     }
 
     const workbook = XLSX.readFile(req.file.path);
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet);
+    const data = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-    let successCount = 0;
-    let failedRows = [];
+    let inserted = 0;
+    const failedRows = [];
 
-    for (const row of rows) {
-      const { name, email, phone, jobTitle } = row;
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
 
-      // Basic validation
-      if (!name || !email || !phone || !jobTitle) {
-        failedRows.push({ row, reason: "Missing required fields" });
+      const phone = String(row["Contact No"]).replace(/\D/g, "");
+
+      if (!phone || phone.length < 10) {
+        failedRows.push({ row: i + 2, reason: "Invalid phone number" });
         continue;
       }
 
-      // Find Job
-      const job = await Job.findOne({ jobTitle });
-      if (!job) {
-        failedRows.push({ row, reason: "Job not found" });
-        continue;
-      }
-
-      //  Find or Create Applicant
-      let applicant = await Applicant.findOne({ email });
-
-      if (!applicant) {
-        const hashedPassword = await bcrypt.hash("Temp@123", 10);
-
-        applicant = await Applicant.create({
-          name,
-          email,
-          phone,
-          password: hashedPassword,
-        });
-      }
-
-      //  Prevent duplicate application
-      const exists = await JobApplication.findOne({
-        jobId: job._id,
-        applicantId: applicant._id,
-      });
-
-      if (exists) {
-        failedRows.push({
-          row,
-          reason: "Applicant already applied for this job",
-        });
-        continue;
-      }
-
-      // Create Job Application
-      const application = await JobApplication.create({
-        jobId: job._id,
-        applicantId: applicant._id,
-        name,
-        email,
+      await CandidateApplication.create({
+        name: row["Candidate Name"] || "",
+        email: row["E-mail ID"] || "",
         phone,
-        resume: "BULK_UPLOAD_PENDING",
+        rawJobTitle: null, // independent of Job collection
+        experience: row["Total Exp"] || "",
+        relevantExperience: row["Relevant Exp"] || "",
+        skills: row["Skill Set"]
+          ? row["Skill Set"].split(",").map(s => s.trim())
+          : [],
+        location: row["Location"] || "",
+        noticePeriod: row["Notice Period /Availability"] || "",
+        linkedIn: row["LinkedIn"] || "",
+        source: "EXCEL_UPLOAD",
       });
 
-      //  Update applicant applications list
-      applicant.applications.push(application._id);
-      applicant.applications.push(application._id);
-      await applicant.save();
-
-      successCount++;
-    }
-
-    // Clean up uploaded file
-    if (req.file && req.file.path) {
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error("Error deleting file:", err);
-      });
+      inserted++;
     }
 
     res.status(200).json({
       message: "Bulk upload completed",
-      successCount,
+      inserted,
       failedCount: failedRows.length,
       failedRows,
     });
-  } catch (error) {
-    // Clean up on error
-    if (req.file && req.file.path) {
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error("Error deleting file:", err);
-      });
-    }
-
-    console.error("Bulk upload error:", error);
-    res.status(500).json({
-      message: "Bulk upload failed",
-      error: error.message,
-    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
   }
 };
+
 
 // Google Drive Bulk Upload
 export const bulkResumeUpload = async (req, res) => {
@@ -154,7 +107,6 @@ export const bulkResumeUpload = async (req, res) => {
 
     let successCount = 0;
     const failed = [];
-
     const user = await User.findById(req.user.id).select(
       "+googleDrive.refreshToken"
     );
@@ -165,7 +117,7 @@ export const bulkResumeUpload = async (req, res) => {
       });
     }
 
-    // CREATE FOLDER ONCE
+      // CREATE FOLDER ONCE
     const folderId = await getOrCreateFolder(
       "Bulk_Resumes",
       user.googleDrive.refreshToken
@@ -179,25 +131,39 @@ export const bulkResumeUpload = async (req, res) => {
         failed.push({ file: fileName, reason: "Invalid filename" });
         continue;
       }
-
-      const application = await JobApplication.findOne({ phone: mobile });
-      if (!application) {
-        failed.push({ file: fileName, reason: "No application found" });
+      
+      const application = await CandidateApplication.findOne({phone: mobile});
+      
+      if(!application){
+        failed.push({ file: fileName, reason: "No matching application" });
         continue;
+      } 
+      
+    
+      try {
+        const ext = path.extname(fileName) || "";
+        const rawName = application.name ? application.name.trim() : "Unknown";
+        const safeName = rawName
+          .replace(/[^a-z0-9]+/gi, "_")
+          .replace(/^_+|_+$/g, "") || "Candidate";
+        const driveFileName = `${safeName}_${mobile}${ext}`;
+
+        const driveUrl = await uploadToGoogleDrive(
+          filePath,
+          driveFileName,
+          user.googleDrive.refreshToken,
+          folderId
+        );
+
+        application.resume = driveUrl;
+        application.resumeStorage = "GOOGLE_DRIVE";
+        await application.save();
+        
+        successCount++;
+      } catch (uploadError) {
+        console.error(`Error uploading ${fileName}:`, uploadError.message);
+        failed.push({ file: fileName, reason: `Upload error: ${uploadError.message}` });
       }
-
-      const driveUrl = await uploadToGoogleDrive(
-        filePath,
-        fileName,
-        user.googleDrive.refreshToken,
-        folderId 
-      );
-
-      application.resume = driveUrl;
-      application.resumeStorage = "GOOGLE_DRIVE";
-      await application.save();
-
-      successCount++;
     }
 
     await fs.remove(extractPath);
@@ -209,7 +175,8 @@ export const bulkResumeUpload = async (req, res) => {
       failed,
     });
   } catch (err) {
-    console.error(err);
+    console.error(" Bulk upload error:", err);
     res.status(500).json({ message: err.message });
   }
 };
+
