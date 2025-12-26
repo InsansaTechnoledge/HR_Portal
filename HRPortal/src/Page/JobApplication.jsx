@@ -37,6 +37,8 @@ const JobApplication = () => {
   const [resumeTarget, setResumeTarget] = useState(null);
   const [zipFile, setZipFile] = useState(null);
   const [driveConnected, setDriveConnected] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const navigate = useNavigate();
 
  
@@ -497,6 +499,30 @@ const JobApplication = () => {
     return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
   };
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredApplications.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedApplications = filteredApplications.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
+
+  const handlePageChange = (pageNumber) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+      // Scroll to top of table
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 p-6">
       <Toaster position="top-right" reverseOrder={false} />
@@ -750,9 +776,9 @@ const JobApplication = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredApplications &&
-                  filteredApplications.length !== 0 &&
-                  filteredApplications.map((app) => (
+                {paginatedApplications &&
+                  paginatedApplications.length !== 0 &&
+                  paginatedApplications.map((app) => (
                     <tr
                       key={app._id}
                       className="border-b border-slate-700 hover:bg-slate-700/30 transition"
@@ -826,6 +852,95 @@ const JobApplication = () => {
               </div>
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {filteredApplications.length > 0 && (
+            <div className="bg-slate-900/50 border-t border-slate-700 p-6">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                {/* Items per page selector */}
+                <div className="flex items-center gap-3">
+                  <label className="text-slate-300 font-medium text-sm">
+                    Items per page:
+                  </label>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                    className="px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-200 font-medium hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+
+                {/* Page info */}
+                <div className="text-slate-400 text-sm font-medium">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredApplications.length)} of{" "}
+                  {filteredApplications.length} applications
+                </div>
+
+                {/* Pagination buttons */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-200 font-medium hover:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    ← Previous
+                  </button>
+
+                  {/* Page numbers */}
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
+                      // Show current page, first page, last page, and adjacent pages
+                      const isVisible =
+                        pageNum === 1 ||
+                        pageNum === totalPages ||
+                        Math.abs(pageNum - currentPage) <= 1;
+
+                      if (!isVisible && pageNum !== 2 && pageNum !== totalPages - 1) {
+                        return null;
+                      }
+
+                      if (
+                        (pageNum === 2 && currentPage > 3) ||
+                        (pageNum === totalPages - 1 && currentPage < totalPages - 2)
+                      ) {
+                        return (
+                          <span key={`ellipsis-${pageNum}`} className="text-slate-400 px-2">
+                            ...
+                          </span>
+                        );
+                      }
+
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`px-3 py-2 rounded-lg font-medium transition ${
+                            currentPage === pageNum
+                              ? "bg-blue-600 text-white border border-blue-600"
+                              : "bg-slate-700/50 border border-slate-600 text-slate-200 hover:border-blue-500"
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-200 font-medium hover:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
