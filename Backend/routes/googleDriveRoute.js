@@ -6,7 +6,7 @@ import { googleAuthUrl, googleCallback, googleDriveStatus, googleDriveDisconnect
 const router = express.Router();
 
 router.get("/connect", checkCookies, googleAuthUrl)
-router.get("/callback", checkCookies, googleCallback)
+router.get("/callback", googleCallback) 
 router.get("/status", checkCookies, googleDriveStatus)
 router.post("/disconnect", checkCookies, googleDriveDisconnect)
 

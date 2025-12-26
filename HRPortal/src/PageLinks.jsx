@@ -39,30 +39,11 @@ import EmployeeDetailsForm from './Components/Form/EmployeeDetailsForm';
 function AppLayout() {
     // const location = useLocation();
     // const token = localStorage.getItem('token');
-    const { user, setUser } = useContext(userContext);
-    const [loading, setLoading] = useState(true);
+    const { user, loading } = useContext(userContext);
 
     // Determine if the user is on a mobile device
     const isMobile = useMediaQuery({ query: '(max-width: 768px)' });
     const showSidebar = user && !isMobile;
-
-    const getUserData = async () => {
-        try {
-            axios.defaults.withCredentials = true;
-            const response = await axios.get(`${API_BASE_URL}/api/auth/checkCookies`);
-            if (response.status === 201) {
-                setUser(response.data.user);
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        getUserData();
-    }, []);
 
     if (loading) {
         return (

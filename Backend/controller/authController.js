@@ -57,13 +57,24 @@ export const logout = async (req, res) => {
 
 export const getUser = async (req, res) => {
   try {
-    const userId = req.userId;
+    if (!req.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-    const user = await User.findById(userId);
+    const user = await User.findById(req.userId).select("-password");
 
-    res.status(201).json({ message: "User found!", user: user });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "User found",
+      user,
+    });
   } catch (err) {
-    console.log(err);
-    res.status(400).json({ message: err });
+    console.error(err);
+    res.status(500).json({
+      message: "Server error",
+    });
   }
 };
