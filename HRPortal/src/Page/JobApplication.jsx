@@ -41,12 +41,14 @@ const JobApplication = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const navigate = useNavigate();
 
- 
-
   const fetchApplications = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/candidate-application`);
-      const apps = Array.isArray(response.data?.applications) ? response.data.applications : [];
+      const response = await axios.get(
+        `${API_BASE_URL}/api/candidate-application`
+      );
+      const apps = Array.isArray(response.data?.applications)
+        ? response.data.applications
+        : [];
       const normalized = apps.map((a) => ({
         ...a,
         position: a.rawJobTitle || "",
@@ -139,9 +141,7 @@ const JobApplication = () => {
       const response = await axios.get(
         `${API_BASE_URL}/api/google-drive/connect`,
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
+          withCredentials: true,
         }
       );
 
@@ -301,55 +301,54 @@ const JobApplication = () => {
     }
   };
 
- const uploadExcelFiles = async () => {
-  try {
-    if (!excelFile) {
-      toast.error("Please select an Excel file to upload.");
-      return;
-    }
-
-
-    const allowedTypes = [
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/vnd.ms-excel",
-    ];
-
-    if (!allowedTypes.includes(excelFile.type)) {
-      toast.error("Only Excel files (.xlsx, .xls) are allowed");
-      return;
-    }
-
-    setLoading(true);
-
-    const formData = new FormData();
-    formData.append("file", excelFile);
-
-    const response = await axios.post(
-      `${API_BASE_URL}/api/bulk-upload/applications`,
-      formData,
-      {
-        headers: { "Content-Type": "multipart/form-data" },
+  const uploadExcelFiles = async () => {
+    try {
+      if (!excelFile) {
+        toast.error("Please select an Excel file to upload.");
+        return;
       }
-    );
 
-    setExcelFile(null);
-    document.getElementById("excelFileInput").value = "";
-    toast.success(response.data?.message || "Excel file uploaded successfully");
+      const allowedTypes = [
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel",
+      ];
 
-    await fetchApplications(); 
+      if (!allowedTypes.includes(excelFile.type)) {
+        toast.error("Only Excel files (.xlsx, .xls) are allowed");
+        return;
+      }
 
-  } catch (error) {
-    console.error("Error uploading Excel file:", error);
-    const errorMsg =
-      error.response?.data?.message ||
-      "Failed to upload Excel file. Please try again.";
-    toast.error(errorMsg);
-    setError(errorMsg);
-  } finally {
-    setLoading(false);
-  }
-};
+      setLoading(true);
 
+      const formData = new FormData();
+      formData.append("file", excelFile);
+
+      const response = await axios.post(
+        `${API_BASE_URL}/api/bulk-upload/applications`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      setExcelFile(null);
+      document.getElementById("excelFileInput").value = "";
+      toast.success(
+        response.data?.message || "Excel file uploaded successfully"
+      );
+
+      await fetchApplications();
+    } catch (error) {
+      console.error("Error uploading Excel file:", error);
+      const errorMsg =
+        error.response?.data?.message ||
+        "Failed to upload Excel file. Please try again.";
+      toast.error(errorMsg);
+      setError(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // const handleDownloadFailedRows = () => {
   //   if (!failedRows || failedRows.length === 0) {
@@ -384,9 +383,6 @@ const JobApplication = () => {
   //   // Download file
   //   XLSX.writeFile(workbook, "failed_job_applications.xlsx");
   // };
-
-
-
 
   // const handleDownloadTemplate = () => {
   //   // Define Excel headers
@@ -433,31 +429,43 @@ const JobApplication = () => {
       );
 
       toast.dismiss();
-      
+
       const { successCount, failed } = response.data;
-      
+
       // Show success message
       toast.success(
-        `${successCount} resume${successCount !== 1 ? 's' : ''} uploaded successfully!`
+        `${successCount} resume${
+          successCount !== 1 ? "s" : ""
+        } uploaded successfully!`
       );
 
       // Show failed uploads if any
       if (failed && failed.length > 0) {
-        const phoneNotMatched = failed.filter(f => f.reason === "No matching application");
-        const otherFailed = failed.filter(f => f.reason !== "No matching application");
-        
+        const phoneNotMatched = failed.filter(
+          (f) => f.reason === "No matching application"
+        );
+        const otherFailed = failed.filter(
+          (f) => f.reason !== "No matching application"
+        );
+
         if (phoneNotMatched.length > 0) {
-          const fileList = phoneNotMatched.map(f => f.file).join(", ");
+          const fileList = phoneNotMatched.map((f) => f.file).join(", ");
           toast.error(
-            `${phoneNotMatched.length} file${phoneNotMatched.length !== 1 ? 's' : ''} failed: Phone number not found in database. Files: ${fileList}`,
+            `${phoneNotMatched.length} file${
+              phoneNotMatched.length !== 1 ? "s" : ""
+            } failed: Phone number not found in database. Files: ${fileList}`,
             { duration: 8000 }
           );
         }
-        
+
         if (otherFailed.length > 0) {
-          const failureReasons = otherFailed.map(f => `${f.file} (${f.reason})`).join(", ");
+          const failureReasons = otherFailed
+            .map((f) => `${f.file} (${f.reason})`)
+            .join(", ");
           toast.error(
-            `${otherFailed.length} file${otherFailed.length !== 1 ? 's' : ''} failed: ${failureReasons}`,
+            `${otherFailed.length} file${
+              otherFailed.length !== 1 ? "s" : ""
+            } failed: ${failureReasons}`,
             { duration: 8000 }
           );
         }
@@ -503,7 +511,10 @@ const JobApplication = () => {
   const totalPages = Math.ceil(filteredApplications.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedApplications = filteredApplications.slice(startIndex, endIndex);
+  const paginatedApplications = filteredApplications.slice(
+    startIndex,
+    endIndex
+  );
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -762,11 +773,11 @@ const JobApplication = () => {
                     Skills
                   </th>
                   <th className="p-4 text-left font-semibold text-slate-300">
-              Experience
-                    </th>
-                    <th className="p-4 text-left font-semibold text-slate-300">
-                      Location
-                    </th>
+                    Experience
+                  </th>
+                  <th className="p-4 text-left font-semibold text-slate-300">
+                    Location
+                  </th>
                   <th className="p-4 text-left font-semibold text-slate-300">
                     Status
                   </th>
@@ -793,8 +804,8 @@ const JobApplication = () => {
                         {app.phone}
                       </td>
                       <td className="p-4 text-slate-300">{app.skills}</td>
-                       <td className="p-4 text-slate-300">{app.experience}</td>
-                       <td className="p-4 text-slate-300">{app.location}</td>
+                      <td className="p-4 text-slate-300">{app.experience}</td>
+                      <td className="p-4 text-slate-300">{app.location}</td>
                       <td className="p-4">
                         <select
                           className={`border rounded-lg p-2 text-xs font-medium transition ${
@@ -864,7 +875,9 @@ const JobApplication = () => {
                   </label>
                   <select
                     value={itemsPerPage}
-                    onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                    onChange={(e) =>
+                      handleItemsPerPageChange(Number(e.target.value))
+                    }
                     className="px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-200 font-medium hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                   >
                     <option value={5}>5</option>
@@ -876,7 +889,8 @@ const JobApplication = () => {
 
                 {/* Page info */}
                 <div className="text-slate-400 text-sm font-medium">
-                  Showing {startIndex + 1} to {Math.min(endIndex, filteredApplications.length)} of{" "}
+                  Showing {startIndex + 1} to{" "}
+                  {Math.min(endIndex, filteredApplications.length)} of{" "}
                   {filteredApplications.length} applications
                 </div>
 
@@ -892,42 +906,52 @@ const JobApplication = () => {
 
                   {/* Page numbers */}
                   <div className="flex items-center gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
-                      // Show current page, first page, last page, and adjacent pages
-                      const isVisible =
-                        pageNum === 1 ||
-                        pageNum === totalPages ||
-                        Math.abs(pageNum - currentPage) <= 1;
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (pageNum) => {
+                        // Show current page, first page, last page, and adjacent pages
+                        const isVisible =
+                          pageNum === 1 ||
+                          pageNum === totalPages ||
+                          Math.abs(pageNum - currentPage) <= 1;
 
-                      if (!isVisible && pageNum !== 2 && pageNum !== totalPages - 1) {
-                        return null;
-                      }
+                        if (
+                          !isVisible &&
+                          pageNum !== 2 &&
+                          pageNum !== totalPages - 1
+                        ) {
+                          return null;
+                        }
 
-                      if (
-                        (pageNum === 2 && currentPage > 3) ||
-                        (pageNum === totalPages - 1 && currentPage < totalPages - 2)
-                      ) {
+                        if (
+                          (pageNum === 2 && currentPage > 3) ||
+                          (pageNum === totalPages - 1 &&
+                            currentPage < totalPages - 2)
+                        ) {
+                          return (
+                            <span
+                              key={`ellipsis-${pageNum}`}
+                              className="text-slate-400 px-2"
+                            >
+                              ...
+                            </span>
+                          );
+                        }
+
                         return (
-                          <span key={`ellipsis-${pageNum}`} className="text-slate-400 px-2">
-                            ...
-                          </span>
+                          <button
+                            key={pageNum}
+                            onClick={() => handlePageChange(pageNum)}
+                            className={`px-3 py-2 rounded-lg font-medium transition ${
+                              currentPage === pageNum
+                                ? "bg-blue-600 text-white border border-blue-600"
+                                : "bg-slate-700/50 border border-slate-600 text-slate-200 hover:border-blue-500"
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
                         );
                       }
-
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => handlePageChange(pageNum)}
-                          className={`px-3 py-2 rounded-lg font-medium transition ${
-                            currentPage === pageNum
-                              ? "bg-blue-600 text-white border border-blue-600"
-                              : "bg-slate-700/50 border border-slate-600 text-slate-200 hover:border-blue-500"
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
+                    )}
                   </div>
 
                   <button
@@ -1056,7 +1080,8 @@ const JobApplication = () => {
                             Relevant Experience
                           </p>
                           <p className="text-slate-100 font-medium">
-                            {selectedApplicant?.relevantExperience || "Not specified"}
+                            {selectedApplicant?.relevantExperience ||
+                              "Not specified"}
                           </p>
                         </div>
                         <div className="p-5 bg-gradient-to-br from-emerald-900/30 to-transparent rounded-xl border border-emerald-700/50 hover:border-emerald-600 transition">
@@ -1079,23 +1104,27 @@ const JobApplication = () => {
                     </div>
 
                     {/* Skills Section */}
-                    {selectedApplicant?.skills && selectedApplicant?.skills.length > 0 && (
-                      <div>
-                        <div className="flex items-center space-x-3 mb-5">
-                          <div className="h-1 w-8 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full"></div>
-                          <h3 className="text-xl font-bold text-slate-100">
-                            Skills
-                          </h3>
+                    {selectedApplicant?.skills &&
+                      selectedApplicant?.skills.length > 0 && (
+                        <div>
+                          <div className="flex items-center space-x-3 mb-5">
+                            <div className="h-1 w-8 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full"></div>
+                            <h3 className="text-xl font-bold text-slate-100">
+                              Skills
+                            </h3>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedApplicant.skills.map((skill, idx) => (
+                              <span
+                                key={idx}
+                                className="px-4 py-2 bg-gradient-to-r from-orange-600/30 to-yellow-600/30 text-orange-200 rounded-full text-sm font-medium border border-orange-500/50 hover:border-orange-400/70 transition"
+                              >
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedApplicant.skills.map((skill, idx) => (
-                            <span key={idx} className="px-4 py-2 bg-gradient-to-r from-orange-600/30 to-yellow-600/30 text-orange-200 rounded-full text-sm font-medium border border-orange-500/50 hover:border-orange-400/70 transition">
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                      )}
 
                     {/* Social Profiles Section */}
                     <div>
@@ -1127,7 +1156,9 @@ const JobApplication = () => {
                                 </p>
                               </div>
                             </div>
-                            <span className="text-slate-400 text-sm">Open ↗</span>
+                            <span className="text-slate-400 text-sm">
+                              Open ↗
+                            </span>
                           </a>
                         )}
                         {selectedApplicant?.github && (

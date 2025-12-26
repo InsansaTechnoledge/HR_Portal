@@ -8,6 +8,8 @@ export const googleAuthUrl = async (req, res) => {
     if (req.user.role !== "admin" && req.user.role !== "superAdmin") {
       return res.status(403).json({ message: "Access denied" });
     }
+
+    
     const url = oauth2Client.generateAuthUrl({
       access_type: "offline",
       prompt: "consent",

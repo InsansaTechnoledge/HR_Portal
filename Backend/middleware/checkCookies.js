@@ -7,11 +7,14 @@ if(process.env.NODE_ENV !== "production"){
 
 const checkCookies = async (req,res,next) => {
     let token = req.cookies?.jwtAuth;
-    if (!token) {
-        const authHeader = req.headers?.authorization || req.headers?.Authorization;
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            token = authHeader.slice(7);
-        }
+
+     if (!token) {
+      const authHeader =
+        req.headers.authorization || req.headers.Authorization;
+
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.split(" ")[1].trim();
+      }
     }
 
     if(!token){
