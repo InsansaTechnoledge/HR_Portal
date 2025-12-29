@@ -92,6 +92,7 @@ const JobApplication = () => {
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
+          withCredentials: true,
         }
       );
 
@@ -328,6 +329,7 @@ const JobApplication = () => {
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
+          withCredentials: true,
         }
       );
 
@@ -425,6 +427,7 @@ const JobApplication = () => {
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
+          withCredentials: true,
         }
       );
 

@@ -8,14 +8,15 @@ if(process.env.NODE_ENV !== "production"){
 const checkCookies = async (req,res,next) => {
     let token = req.cookies?.jwtAuth;
 
-     if (!token) {
-      const authHeader =
-        req.headers.authorization || req.headers.Authorization;
+        // Fallback to Authorization header if cookie is missing
+        if (!token) {
+            const authHeader =
+                req.headers.authorization || req.headers.Authorization;
 
-      if (authHeader && authHeader.startsWith("Bearer ")) {
-        token = authHeader.split(" ")[1].trim();
-      }
-    }
+            if (authHeader && authHeader.startsWith("Bearer ")) {
+                token = authHeader.split(" ")[1].trim();
+            }
+        }
 
     if(!token){
         return res.status(401).json({ message: 'Access denied. No token provided.' });

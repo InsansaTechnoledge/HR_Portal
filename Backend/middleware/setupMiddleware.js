@@ -42,6 +42,7 @@ const corsOptions = {
   origin: process.env.CLIENT_ORIGIN || 'https://hr-portal-5d6l.vercel.app' || 'https://hr-portal-mu.vercel.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+  credentials: true,
 };
 
 app.use(cors(corsOptions));
