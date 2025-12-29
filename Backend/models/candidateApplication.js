@@ -19,4 +19,6 @@ const candidateApplication = new mongoose.Schema(
   { timestamps: true }
 );
 
+candidateApplication.index({ phone: 1, email: 1 }, { unique: true });
+
 export default mongoose.model("CandidateApplication", candidateApplication);

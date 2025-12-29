@@ -13,7 +13,6 @@ import User from "../models/User.js";
 import getOrCreateFolder from "../utils/googleDriveFolder.js";
 import CandidateApplication from "../models/candidateApplication.js";
 
-
 //Helper to recursively get all files in a directory
 const getAllFiles = async (dirPath, arrayOfFiles = []) => {
   const files = await fs.readdir(dirPath);
@@ -52,10 +51,46 @@ export const bulkUploadJobApplications = async (req, res) => {
       const phone = String(row["Contact No"]).replace(/\D/g, "");
 
       if (!phone || phone.length < 10) {
-        failedRows.push({ row: i + 2, reason: "Invalid phone number" });
+        failedRows.push({
+          rowNumber: i + 2,
+          name: row["Candidate Name"] || "",
+          email: row["E-mail ID"] || "",
+          phone: row["Contact No"] || "",
+          experience: row["Total Exp"] || "",
+          relevantExperience: row["Relevant Exp"] || "",
+          skills: row["Skill Set"] || "",
+          location: row["Location"] || "",
+          noticePeriod: row["Notice Period /Availability"] || "",
+          linkedIn: row["LinkedIn"] || "",
+          reason: "Invalid phone number"
+        });
         continue;
       }
 
+      const email = row["E-mail ID"]?.toLowerCase() || "";
+
+      // Check Duplicate by email of phone
+      const existingCandidate = await CandidateApplication.findOne({
+        $or: [{ phone }, { email }],
+      });
+
+      if (existingCandidate) {
+        failedRows.push({
+          rowNumber: i + 2,
+          name: row["Candidate Name"] || "",
+          email: row["E-mail ID"] || "",
+          phone: row["Contact No"] || "",
+          experience: row["Total Exp"] || "",
+          relevantExperience: row["Relevant Exp"] || "",
+          skills: row["Skill Set"] || "",
+          location: row["Location"] || "",
+          noticePeriod: row["Notice Period /Availability"] || "",
+          linkedIn: row["LinkedIn"] || "",
+          reason: "Duplicate record (email or phone already exists)",
+        });
+        continue;
+      }
+      
       await CandidateApplication.create({
         name: row["Candidate Name"] || "",
         email: row["E-mail ID"] || "",
@@ -64,7 +99,7 @@ export const bulkUploadJobApplications = async (req, res) => {
         experience: row["Total Exp"] || "",
         relevantExperience: row["Relevant Exp"] || "",
         skills: row["Skill Set"]
-          ? row["Skill Set"].split(",").map(s => s.trim())
+          ? row["Skill Set"].split(",").map((s) => s.trim())
           : [],
         location: row["Location"] || "",
         noticePeriod: row["Notice Period /Availability"] || "",
@@ -86,7 +121,6 @@ export const bulkUploadJobApplications = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
 
 // Google Drive Bulk Upload
 export const bulkResumeUpload = async (req, res) => {
@@ -117,7 +151,7 @@ export const bulkResumeUpload = async (req, res) => {
       });
     }
 
-      // CREATE FOLDER ONCE
+    // CREATE FOLDER ONCE
     const folderId = await getOrCreateFolder(
       "Bulk_Resumes",
       user.googleDrive.refreshToken
@@ -131,21 +165,20 @@ export const bulkResumeUpload = async (req, res) => {
         failed.push({ file: fileName, reason: "Invalid filename" });
         continue;
       }
-      
-      const application = await CandidateApplication.findOne({phone: mobile});
-      
-      if(!application){
+
+      const application = await CandidateApplication.findOne({ phone: mobile });
+
+      if (!application) {
         failed.push({ file: fileName, reason: "No matching application" });
         continue;
-      } 
-      
-    
+      }
+
       try {
         const ext = path.extname(fileName) || "";
         const rawName = application.name ? application.name.trim() : "Unknown";
-        const safeName = rawName
-          .replace(/[^a-z0-9]+/gi, "_")
-          .replace(/^_+|_+$/g, "") || "Candidate";
+        const safeName =
+          rawName.replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "") ||
+          "Candidate";
         const driveFileName = `${safeName}_${mobile}${ext}`;
 
         const driveUrl = await uploadToGoogleDrive(
@@ -158,11 +191,14 @@ export const bulkResumeUpload = async (req, res) => {
         application.resume = driveUrl;
         application.resumeStorage = "GOOGLE_DRIVE";
         await application.save();
-        
+
         successCount++;
       } catch (uploadError) {
         console.error(`Error uploading ${fileName}:`, uploadError.message);
-        failed.push({ file: fileName, reason: `Upload error: ${uploadError.message}` });
+        failed.push({
+          file: fileName,
+          reason: `Upload error: ${uploadError.message}`,
+        });
       }
     }
 
@@ -179,4 +215,3 @@ export const bulkResumeUpload = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-

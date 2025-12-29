@@ -335,9 +335,28 @@ const JobApplication = () => {
 
       setExcelFile(null);
       document.getElementById("excelFileInput").value = "";
-      toast.success(
-        response.data?.message || "Excel file uploaded successfully"
-      );
+
+      const { inserted, failedCount, failedRows: failed } = response.data;
+
+      // Store failed rows for download
+      if (failed && failed.length > 0) {
+        setFailedRows(failed);
+      }
+
+      // Show appropriate message based on results
+      if (failedCount === 0) {
+        toast.success(
+          `All ${inserted} records uploaded successfully!`
+        );
+      } else if (inserted > 0 && failedCount > 0) {
+        toast.success(
+          `${inserted} records uploaded. ${failedCount} records failed. Download failed rows to see details.`
+        );
+      } else {
+        toast.error(
+          `All records failed. Check details below.`
+        );
+      }
 
       await fetchApplications();
     } catch (error) {
@@ -352,39 +371,54 @@ const JobApplication = () => {
     }
   };
 
-  // const handleDownloadFailedRows = () => {
-  //   if (!failedRows || failedRows.length === 0) {
-  //     alert("No failed rows to download");
-  //     return;
-  //   }
+  const handleDownloadFailedRows = () => {
+    if (!failedRows || failedRows.length === 0) {
+      toast.error("No failed rows to download");
+      return;
+    }
 
-  //   // Convert failed rows to flat structure
-  //   const excelData = failedRows.map((item) => ({
-  //     name: item.row?.name || "",
-  //     email: item.row?.email || "",
-  //     phone: item.row?.phone || "",
-  //     jobTitle: item.row?.jobTitle || "",
-  //     failureReason: item.reason || "Unknown error",
-  //   }));
+    // Convert failed rows to flat structure with all details and reason
+    const excelData = failedRows.map((item) => ({
+      "Row #": item.rowNumber,
+      "Candidate Name": item.name,
+      "Email": item.email,
+      "Phone": item.phone,
+      "Total Experience": item.experience,
+      "Relevant Experience": item.relevantExperience,
+      "Skills": item.skills,
+      "Location": item.location,
+      "Notice Period": item.noticePeriod,
+      "LinkedIn": item.linkedIn,
+      "Failure Reason": item.reason || "Unknown error",
+    }));
 
-  //   // Create worksheet
-  //   const worksheet = XLSX.utils.json_to_sheet(excelData);
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
 
-  //   worksheet["!cols"] = [
-  //     { wch: 20 },
-  //     { wch: 30 },
-  //     { wch: 15 },
-  //     { wch: 25 },
-  //     { wch: 40 },
-  //   ];
+    // Set column widths
+    worksheet["!cols"] = [
+      { wch: 8 },    // Row #
+      { wch: 20 },   // Candidate Name
+      { wch: 25 },   // Email
+      { wch: 15 },   // Phone
+      { wch: 18 },   // Total Experience
+      { wch: 20 },   // Relevant Experience
+      { wch: 25 },   // Skills
+      { wch: 15 },   // Location
+      { wch: 20 },   // Notice Period
+      { wch: 20 },   // LinkedIn
+      { wch: 40 },   // Failure Reason
+    ];
 
-  //   // Create workbook
-  //   const workbook = XLSX.utils.book_new();
-  //   XLSX.utils.book_append_sheet(workbook, worksheet, "FailedRows");
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "FailedRows");
 
-  //   // Download file
-  //   XLSX.writeFile(workbook, "failed_job_applications.xlsx");
-  // };
+    // Download file
+    XLSX.writeFile(workbook, "failed_job_applications.xlsx");
+    toast.success("Failed rows downloaded successfully!");
+    setFailedRows([]); 
+  };
 
   // const handleDownloadTemplate = () => {
   //   // Define Excel headers
@@ -718,16 +752,20 @@ const JobApplication = () => {
             </div>
           </div>
 
-          {/* {failedRows.length > 0 && (
-            <div className="mt-4">
+          {failedRows.length > 0 && (
+            <div className="mt-4 p-4 bg-red-600/20 border border-red-500/50 rounded-xl">
+              <div className="mb-3">
+                <p className="text-red-300 font-semibold mb-2">⚠️ Failed Records ({failedRows.length})</p>
+                <p className="text-red-200/70 text-sm mb-3">Download the file to see which rows failed and the reasons why.</p>
+              </div>
               <button
                 onClick={handleDownloadFailedRows}
-                className="w-full px-4 py-3 bg-red-600/20 text-red-300 border border-red-500/50 rounded-xl hover:bg-red-600/30 transition font-medium"
+                className="w-full px-4 py-3 bg-red-600 text-white border border-red-400 rounded-lg hover:bg-red-700 hover:border-red-300 transition font-medium"
               >
-                ⚠️ Download Failed Rows ({failedRows.length})
+                📥 Download Failed Rows ({failedRows.length})
               </button>
             </div>
-          )} */}
+          )}
         </div>
 
         {/* Search & Filter Section */}
