@@ -1,7 +1,12 @@
 import React from "react";
 
-const TemplateCorporate = ({ data, company, calculations }) => {
+const TemplateCorporate = ({ data, company, calculations, expenses = [] }) => {
   const n = (v) => Number(v || 0).toFixed(2);
+  const expenseTotal = (expenses || []).reduce(
+    (sum, exp) => sum + (Number(exp.amount) || 0),
+    0
+  );
+  const totalPayable = Number(calculations?.totalPayable || 0);
 
   return (
     <div className="mx-auto relative w-[210mm] h-[297mm] bg-white font-['Inter'] text-gray-800 overflow-hidden">
@@ -69,15 +74,66 @@ const TemplateCorporate = ({ data, company, calculations }) => {
             </div>
           ))}
 
-        {/* TOTAL */}
+        {/* TOTALS */}
         <div className="flex justify-end mt-10">
           <div className="w-[64mm] text-sm space-y-2">
-            <div className="flex justify-between font-semibold text-lg border-t pt-4">
-              <span>Total</span>
+            <div className="flex justify-between border-t pt-4">
+              <span className="font-medium">Net Salary</span>
               <span>₹{n(calculations.netSalary)}</span>
             </div>
+
+            {expenseTotal > 0 && (
+              <>
+                <div className="flex justify-between text-xs text-gray-600">
+                  <span>Reimbursable Expenses</span>
+                  <span>₹{n(expenseTotal)}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-lg">
+                  <span>Total Payable</span>
+                  <span>
+                    ₹{n(totalPayable || Number(calculations.netSalary || 0) + expenseTotal)}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
         </div>
+
+        {/* REIMBURSABLE EXPENSES */}
+        {expenses && expenses.length > 0 && (
+          <div className="mt-10 text-sm">
+            <p className="uppercase tracking-wider text-xs text-gray-500 mb-2">
+              Reimbursable Expenses (Approved)
+            </p>
+            <div className="border border-gray-300 rounded overflow-hidden">
+              <div className="grid grid-cols-3 bg-gray-100 font-semibold px-3 py-2 text-xs">
+                <span>Date</span>
+                <span>Type</span>
+                <span className="text-right">Amount (₹)</span>
+              </div>
+
+              {expenses.map((exp) => (
+                <div
+                  key={exp._id}
+                  className="grid grid-cols-3 border-t px-3 py-2 text-xs text-gray-700"
+                >
+                  <span>
+                    {exp.expenseDate
+                        ? new Date(exp.expenseDate).toLocaleDateString()
+                      : "-"}
+                  </span>
+                  <span>{exp.expenseType}</span>
+                  <span className="text-right">₹{n(exp.amount)}</span>
+                </div>
+              ))}
+
+              <div className="grid grid-cols-3 border-t bg-gray-50 font-semibold px-3 py-2 text-xs">
+                <span className="col-span-2">Total Reimbursable Expenses</span>
+                <span className="text-right">₹{n(expenseTotal)}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* PAY TO */}
         <div className="mt-16 text-sm">

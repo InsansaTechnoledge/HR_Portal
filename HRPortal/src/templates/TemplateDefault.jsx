@@ -1,8 +1,13 @@
 import React from 'react';
 import { Phone, Mail } from 'lucide-react';
 
-const TemplateDefault = ({ data, company, calculations }) => {
+const TemplateDefault = ({ data, company, calculations, expenses = [] }) => {
   const n = (v) => Number(v || 0).toFixed(2);
+  const expenseTotal = (expenses || []).reduce(
+    (sum, exp) => sum + (Number(exp.amount) || 0),
+    0
+  );
+  const totalPayable = Number(calculations?.totalPayable || 0);
 
   if (!data) return null; // guard
 
@@ -117,12 +122,55 @@ const TemplateDefault = ({ data, company, calculations }) => {
         </div>
 
         {/* NET SALARY */}
-        <div className="mt-6 p-4 bg-indigo-50 rounded-lg">
+        <div className="mt-6 p-4 bg-indigo-50 rounded-lg mb-2">
           <div className="flex justify-between items-center">
             <span className="text-xl font-bold">Net Salary</span>
             <span className="text-xl font-bold">₹{n(calculations.netSalary)}</span>
           </div>
         </div>
+
+        {/* REIMBURSABLE EXPENSES */}
+        {expenses && expenses.length > 0 && (
+          <div className="mt-2 bg-gray-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold mb-3">Reimbursable Expenses (Approved)</h3>
+            <div className="overflow-x-auto text-sm">
+              <table className="min-w-full">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600">Date</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600">Type</th>
+                    <th className="px-3 py-2 text-right font-medium text-gray-600">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expenses.map((exp) => (
+                    <tr key={exp._id} className="border-t">
+                      <td className="px-3 py-2 text-gray-700">
+                        {exp.expenseDate
+                            ? new Date(exp.expenseDate).toLocaleDateString()
+                            : "-"}
+                      </td>
+                      <td className="px-3 py-2 text-gray-700">{exp.expenseType}</td>
+                      <td className="px-3 py-2 text-gray-900 text-right font-medium">
+                        ₹{n(exp.amount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-3 flex justify-between font-semibold">
+              <span>Total Reimbursable Expenses</span>
+              <span>₹{n(expenseTotal)}</span>
+            </div>
+            <div className="mt-3 flex justify-between text-sm font-semibold text-green-700">
+              <span>Total Payable (Net Salary + Expenses)</span>
+              <span>
+                ₹{n(totalPayable || Number(calculations.netSalary || 0) + expenseTotal)}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

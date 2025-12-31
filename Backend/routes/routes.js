@@ -9,6 +9,7 @@ import careerPortal from "./careerPortal.js";
 import bulkUpload from "./bulkUpload.js";
 import googleDriveRoute from "./googleDriveRoute.js";
 import candidateApplicationRoute from "./candidateApplication.js";
+import expense from "./expense.js";
 
 const routes = (app) => {
     app.use("/api/auth", auth);
@@ -22,7 +23,7 @@ const routes = (app) => {
     app.use("/api/candidate-application", candidateApplicationRoute);
     app.use("/api/bulk-upload",bulkUpload)
     app.use("/api/google-drive",googleDriveRoute)
-
+    app.use("/api/expense", expense)
 };
 
 export default routes;

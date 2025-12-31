@@ -24,6 +24,7 @@ import { use } from "react";
 import ErrorToast from "../Toaster/ErrorToaster";
 import SuccessToast from "../Toaster/SuccessToaser";
 import UserProfile from "../../Page/UserProfile";
+import { ReceiptIndianRupee } from "lucide-react";
 
 // Logout function to handle user logout
 const handleLogout = async (setUser) => {
@@ -135,24 +136,55 @@ const Sidebar = () => {
               />
 
               {/* Apps Dropdown for User */}
-              {user && user.role === 'user' && (
-                            <SidebarDropdown
-                                icon={<IconGridDots />}
-                                label="Management"
-                                isOpen={isOpen}
-                                isExpanded={dropdowns.user}
-                                toggleDropdown={() => toggleDropdown("user")}
-                            >
-                                <SidebarItem icon={<IconFolder />} label="Docs Management" isOpen={isOpen} to="/docs" />
-                                <SidebarItem icon={<IconUser />} label="Profile" isOpen={isOpen} to="/user-profile" />
-                                <SidebarItem icon={<IconCalendar />} label="Leave Tracker" isOpen={isOpen} to="/leave-tracker" />
-                                <SidebarItem icon={<IconKey />} label="Payslip Tracker" isOpen={isOpen} to="/payslip-tracker" />
-                                <SidebarItem icon={<IconKey />} label="Change Password" isOpen={isOpen} to="/change-password" />
-                                 {/* <SidebarItem icon={<IconId />} label="Employee Registration" isOpen={isOpen} to="/emp-info" />   */}
+              {user && user.role === "user" && (
+                <SidebarDropdown
+                  icon={<IconGridDots />}
+                  label="Management"
+                  isOpen={isOpen}
+                  isExpanded={dropdowns.user}
+                  toggleDropdown={() => toggleDropdown("user")}
+                >
+                  <SidebarItem
+                    icon={<IconFolder />}
+                    label="Docs Management"
+                    isOpen={isOpen}
+                    to="/docs"
+                  />
+                  <SidebarItem
+                    icon={<IconUser />}
+                    label="Profile"
+                    isOpen={isOpen}
+                    to="/user-profile"
+                  />
+                  <SidebarItem
+                    icon={<IconCalendar />}
+                    label="Leave Tracker"
+                    isOpen={isOpen}
+                    to="/leave-tracker"
+                  />
+                  <SidebarItem
+                    icon={<IconKey />}
+                    label="Payslip Tracker"
+                    isOpen={isOpen}
+                    to="/payslip-tracker"
+                  />
 
-                            </SidebarDropdown>
-                        )}
+                  <SidebarItem
+                    icon={<ReceiptIndianRupee />}
+                    label="Add Expense"
+                    isOpen={isOpen}
+                    to="/add-expense"
+                  />
 
+                  <SidebarItem
+                    icon={<IconKey />}
+                    label="Change Password"
+                    isOpen={isOpen}
+                    to="/change-password"
+                  />
+                  {/* <SidebarItem icon={<IconId />} label="Employee Registration" isOpen={isOpen} to="/emp-info" />   */}
+                </SidebarDropdown>
+              )}
 
               {/* Apps Dropdown for Admin/SuperAdmin */}
               {user &&
@@ -279,6 +311,22 @@ const Sidebar = () => {
                       ) : null}
                     </SidebarDropdown>
 
+                    {user && user.role === "superAdmin" && (
+                      <SidebarItem
+                        icon={<IconSettings />}
+                        label="Expense Tracker"
+                        isOpen={isOpen}
+                        to="/expense-tracker"
+                      />
+                    )}
+
+                    <SidebarItem
+                      label="Resume Analyzer"
+                      icon={<IconFilePlus />}
+                      isOpen={isOpen}
+                      to="/resume-analyze"
+                    />
+
                     {/* Authentication Management */}
                     <SidebarItem
                       icon={<IconSettings />}
@@ -316,6 +364,12 @@ const Sidebar = () => {
                       isOpen={isOpen}
                       to="/payslip"
                     />
+                     <SidebarItem
+                        icon={<IconSettings />}
+                        label="Expense Tracker"
+                        isOpen={isOpen}
+                        to="/expense-tracker"
+                      />
                   </SidebarDropdown>
                 </>
               )}
