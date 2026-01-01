@@ -6,9 +6,15 @@ import React from "react";
  *  - data: employee details
  *  - company: company info
  *  - calculations: salary calculations
+ *  - expenses: optional reimbursable expenses
  */
-const TemplateMinimal = ({ data, company, calculations }) => {
+const TemplateMinimal = ({ data, company, calculations, expenses = [] }) => {
   const formatCurrency = (v) => `₹${Number(v || 0).toFixed(2)}`;
+  const expenseTotal = (expenses || []).reduce(
+    (sum, exp) => sum + (Number(exp.amount) || 0),
+    0
+  );
+  const totalPayable = Number(calculations?.totalPayable || 0);
 
   return (
     <div
@@ -103,9 +109,52 @@ const TemplateMinimal = ({ data, company, calculations }) => {
       </div>
 
       {/* Net Salary */}
-      <div className="p-4 bg-gray-50 rounded-lg text-center font-bold text-lg">
+      <div className="p-4 bg-gray-50 rounded-lg text-center font-bold text-lg mb-3">
         Net Salary: {formatCurrency(calculations.netSalary)}
       </div>
+
+      {/* Total Payable when expenses exist */}
+      {expenseTotal > 0 && (
+        <div className="p-3 bg-green-50 rounded-lg text-center text-sm font-semibold mb-6">
+          Total Payable (Net Salary + Expenses): {formatCurrency(
+            totalPayable || Number(calculations.netSalary || 0) + expenseTotal
+          )}
+        </div>
+      )}
+
+      {/* Reimbursable Expenses */}
+      {expenses && expenses.length > 0 && (
+        <div className="mb-6">
+          <h3 className="font-semibold mb-2">Reimbursable Expenses (Approved)</h3>
+          <div className="border border-gray-300 rounded overflow-hidden">
+            <div className="grid grid-cols-3 bg-gray-100 font-semibold px-4 py-2 text-xs">
+              <span>Date</span>
+              <span>Type</span>
+              <span className="text-right">Amount</span>
+            </div>
+
+            {expenses.map((exp) => (
+              <div
+                key={exp._id}
+                className="grid grid-cols-3 border-t px-4 py-2 text-xs text-gray-700"
+              >
+                <span>
+                  {exp.expenseDate
+                    ? new Date(exp.expenseDate).toLocaleDateString()
+                    : "-"}
+                </span>
+                <span>{exp.expenseType}</span>
+                <span className="text-right">{formatCurrency(exp.amount)}</span>
+              </div>
+            ))}
+
+            <div className="grid grid-cols-3 border-t bg-gray-50 font-semibold px-4 py-2 text-xs">
+              <span className="col-span-2">Total Reimbursable Expenses</span>
+              <span className="text-right">{formatCurrency(expenseTotal)}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="mt-12 text-xs text-gray-500 text-center">

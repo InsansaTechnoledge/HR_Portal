@@ -60,6 +60,14 @@ const PayslipSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        expenseTotal: {
+            type: Number,
+            default: 0,
+        },
+        totalPayable: {
+            type: Number,
+            default: 0,
+        },
         totalEarnings: {
             type: Number,
             required: true,
