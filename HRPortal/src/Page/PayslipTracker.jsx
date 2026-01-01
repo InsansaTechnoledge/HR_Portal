@@ -47,7 +47,6 @@ const PayslipTracker = () => {
       totalEarnings: parseFloat(payslipData.totalEarnings || 0).toFixed(2),
       totalDeductions: parseFloat(payslipData.totalDeductions || 0).toFixed(2),
       netSalary: parseFloat(payslipData.netSalary || 0).toFixed(2),
-      totalPayable: parseFloat(payslipData.totalPayable || 0).toFixed(2),
       deductions: {
         professionalTax: payslipData.professionalTax || 0,
         TDS: payslipData.TDS || 0,
@@ -342,10 +341,7 @@ const PayslipTracker = () => {
                     Deductions
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                    Net Salary (Salary Only)
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                    Total Payable (Net + Expenses)
+                    Net Salary
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Status
@@ -386,17 +382,7 @@ const PayslipTracker = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-right">
                         ₹{payslip.netSalary?.toLocaleString?.("en-IN") || 0}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-right">
-                        {(() => {
-                          const baseNet = Number(payslip.netSalary) || 0;
-                          const expTotal = Number(payslip.expenseTotal) || 0;
-                          const total =
-                            payslip.totalPayable != null
-                              ? Number(payslip.totalPayable) || 0
-                              : baseNet + expTotal;
-                          return `₹${total.toLocaleString("en-IN")}`;
-                        })()}
-                      </td>
+                      {/* Total payable column removed: expenses are now always paid separately */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                           paid

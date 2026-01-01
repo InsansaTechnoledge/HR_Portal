@@ -99,107 +99,116 @@ const AuthenticationManagement = () => {
     setUserForm((prev) => ({ ...prev, [name]: value }));
   };
 
- const handleSubmit = async () => {
-  if (!userForm.userName || !userForm.userEmail) {
-    setToastErrorMessage("Please fill all details");
-    setToastErrorVisible(true);
-    setTimeout(() => setToastErrorVisible(false), 3500);
-    return;
-  }
-
-  setLoading(true);
-  try {
-   
-    if (userForm.userId) {
-      const payload = {
-        userName: userForm.userName,
-        userEmail: userForm.userEmail,
-      };
-
-
-      if (userForm.password && userForm.password.trim()) {
-        if (!userForm.currentPassword || !userForm.currentPassword.trim()) {
-          setToastErrorMessage("Current password is required to change password");
-          setToastErrorVisible(true);
-          setTimeout(() => setToastErrorVisible(false), 3500);
-          setLoading(false);
-          return;
-        }
-
-        // include both new and current password in the request
-        payload.newPassword = userForm.password;
-        payload.currentPassword = userForm.currentPassword;
-      }
-
-      // Only allow role change from frontend if current user is superAdmin
-      if (user.role === "superAdmin") {
-        payload.role = userForm.role;
-      }
-
-      const response = await axios.put(
-        `${API_BASE_URL}/api/user/edit-login-info/${userForm.userId}`,
-        payload
-      );
-
-      if (response.status === 200) {
-        setToastSuccessMessage(response.data.message || "User updated successfully");
-        setToastSuccessVisible(true);
-        setTimeout(() => setToastSuccessVisible(false), 3500);
-
-        // update local list
-        setUsers((prev) =>
-          prev.map((existing) =>
-            existing._id === userForm.userId || existing.userId === userForm.userId
-              ? {
-                  ...existing,
-                  userName: response.data.user.userName,
-                  userEmail: response.data.user.userEmail,
-                  role: response.data.user.role,
-                  _id: response.data.user._id,
-                }
-              : existing
-          )
-        );
-      }
-    } else {
-      // CREATE NEW USER
-      const createPayload = {
-        userName: userForm.userName,
-        userEmail: userForm.userEmail,
-        password:
-          userForm.password && userForm.password.trim()
-            ? userForm.password
-            : `${userForm.userName.toLowerCase().replace(/\s+/g, "")}@123`,
-        role: userForm.role || "user",
-      };
-
-      const response = await axios.post(
-        `${API_BASE_URL}/api/user/createUser`,
-        createPayload
-      );
-
-      if (response.status === 201 || response.status === 200) {
-        setToastSuccessMessage(response.data.message || "User created successfully");
-        setToastSuccessVisible(true);
-        setTimeout(() => setToastSuccessVisible(false), 3500);
-        setUsers((prev) => [...prev, response.data.new_user]);
-      }
+  const handleSubmit = async () => {
+    if (!userForm.userName || !userForm.userEmail) {
+      setToastErrorMessage("Please fill all details");
+      setToastErrorVisible(true);
+      setTimeout(() => setToastErrorVisible(false), 3500);
+      return;
     }
 
-    resetForm();
-    setModalOpen(false);
-  } catch (error) {
-    console.error("handleSubmit error:", error);
-    setToastErrorMessage(
-      error.response?.data?.message || error.message || "Failed to update user"
-    );
-    setToastErrorVisible(true);
-    setTimeout(() => setToastErrorVisible(false), 3500);
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      if (userForm.userId) {
+        const payload = {
+          userName: userForm.userName,
+          userEmail: userForm.userEmail,
+        };
 
+        if (userForm.password && userForm.password.trim()) {
+          if (!userForm.currentPassword || !userForm.currentPassword.trim()) {
+            setToastErrorMessage(
+              "Current password is required to change password"
+            );
+            setToastErrorVisible(true);
+            setTimeout(() => setToastErrorVisible(false), 3500);
+            setLoading(false);
+            return;
+          }
+
+          // include both new and current password in the request
+          payload.newPassword = userForm.password;
+          payload.currentPassword = userForm.currentPassword;
+        }
+
+        // Only allow role change from frontend if current user is superAdmin
+        if (user.role === "superAdmin") {
+          payload.role = userForm.role;
+        }
+
+        const response = await axios.put(
+          `${API_BASE_URL}/api/user/edit-login-info/${userForm.userId}`,
+          payload,
+          {
+            withCredentials: true,
+          }
+        );
+
+        if (response.status === 200) {
+          setToastSuccessMessage(
+            response.data.message || "User updated successfully"
+          );
+          setToastSuccessVisible(true);
+          setTimeout(() => setToastSuccessVisible(false), 3500);
+
+          // update local list
+          setUsers((prev) =>
+            prev.map((existing) =>
+              existing._id === userForm.userId ||
+              existing.userId === userForm.userId
+                ? {
+                    ...existing,
+                    userName: response.data.user.userName,
+                    userEmail: response.data.user.userEmail,
+                    role: response.data.user.role,
+                    _id: response.data.user._id,
+                  }
+                : existing
+            )
+          );
+        }
+      } else {
+        // CREATE NEW USER
+        const createPayload = {
+          userName: userForm.userName,
+          userEmail: userForm.userEmail,
+          password:
+            userForm.password && userForm.password.trim()
+              ? userForm.password
+              : `${userForm.userName.toLowerCase().replace(/\s+/g, "")}@123`,
+          role: userForm.role || "user",
+        };
+
+        const response = await axios.post(
+          `${API_BASE_URL}/api/user/createUser`,
+          createPayload
+        );
+
+        if (response.status === 201 || response.status === 200) {
+          setToastSuccessMessage(
+            response.data.message || "User created successfully"
+          );
+          setToastSuccessVisible(true);
+          setTimeout(() => setToastSuccessVisible(false), 3500);
+          setUsers((prev) => [...prev, response.data.new_user]);
+        }
+      }
+
+      resetForm();
+      setModalOpen(false);
+    } catch (error) {
+      console.error("handleSubmit error:", error);
+      setToastErrorMessage(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to update user"
+      );
+      setToastErrorVisible(true);
+      setTimeout(() => setToastErrorVisible(false), 3500);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const resetForm = () => {
     setUserForm({
@@ -546,7 +555,11 @@ const AuthenticationManagement = () => {
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                           />
                           <p className="text-xs text-gray-500 mt-1">
-                            If empty, default password will be: {userForm.userName.toLowerCase().replace(/\s+/g, '')}@123
+                            If empty, default password will be:{" "}
+                            {userForm.userName
+                              .toLowerCase()
+                              .replace(/\s+/g, "")}
+                            @123
                           </p>
                         </div>
                       )}
@@ -564,7 +577,8 @@ const AuthenticationManagement = () => {
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                           />
                           <p className="text-xs text-gray-500 mt-1">
-                            To change password, enter new password below and verify with current password
+                            To change password, enter new password below and
+                            verify with current password
                           </p>
                         </div>
                       )}
@@ -582,7 +596,8 @@ const AuthenticationManagement = () => {
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                           />
                           <p className="text-xs text-gray-500 mt-1">
-                            Enter the current password to verify your identity before making any changes
+                            Enter the current password to verify your identity
+                            before making any changes
                           </p>
                         </div>
                       )}

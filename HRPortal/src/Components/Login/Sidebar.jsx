@@ -177,6 +177,13 @@ const Sidebar = () => {
                   />
 
                   <SidebarItem
+                    icon={<IconSettings />}
+                    label="Expense Tracker"
+                    isOpen={isOpen}
+                    to="/expense-tracker"
+                  />
+
+                  <SidebarItem
                     icon={<IconKey />}
                     label="Change Password"
                     isOpen={isOpen}
@@ -364,12 +371,29 @@ const Sidebar = () => {
                       isOpen={isOpen}
                       to="/payslip"
                     />
-                     <SidebarItem
-                        icon={<IconSettings />}
-                        label="Expense Tracker"
-                        isOpen={isOpen}
-                        to="/expense-tracker"
-                      />
+                  </SidebarDropdown>
+
+                  <SidebarDropdown
+                    icon={<IconUsers />}
+                    label="Expense Management"
+                    isOpen={isOpen}
+                    isExpanded={dropdowns.expense}
+                    toggleDropdown={() => toggleDropdown("expense")}
+                  >
+
+                    <SidebarItem
+                      icon={<IconFileText />}
+                      label="Expense Tracker"
+                      isOpen={isOpen}
+                      to="/expense-tracker"
+                    />
+
+                    <SidebarItem
+                      icon={<IconFilePlus />}
+                      label="Expense Generator" 
+                      isOpen={isOpen}
+                      to="/expense"
+                    />
                   </SidebarDropdown>
                 </>
               )}

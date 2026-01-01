@@ -39,6 +39,7 @@ import ResumeAnalyzer from "./Page/ResumeAnalyzer";
 import AnalysisResult from "./Page/AnalysisResult";
 import AddExpense from "./Page/AddExpense";
 import ExpenseTracker from "./Page/ExpenseTracker";
+import ExpenseGenerator from "./Page/ExpenseGernerator";
 
 function AppLayout() {
   // const location = useLocation();
@@ -122,6 +123,15 @@ function AppLayout() {
               <ProtectedRoute>
                 <ExpenseTracker />
               </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/expense"
+            element={
+              <AccountantSuperAdminRoute>
+                <ExpenseGenerator />
+              </AccountantSuperAdminRoute>
             }
           />
 

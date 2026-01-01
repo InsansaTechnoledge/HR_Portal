@@ -1,12 +1,7 @@
 import React from "react";
 
-const TemplateModern = ({ data, company, calculations, expenses = [] }) => {
+const TemplateModern = ({ data, company, calculations }) => {
   const n = (v) => Number(v || 0).toFixed(2);
-  const expenseTotal = (expenses || []).reduce(
-    (sum, exp) => sum + (Number(exp.amount) || 0),
-    0
-  );
-  const totalPayable = Number(calculations?.totalPayable || 0);
 
   return (
     <div
@@ -117,52 +112,8 @@ const TemplateModern = ({ data, company, calculations, expenses = [] }) => {
               <span>₹{n(calculations.netSalary)}</span>
             </div>
 
-            {expenseTotal > 0 && (
-              <div className="flex justify-between font-semibold text-sm text-green-700 mt-[3mm]">
-                <span>Total Payable (Net + Expenses)</span>
-                <span>
-                  ₹{n(totalPayable || Number(calculations.netSalary || 0) + expenseTotal)}
-                </span>
-              </div>
-            )}
           </div>
         </div>
-
-        {/* REIMBURSABLE EXPENSES */}
-        {expenses && expenses.length > 0 && (
-          <div className="mt-[12mm]">
-            <p className="uppercase tracking-wider text-xs text-gray-500 mb-[3mm]">
-              Reimbursable Expenses (Approved)
-            </p>
-            <div className="border border-gray-200 rounded overflow-hidden text-xs">
-              <div className="grid grid-cols-3 bg-gray-100 font-semibold px-[4mm] py-[2mm]">
-                <span>Date</span>
-                <span>Type</span>
-                <span className="text-right">Amount (₹)</span>
-              </div>
-
-              {expenses.map((exp) => (
-                <div
-                  key={exp._id}
-                  className="grid grid-cols-3 border-t px-[4mm] py-[2mm] text-gray-700"
-                >
-                  <span>
-                    {exp.expenseDate
-                      ? new Date(exp.expenseDate).toLocaleDateString()
-                      : "-"}
-                  </span>
-                  <span>{exp.expenseType}</span>
-                  <span className="text-right">₹{n(exp.amount)}</span>
-                </div>
-              ))}
-
-              <div className="grid grid-cols-3 border-t bg-gray-50 font-semibold px-[4mm] py-[2mm]">
-                <span className="col-span-2">Total Reimbursable Expenses</span>
-                <span className="text-right">₹{n(expenseTotal)}</span>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* FOOTER */}
         <div className="mt-[20mm] flex justify-between items-end text-xs text-gray-500">
