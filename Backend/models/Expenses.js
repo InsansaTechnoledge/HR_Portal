@@ -56,11 +56,6 @@ const ExpenseSchema = new mongoose.Schema(
       index: true,
     },
 
-    paymentMode: {
-      type: String,
-      enum: ["SALARY", "SEPARATE"],
-      default: "SALARY",
-    },
     status: {
       type: String,
       enum: ["PENDING", "APPROVED", "REJECTED", "PAID"],
@@ -80,12 +75,6 @@ const ExpenseSchema = new mongoose.Schema(
     rejectionReason: {
       type: String,
       trim: true,
-    },
-
-    paidInPayslipId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Payslip",
-      default: null,
     },
 
     paidAt: {

@@ -8,7 +8,6 @@ export const createExpense = async (req, res) => {
       amount,
       expenseDate,
       reimbursementMonth,
-      paymentMode,
       description,
     } = req.body;
 
@@ -41,7 +40,6 @@ export const createExpense = async (req, res) => {
       amount,
       expenseDate,
       reimbursementMonth,
-      paymentMode,
       description,
       receipts: uploadedReceipts,
     });
@@ -196,7 +194,7 @@ export const updateExpenseStatus = async (req, res) => {
 export const payExpenseSeparately = async (req, res) => {
   try {
     const { id } = req.params;
-
+    console.log("Paying expense separately for ID:", id);
     if (!id) {
       return res.status(400).json({ message: "Expense ID is required" });
     }

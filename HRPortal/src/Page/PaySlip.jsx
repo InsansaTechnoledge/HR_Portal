@@ -22,7 +22,6 @@ const PayslipGenerator = () => {
     const professionalTax = 200;
     const [employees, setEmployees] = useState();
     const [selectedEmployee, setSelectedEmployee] = useState(null);
-    const [payslipExpenses, setPayslipExpenses] = useState([]);
     const {user} = useContext(userContext);
     const [taxType, setTaxType] = useState("Professional Tax");
     const [loading, setLoading] = useState(true);
@@ -86,13 +85,7 @@ const PayslipGenerator = () => {
     const renderTemplate = (template) => {
         if (!template) return null;
 
-        const expenseTotal = (payslipExpenses || []).reduce(
-            (sum, exp) => sum + (Number(exp.amount) || 0),
-            0
-        );
-
         const net = calculateNetSalary();
-        const totalPayable = net + expenseTotal;
 
         const calculations = {
             totalEarnings: calculateTotalEarnings().toFixed(2),
@@ -100,17 +93,13 @@ const PayslipGenerator = () => {
                 .reduce((a, b) => a + b, 0)
                 .toFixed(2),
             netSalary: net.toFixed(2),
-            totalPayable: totalPayable.toFixed(2),
             deductions: calculateDeductions(),
-            expenseTotal,
-            expenseCount: payslipExpenses.length,
         };
 
         const props = {
             data: employeeData,
             company: companyDetails,
             calculations,
-            expenses: payslipExpenses,
         };
 
         switch (template) {
@@ -167,35 +156,6 @@ const PayslipGenerator = () => {
         }
     };
 
-    // Fetch approved expenses for selected employee & month
-    useEffect(() => {
-        const fetchExpensesForPayslip = async () => {
-            if (!employeeData.month || !selectedEmployee?.email) {
-                setPayslipExpenses([]);
-                return;
-            }
-
-            try {
-                const response = await axios.get(`${API_BASE_URL}/api/expense`, {
-                    params: {
-                        status: "APPROVED",
-                        reimbursementMonth: employeeData.month,
-                        employeeEmail: selectedEmployee.email,
-                        limit: 100,
-                    },
-                    withCredentials: true,
-                });
-
-                if (response.status === 200 || response.status === 201) {
-                    setPayslipExpenses(response.data.expenses || []);
-                }
-            } catch (err) {
-                console.error("Error fetching expenses for payslip:", err);
-            }
-        };
-
-        fetchExpensesForPayslip();
-    }, [employeeData.month, selectedEmployee]);
 
     const calculateDeductions = () => {
         const salary = parseFloat(employeeData.salary) || 0;
@@ -229,13 +189,6 @@ const PayslipGenerator = () => {
         }
     };
 
-    // Helper to compute total approved expenses for summary
-    const getExpenseTotal = () =>
-        (payslipExpenses || []).reduce(
-            (sum, exp) => sum + (Number(exp.amount) || 0),
-            0
-        );
-
     const handleGeneratePayslip = (e) => {
         e.preventDefault();
     if (!employeeData.name || !employeeData.month) {
@@ -251,8 +204,6 @@ const PayslipGenerator = () => {
 const handleConfirmTemplate = async () => {
     try {
         setIsGeneratingPDF(true);
-
-        const expenseTotal = getExpenseTotal();
         const net = calculateNetSalary();
 
         const payload = {
@@ -276,10 +227,6 @@ const handleConfirmTemplate = async () => {
             totalEarnings: calculateTotalEarnings(),
             totalDeductions: Object.values(calculateDeductions()).reduce((a,b)=>a+b,0),
             netSalary: net,
-
-            // Include expense summary so DB matches what templates show
-            expenseTotal,
-            totalPayable: net + expenseTotal,
 
             bankAccount: employeeData.bankAccount,
             panNumber: employeeData.panNumber,
@@ -495,64 +442,7 @@ const handleConfirmTemplate = async () => {
                             </div>
                         ))}
                     </div>
-                    {/* Expense summary for selected employee & month */}
-                    {employeeData.name && employeeData.month && (
-                        <div className="bg-white shadow-md rounded-lg p-6 mb-2">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-semibold text-gray-800">
-                                    Approved Expenses for {employeeData.name} ({employeeData.month})
-                                </h3>
-                                <div className="text-sm text-gray-600">
-                                    <span className="mr-4">
-                                        Count: {payslipExpenses.length}
-                                    </span>
-                                    <span>
-                                        Total: 
-                                        ₹{getExpenseTotal().toLocaleString("en-IN")}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {payslipExpenses.length === 0 ? (
-                                <p className="text-sm text-gray-500">
-                                    No approved expenses found for this employee and month.
-                                </p>
-                            ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="min-w-full text-sm text-left">
-                                        <thead className="bg-gray-50">
-                                            <tr>
-                                                <th className="px-3 py-2 font-medium text-gray-600">Date</th>
-                                                <th className="px-3 py-2 font-medium text-gray-600">Type</th>
-                                                <th className="px-3 py-2 font-medium text-gray-600 text-right">Amount (₹)</th>
-                                                <th className="px-3 py-2 font-medium text-gray-600">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {payslipExpenses.map((exp) => (
-                                                <tr key={exp._id} className="border-t">
-                                                    <td className="px-3 py-2 text-gray-700">
-                                                        {exp.expenseDate
-                                                            ? new Date(exp.expenseDate).toLocaleDateString("en-IN")
-                                                            : "-"}
-                                                    </td>
-                                                    <td className="px-3 py-2 text-gray-700">{exp.expenseType}</td>
-                                                    <td className="px-3 py-2 text-gray-900 text-right font-medium">
-                                                        ₹{Number(exp.amount || 0).toLocaleString("en-IN")}
-                                                    </td>
-                                                    <td className="px-3 py-2 text-xs">
-                                                        <span className="inline-flex items-center rounded px-2 py-0.5 bg-blue-50 text-blue-700 font-semibold">
-                                                            {exp.status}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                    {/* Expense summary removed: expenses are now paid separately, not via payslip */}
                     <div className="flex gap-4 justify-end">
                         <button
                             type="submit"

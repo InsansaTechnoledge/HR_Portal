@@ -1,6 +1,5 @@
 import Payslip from "../models/PaySlip.js";
 import Employee from "../models/Employee.js";
-import Expenses from "../models/Expenses.js";
 
 export const generatePaySlip = async (req, res) => {
   try {
@@ -27,7 +26,7 @@ export const generatePaySlip = async (req, res) => {
       });
     }
 
-    // Create payslip with template (expense fields will be updated after we compute them)
+    // Create payslip with template (no longer touching expenses here)
     const newPayslip = new Payslip({
       ...payslipData,
       template: payslipData.template || "classic",
@@ -38,62 +37,11 @@ export const generatePaySlip = async (req, res) => {
     employee.payslips.push(savedPayslip._id);
     await employee.save();
 
-    // After payslip is generated, mark approved, unpaid expenses for this
-    // employee and reimbursement month as paid via salary.
-    try {
-      const payableExpenses = await Expenses.find({
-        employeeId: employee._id,
-        status: "APPROVED",
-        paidInPayslipId: null,
-        reimbursementMonth: payslipData.month,
-      }).select("_id amount");
-
-      if (payableExpenses.length) {
-        const expenseIds = payableExpenses.map((e) => e._id);
-
-        const expenseTotal = payableExpenses.reduce(
-          (sum, e) => sum + (Number(e.amount) || 0),
-          0
-        );
-
-        await Expenses.updateMany(
-          { _id: { $in: expenseIds } },
-          {
-            $set: {
-              status: "PAID",
-              paymentMode: "SALARY",
-              paidInPayslipId: savedPayslip._id,
-              paidAt: new Date(),
-            },
-          }
-        );
-
-        // Store expenseTotal and totalPayable on the payslip so trackers can show full payout
-        await Payslip.findByIdAndUpdate(savedPayslip._id, {
-          $set: {
-            expenseTotal,
-            totalPayable:
-              (Number(savedPayslip.netSalary) || 0) + expenseTotal,
-          },
-        });
-      }
-
-      // Success response
-      res.status(201).json({
-        message:
-          "Payslip generated, linked to employee, and related expenses paid via salary",
-        payslip: savedPayslip,
-        paidExpensesCount: payableExpenses.length,
-      });
-    } catch (expenseError) {
-      // If expense update fails, still return payslip but log the error.
-      console.error("Error updating related expenses for payslip:", expenseError);
-      res.status(201).json({
-        message:
-          "Payslip generated and linked to employee, but updating related expenses failed",
-        payslip: savedPayslip,
-      });
-    }
+    // Success response without any expense-side effects
+    res.status(201).json({
+      message: "Payslip generated and linked to employee",
+      payslip: savedPayslip,
+    });
 
   } catch (err) {
     console.error("Generate Payslip Error:", err);

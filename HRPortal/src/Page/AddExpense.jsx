@@ -194,21 +194,6 @@ const AddExpense = () => {
             />
           </div>
 
-          {/* Payment Mode */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Payment Mode
-            </label>
-            <select
-              name="paymentMode"
-              value={form.paymentMode}
-              onChange={handleChange}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 transition"
-            >
-              <option value="SALARY">With Salary</option>
-              <option value="SEPARATE">Separate Payment</option>
-            </select>
-          </div>
 
           {/* Description */}
           <div>

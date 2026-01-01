@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import axios from "axios";
 import API_BASE_URL from "../config";
+import { userContext } from "../Context/userContext";
 
 const ExpenseTracker = () => {
+  const { user } = useContext(userContext);
   const [expenses, setExpenses] = useState([]);
   const [error, setError] = useState("");
 
@@ -16,8 +18,16 @@ const ExpenseTracker = () => {
     try {
       setLoading(true);
       setError("");
+      const params = { ...filters };
+
+      // Employees should only see their own expenses
+      if (user && (user.role === "user" || user.role === "employee")) {
+        params.employeeEmail = user.userEmail;
+      }
+
       const res = await axios.get(`${API_BASE_URL}/api/expense`, {
-        params: filters,
+        params,
+        withCredentials: true,
       });
       setExpenses(res.data.expenses || []);
     } catch (err) {
@@ -42,6 +52,11 @@ const ExpenseTracker = () => {
   const handleStatusChange = async (expenseId, newStatus) => {
     // Only send update when moving away from PENDING to APPROVED/REJECTED
     if (newStatus === "PENDING") return;
+
+    // Only superAdmin and accountant can approve/reject
+    if (!user || !["superAdmin", "accountant"].includes(user.role)) {
+      return;
+    }
 
     try {
       setError("");
@@ -204,18 +219,21 @@ const ExpenseTracker = () => {
                       >
                         {exp.status}
                       </span>
-                      <select
-                        value={exp.status}
-                        disabled={exp.status !== "PENDING"}
-                        onChange={(e) =>
-                          handleStatusChange(exp._id, e.target.value)
-                        }
-                        className="ml-2 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-400"
-                      >
-                        <option value="PENDING">Pending</option>
-                        <option value="APPROVED">Approved</option>
-                        <option value="REJECTED">Rejected</option>
-                      </select>
+                      {/* Only superAdmin/accountant can change status */}
+                      {user && ["superAdmin", "accountant"].includes(user.role) && (
+                        <select
+                          value={exp.status}
+                          disabled={exp.status !== "PENDING"}
+                          onChange={(e) =>
+                            handleStatusChange(exp._id, e.target.value)
+                          }
+                          className="ml-2 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-400"
+                        >
+                          <option value="PENDING">Pending</option>
+                          <option value="APPROVED">Approved</option>
+                          <option value="REJECTED">Rejected</option>
+                        </select>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3 align-top text-sm text-gray-700">
@@ -232,6 +250,18 @@ const ExpenseTracker = () => {
                             View Receipt {idx + 1}
                           </a>
                         ))}
+
+                        {/* If expense is paid, allow download of receipt(s) */}
+                        {exp.status === "PAID" && exp.receipts[0]?.url && (
+                          <a
+                            href={exp.receipts[0].url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-block mt-1 rounded bg-green-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-green-700"
+                          >
+                            Download Expense
+                          </a>
+                        )}
                       </div>
                     ) : (
                       <span className="text-xs text-gray-400">No receipts</span>
