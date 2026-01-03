@@ -1,0 +1,44 @@
+
+# PYTHON / FASTAPI PROJECT
+
+# Virtual environment
+.venv/
+venv/
+venv311/
+
+
+# Byte-compiled / __pycache__
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.pkl
+*.pklz
+
+# Local development environment
+.env
+.env.local
+.env.*.local
+
+
+# Uploaded / user files
+uploads/
+Resumes/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor specific
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+
+# Python build / packaging
+build/
+dist/
+*.egg-info/
