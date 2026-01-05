@@ -6,6 +6,8 @@ import {
   Pencil,
   Trash2,
   X,
+  Search,
+  Building2
 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
@@ -13,6 +15,12 @@ import { userContext } from "../Context/userContext";
 import Loader from "../Components/Loader/Loader";
 import SuccessToast from "../Components/Toaster/SuccessToaser";
 import ErrorToast from "../Components/Toaster/ErrorToaster";
+import {Card, CardContent, CardHeader, CardTitle} from '../Components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription} from '../Components/ui/dialog';
+import { Label } from '../Components/ui/label';
+import { Input} from '../Components/ui/input';
+import {Button} from '../Components/ui/button';
+import * as XLSX from "xlsx";
 
 const EmployeeList = () => {
   const [expandedRows, setExpandedRows] = useState(new Set());
@@ -24,8 +32,21 @@ const EmployeeList = () => {
   const [toastErrorMessage, setToastErrorMessage] = useState();
   const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
   const [toastErrorVisible, setToastErrorVisible] = useState(false);
+  
   const [editOpen, setEditOpen] = useState(false);
+  
   const [editingEmployee, setEditingEmployee] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedDepartment, setSelectedDepartment] = useState("all");
+  const [allEmployees, setAllEmployees] = useState([]);
+  
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletingEmployee, setDeletingEmployee] = useState(null);
+
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportType, setExportType] = useState("all"); // all | department | department-wise
+  const [exportDepartment, setExportDepartment] = useState("");
+
   const initialFormState = {
     name: "",
     email: "",
@@ -73,11 +94,8 @@ const EmployeeList = () => {
           signal,
         });
         if (response.status === 201 || response.status === 200) {
-          const allEmployees = response.data.employees;
-          const filteredEmployees = allEmployees.filter(
-            (emp) => emp.details !== undefined
-          );
-          setEmployees(filteredEmployees);
+          setAllEmployees(response.data.employees);
+          setEmployees(response.data.employees);
         }
       } catch (err) {
         if (axios.isCancel?.(err)) return;
@@ -95,6 +113,82 @@ const EmployeeList = () => {
   }, []);
 
 
+useEffect(() => {
+  const filtered = allEmployees.filter((emp) => {
+    // Skip employees without details
+    if (!emp?.details) return false;
+
+    const name = emp.details.name?.toLowerCase() || "";
+    const email = emp.details.email?.toLowerCase() || "";
+    const department = emp.details.department || "";
+
+    const matchesSearch =
+      name.includes(searchTerm.toLowerCase()) ||
+      email.includes(searchTerm.toLowerCase());
+
+    const matchesDepartment =
+      selectedDepartment === "all" ||
+      department === selectedDepartment;
+
+    return matchesSearch && matchesDepartment;
+  });
+
+  setEmployees(filtered);
+}, [searchTerm, selectedDepartment, allEmployees]);
+
+//Helper function Initializer for edit dialog employee data
+  const mapEmployeeToForm = (employee) => {
+    const d = employee?.details || {};
+
+    return {
+      // Personal
+      name: d.name || "",
+      email: d.email || "",
+      phone: d.phone || "",
+      dateOfBirth: d.dateOfBirth
+        ? d.dateOfBirth.split("T")[0]
+        : "",
+      gender: d.gender || "",
+      maritalStatus: d.maritalStatus || "",
+      nationality: d.nationality || "",
+
+      // Address
+      currentAddress: d.currentAddress || "",
+      permanentAddress: d.permanentAddress || "",
+      city: d.city || "",
+      state: d.state || "",
+      pincode: d.pincode || "",
+
+      // Employment
+      department: d.department || "",
+      designation: d.designation || "",
+      dateOfJoining: d.dateOfJoining
+        ? d.dateOfJoining.split("T")[0]
+        : "",
+      salary: d.salary || "",
+
+      // Financial
+      nameAsPerBank: d.nameAsPerBank || "",
+      bankName: d.bankName || "",
+      accountNumber: d.accountNumber || "",
+      ifscCode: d.ifscCode || "",
+      panNumber: d.panNumber || "",
+      aadharNumber: d.aadharNumber || "",
+      uanNumber: d.uanNumber || "",
+
+      // Emergency
+      emergencyContactName: d.emergencyContactName || "",
+      emergencyContactRelation: d.emergencyContactRelation || "",
+      emergencyContactPhone: d.emergencyContactPhone || "",
+    };
+  };
+
+  //initializing edit form data
+  useEffect(() => {
+  if (editingEmployee?.details) {
+    setForm(mapEmployeeToForm(editingEmployee));
+  }
+}, [editingEmployee]);
   // Update employee details
   const updateEmployee = async (employeeId, payload) => {
     try {
@@ -103,6 +197,7 @@ const EmployeeList = () => {
         { newEmployee: payload },
         { headers: { "Content-Type": "application/json" } }
       );
+
 
       if (resp.status === 200) {
         const updatedDetails = resp.data?.employee?.details || payload;
@@ -131,20 +226,44 @@ const EmployeeList = () => {
     }
   };
 
+  //edit employee modal open func
+  const handleEditClick = (employee) => {
+  setEditingEmployee(employee);
+  setForm(mapEmployeeToForm(employee));
+  setEditOpen(true);
+};
+
+  const handleDeleteClick = (employee) => {
+  setDeletingEmployee(employee);
+  setDeleteOpen(true);
+};
 // Delete employee
+
 const deleteEmployee = async (employeeId) => {
   try {
-    if (!confirm("Delete this employee?")) return;
-    const resp = await axios.delete(`${API_BASE_URL}/api/employee/${employeeId}`);
+    const resp = await axios.delete(
+      `${API_BASE_URL}/api/employee/${employeeId}`
+    );
+
     if (resp.status === 200) {
-      setEmployees(prev => prev.filter(emp => emp._id !== employeeId));
-      setToastSuccessMessage("Employee deleted");
+      setEmployees((prev) =>
+        prev.filter((emp) => emp._id !== employeeId)
+      );
+
+      setToastSuccessMessage(
+        resp.data?.message || "Employee deleted successfully"
+      );
       setToastSuccessVisible(true);
       setTimeout(() => setToastSuccessVisible(false), 3000);
+
+      setDeleteOpen(false);
+      setDeletingEmployee(null);
     }
   } catch (err) {
     console.error(err);
-    setToastErrorMessage(err.response?.data?.message || "Delete failed");
+    setToastErrorMessage(
+      err.response?.data?.message || "Delete failed"
+    );
     setToastErrorVisible(true);
     setTimeout(() => setToastErrorVisible(false), 3000);
   }
@@ -258,78 +377,17 @@ const deleteEmployee = async (employeeId) => {
     setForm(initialFormState);
   };
 
-  // const handleDownload = async (employee, doc) => {
-  //     // Fetch document on-demand to avoid loading all documents upfront
-  //     try {
-  //         const response = await axios.get(`${API_BASE_URL}/api/employee/${employee._id}`, {
-  //             params: { includeDocuments: "true" }
-  //         });
-
-  //         if (response.status === 200) {
-  //             const fullEmployee = response.data.employee;
-
-  //             if (doc === 'PAN Card') {
-  //                 downloadDocument(employee.name, doc, fullEmployee.details.documentsPanCard);
-  //             }
-  //             else if (doc === 'Aadhar Card') {
-  //                 downloadDocument(employee.name, doc, fullEmployee.details.documentsAadhar);
-  //             }
-  //             else if (doc === 'Degree Certificate') {
-  //                 downloadDocument(employee.name, doc, fullEmployee.details.documentsDegree);
-  //             }
-  //             else if (doc === 'Experience Certificate') {
-  //                 downloadDocument(employee.name, doc, fullEmployee.details.documentsExperience);
-  //             }
-  //         } else {
-  //             throw new Error('Failed to fetch employee documents');           }
-  //     } catch (err) {
-  //         console.error('Error downloading document:', err);
-  //         setToastErrorMessage('Failed to download document');
-  //                   setToastErrorVisible(true);
-  //         setTimeout(() => setToastErrorVisible(false), 3500);
-  //     }
-  // }
-
-  // function downloadDocument(name, doc, buffer) {
-  //     // Check if we have a valid Buffer and convert it to ArrayBuffer
-  //     if (buffer && buffer.data instanceof Array) {
-  //         // Convert Buffer (Node.js) to ArrayBuffer
-  //         const arrayBuffer = new Uint8Array(buffer.data).buffer; // Create an ArrayBuffer from Buffer data
-
-  //         // Convert the ArrayBuffer to a Blob (ensure MIME type is correct for the document)
-  //         const blob = new Blob([arrayBuffer], { type: 'application/pdf' }); // Adjust MIME type as needed (e.g., 'application/pdf')
-
-  //         // Ensure Blob is created correctly
-  //         if (!blob.size) {
-  //             console.error('Failed to create Blob from ArrayBuffer.');
-  //             return;
-  //         }
-
-  //         // Create a link element to download the Blob
-  //         const link = document.createElement('a');
-  //         const url = window.URL.createObjectURL(blob);
-
-  //         // Ensure URL is created successfully
-  //         if (!url) {
-  //             console.error('Failed to create Object URL for the Blob.');
-  //             return;
-  //         }
-
-  //         // Set the download attribute to define the file name
-  //         link.href = url;
-  //         link.download = `${name}-${doc}.pdf`; // You can adjust file extension based on the document type
-
-  //         // Append the link to the DOM, trigger the download, and remove the link afterward
-  //         document.body.appendChild(link);
-  //         link.click();
-  //         document.body.removeChild(link);
-
-  //         // Release the Object URL to free up memory
-  //         window.URL.revokeObjectURL(url);
-  //     } else {
-  //         console.error('Received data is not a valid Buffer or Array.');
-  //     }
-  // }
+  //Reusable Field component for information display
+  const Field = ({ label, value }) => (
+  <div className="space-y-1">
+    <p className="text-xs font-medium text-gray-500 uppercase">
+      {label}
+    </p>
+    <p className="text-sm text-gray-900 break-words">
+      {value || "—"}
+    </p>
+  </div>
+);
 
   const handleDownload = (docObj) => {
     if (!docObj?.url) {
@@ -347,722 +405,783 @@ const deleteEmployee = async (employeeId) => {
     return <Loader />;
   }
 
+  //Handle export employee data to excel
+  const handleExportExcel = () => {
+  const workbook = XLSX.utils.book_new();
+
+  // Full employee list
+  if (exportType === "all") {
+    const data = allEmployees.map(mapEmployeeForExcel);
+    const sheet = XLSX.utils.json_to_sheet(data);
+    applySheetStyles(sheet, data);
+    XLSX.utils.book_append_sheet(workbook, sheet, "All Employees");
+  }
+
+  // Specific department
+  if (exportType === "department") {
+    const filtered = allEmployees.filter(
+      (e) => e.details?.department === exportDepartment
+    );
+
+    const data = filtered.map(mapEmployeeForExcel);
+    const sheet = XLSX.utils.json_to_sheet(data);
+    applySheetStyles(sheet, data);
+    XLSX.utils.book_append_sheet(workbook, sheet, exportDepartment);
+  }
+
+  // Department-wise sheets
+  if (exportType === "department-wise") {
+    const departmentMap = {};
+
+    allEmployees.forEach((emp) => {
+      const dep = emp.details?.department || "Unknown";
+      if (!departmentMap[dep]) departmentMap[dep] = [];
+      departmentMap[dep].push(emp);
+    });
+
+    Object.entries(departmentMap).forEach(([dep, emps]) => {
+      const data = emps.map(mapEmployeeForExcel);
+      const sheet = XLSX.utils.json_to_sheet(data);
+      applySheetStyles(sheet, data);
+      XLSX.utils.book_append_sheet(workbook, sheet, dep);
+    });
+  }
+
+  XLSX.writeFile(
+    workbook,
+    `Employees_${new Date().toISOString().split("T")[0]}.xlsx`
+  );
+
+  setExportOpen(false);
+};
+  //Helper function for export employeelist format
+  const mapEmployeeForExcel = (emp, index) => {
+  const d = emp.details || {};
+
+  return {
+    "S.No": index + 1,
+    "Employee Name": d.name || "",
+    "Email": d.email || "",
+    "Phone": d.phone || "",
+    "Department": d.department || "",
+    "Designation": d.designation || "",
+    "Date of Joining": d.dateOfJoining
+      ? new Date(d.dateOfJoining).toLocaleDateString("en-GB")
+      : "",
+    "Salary": d.salary || "",
+    "Gender": d.gender || "",
+    "City": d.city || "",
+    "State": d.state || "",
+  };
+};
+
+//helper function for Auto Column Width + Bold Headers
+const applySheetStyles = (worksheet, data) => {
+  const headers = Object.keys(data[0] || {});
+  const colWidths = headers.map((key) => ({
+    wch: Math.max(
+      key.length,
+      ...data.map((row) => String(row[key] || "").length)
+    ) + 2,
+  }));
+
+  worksheet["!cols"] = colWidths;
+
+  // Bold header row
+  headers.forEach((_, index) => {
+    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: index });
+    if (worksheet[cellAddress]) {
+      worksheet[cellAddress].s = {
+        font: { bold: true },
+      };
+    }
+  });
+
+};
+
   return (
     <>
       {toastSuccessVisible ? (
         <SuccessToast message={toastSuccessMessage} />
       ) : null}
       {toastErrorVisible ? <ErrorToast error={toastErrorMessage} /> : null}
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-          <div className="px-6 py-4 bg-gray-100 border-b border-gray-300">
-            <h2 className="text-xl font-semibold text-gray-800">
-              Employee Directory
-            </h2>
+      <div className="min-h-screen bg-background p-4 lg:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold">Employee List</h1>
+              <p className="text-muted-foreground">View and manage all employees</p>
+            </div>
+            { user.role === 'admin' || user.role === 'superAdmin' &&
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => setExportOpen(true)}
+              >
+                <Download className="w-4 h-4" />
+                Export
+              </Button>
+              }
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Expand
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Employee ID
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Department
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Designation
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {employees.map((employee) => (
-                  <React.Fragment key={employee.details.employeeDetailId}>
-                    <tr className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() =>
-                            toggleRow(employee.details.employeeDetailId)
-                          }
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          {expandedRows.has(
-                            employee.details.employeeDetailId
-                          ) ? (
-                            <ChevronUp className="w-5 h-5" />
-                          ) : (
-                            <ChevronDown className="w-5 h-5" />
-                          )}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {employee.details.name}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {employee.details.employeeDetailId}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {employee.details.department}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {employee.details.designation}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {employee.details.email}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            className="px-3 py-1 text-blue-600 hover:bg-blue-50 rounded border border-blue-200"
-                            onClick={async () => {
-                              setEditingEmployee(employee);
-                              const d = employee.details;
-                              setForm({
-                                name: d.name || "",
-                                email: d.email || "",
-                                department: d.department || "",
-                                designation: d.designation || "",
-                                phone: d.phone || "",
-                                dateOfBirth: d.dateOfBirth
-                                  ? new Date(d.dateOfBirth)
-                                      .toISOString()
-                                      .split("T")[0]
-                                  : "",
-                                gender: d.gender || "",
-                                maritalStatus: d.maritalStatus || "",
-                                nationality: d.nationality || "",
-                                currentAddress: d.currentAddress || "",
-                                permanentAddress: d.permanentAddress || "",
-                                city: d.city || "",
-                                state: d.state || "",
-                                pincode: d.pincode || "",
-                                dateOfJoining: d.dateOfJoining
-                                  ? new Date(d.dateOfJoining)
-                                      .toISOString()
-                                      .split("T")[0]
-                                  : "",
-                                nameAsPerBank: d.nameAsPerBank || "",
-                                bankName: d.bankName || "",
-                                accountNumber: d.accountNumber || "",
-                                ifscCode: d.ifscCode || "",
-                                panNumber: d.panNumber || "",
-                                aadharNumber: d.aadharNumber || "",
-                                uanNumber: d.uanNumber || "",
-                                salary: d.salary || "",
-                                emergencyContactName:
-                                  d.emergencyContactName || "",
-                                emergencyContactRelation:
-                                  d.emergencyContactRelation || "",
-                                emergencyContactPhone:
-                                  d.emergencyContactPhone || "",
-                              });
 
-                              setEditOpen(true);
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="px-3 py-1 text-red-600 hover:bg-red-50 rounded border border-red-200"
-                            onClick={()=> deleteEmployee(employee._id)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
+          {/* Search */}
+          <Card className="border-0 shadow-card">
+            <CardContent className="p-4">
+              <div className="bg-white rounded-lg shadow p-4 flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    className="pl-10 w-full border rounded px-3 py-2"
+                    placeholder="Search employees..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+
+                <select
+                  className="border rounded px-3 py-2"
+                  value={selectedDepartment}
+                  onChange={(e) => setSelectedDepartment(e.target.value)}
+                >
+                  <option value="all">All Departments</option>
+                  {[...new Set(allEmployees.map(e => e.details.department))].map(dep => (
+                    <option key={dep} value={dep}>{dep}</option>
+                  ))}
+                </select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Employee Table */}
+          <Card className="border-0 shadow-card">
+            <CardHeader>
+              <CardTitle className="text-lg">All Employees ({employees.length})</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted/30">
+                    <tr>
+                      <th className="p-4">Expand</th>
+                      <th className="p-4">Employee</th>
+                      <th className="p-4">Department</th>
+                      <th className="p-4">Contact</th>
+                      <th className="p-4 text-right">Actions</th>
                     </tr>
-                    {expandedRows.has(employee.details.employeeDetailId) && (
-                      <tr>
-                        <td colSpan="7" className="px-6 py-4 bg-gray-50">
-                          <div className="space-y-6">
-                            {renderDetailSection("Personal Information", {
-                              Phone: employee.details.phone,
-                              "Date of Birth": employee.details.dateOfBirth
-                                ? new Date(
-                                    employee.details.dateOfBirth
-                                  ).toLocaleDateString("en-GB") // Format to dd-mm-yyyy
-                                : null,
-                              Gender: employee.details.gender,
-                              "Marital Status": employee.details.maritalStatus,
-                              Nationality: employee.details.nationality,
-                            })}
+                  </thead>
 
-                            {renderDetailSection("Address Information", {
-                              "Current Address":
-                                employee.details.currentAddress,
-                              "Permanent Address":
-                                employee.details.permanentAddress,
-                              City: employee.details.city,
-                              State: employee.details.state,
-                              Pincode: employee.details.pincode,
-                            })}
-
-                            {renderDetailSection("Employment Details", {
-                              "Date of Joining": employee.details.dateOfJoining
-                                ? new Date(
-                                    employee.details.dateOfJoining
-                                  ).toLocaleDateString("en-GB") // Format to dd-mm-yyyy
-                                : null,
-                            })}
-
-                            {renderDetailSection(
-                              "Financial Information",
-                              {
-                                "Name as per Bank Account":
-                                  employee.details.nameAsPerBank,
-                                "Bank Name": employee.details.bankName,
-                                "Account Number":
-                                  employee.details.accountNumber,
-                                "IFSC Code": employee.details.ifscCode,
-                                "PAN Number": employee.details.panNumber,
-                                "Aadhar Number": employee.details.aadharNumber,
-                                "UAN Number": employee.details.uanNumber,
-                              },
-                              employee
+                  <tbody>
+                  {employees.map((employee) => (
+                    <React.Fragment key={employee._id}>
+                      <tr className="border-b hover:bg-muted/30">
+                        <td className="p-4">
+                          <button
+                            onClick={() =>
+                              toggleRow(employee.details.employeeDetailId)
+                            }
+                            className="text-green-600 hover:text-green-800"
+                          >
+                            {expandedRows.has(
+                              employee.details.employeeDetailId
+                            ) ? (
+                              <ChevronUp className="w-5 h-5" />
+                            ) : (
+                              <ChevronDown className="w-5 h-5" />
                             )}
+                          </button>
+                        </td>
 
-                            {renderDetailSection("Emergency Contact", {
-                              "Contact Name":
-                                employee.details.emergencyContactName,
-                              "Contact Relation":
-                                employee.details.emergencyContactRelation,
-                              "Contact Phone":
-                                employee.details.emergencyContactPhone,
-                            })}
-
-                            <div className="mt-4">
-                              <h3 className="text-lg font-semibold text-blue-600 mb-2">
-                                Documents
-                              </h3>
-                              {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                                            {
-                                                                employee.details.documentsAadhar || employee.details.documentsPanCard || employee.details.documentsDegree || employee.details.documentsExperience
-                                                                    ?
-                                                                    null
-                                                                    :
-                                                                    <div className='text-gray-500'>No documents submitted</div>
-                                                            }
-                                                            {
-                                                                employee.details.documentsPanCard
-                                                                    ?
-                                                                    <button
-                                                                        onClick={() => handleDownload(employee.details.documentsPanCard)}
-                                                                        key='PAN Card'
-                                                                        className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                                                                    >
-                                                                        <Download className="w-4 h-4 mr-2" />
-                                                                        PAN Card
-                                                                    </button>
-                                                                    :
-                                                                    null
-                                                            }
-                                                            {
-                                                                employee.details.documentsAadhar
-                                                                    ?
-                                                                    <button
-                                                                        onClick={() => handleDownload(employee.details.documentsAadhar)}
-                                                                        key='Aadhar Card'
-                                                                        className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                                                                    >
-                                                                        <Download className="w-4 h-4 mr-2" />
-                                                                        Aadhar Card
-                                                                    </button>
-                                                                    :
-                                                                    null
-                                                            }
-                                                            {
-                                                                employee.details.documentsDegree
-                                                                    ?
-                                                                    <button
-                                                                        onClick={() => handleDownload(employee.details.documentsDegree)}
-                                                                        key='Degree Certificate'
-                                                                        className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                                                                    >
-                                                                        <Download className="w-4 h-4 mr-2" />
-                                                                        Degree Certificate
-                                                                    </button>
-                                                                    :
-                                                                    null
-                                                            }
-                                                            {
-                                                                employee.details.documentsExperience
-                                                                    ?
-                                                                    <button
-                                                                        onClick={() => handleDownload(employee.details.documentsExperience)}
-                                                                        key='Experience Certificate'
-                                                                        className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                                                                    >
-                                                                        <Download className="w-4 h-4 mr-2" />
-                                                                        Experience Certificate
-                                                                    </button>
-                                                                    :
-                                                                    null
-                                                            }
-
-                                                        </div> */}
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {!employee.details.documentsPanCard &&
-                                  !employee.details.documentsAadhar &&
-                                  !employee.details.documentsDegree &&
-                                  !employee.details.documentsExperience && (
-                                    <div className="text-gray-500">
-                                      No documents submitted
-                                    </div>
-                                  )}
-
-                                {employee.details.documentsPanCard && (
-                                  <button
-                                    onClick={() =>
-                                      handleDownload(
-                                        employee.details.documentsPanCard
-                                      )
-                                    }
-                                    className="flex items-center justify-center px-4 py-2 border rounded-md"
-                                  >
-                                    <Download className="w-4 h-4 mr-2" />
-                                    PAN Card
-                                  </button>
-                                )}
-
-                                {employee.details.documentsAadhar && (
-                                  <button
-                                    onClick={() =>
-                                      handleDownload(
-                                        employee.details.documentsAadhar
-                                      )
-                                    }
-                                    className="flex items-center justify-center px-4 py-2 border rounded-md"
-                                  >
-                                    <Download className="w-4 h-4 mr-2" />
-                                    Aadhar Card
-                                  </button>
-                                )}
-
-                                {employee.details.documentsDegree && (
-                                  <button
-                                    onClick={() =>
-                                      handleDownload(
-                                        employee.details.documentsDegree
-                                      )
-                                    }
-                                    className="flex items-center justify-center px-4 py-2 border rounded-md"
-                                  >
-                                    <Download className="w-4 h-4 mr-2" />
-                                    Degree Certificate
-                                  </button>
-                                )}
-
-                                {employee.details.documentsExperience && (
-                                  <button
-                                    onClick={() =>
-                                      handleDownload(
-                                        employee.details.documentsExperience
-                                      )
-                                    }
-                                    className="flex items-center justify-center px-4 py-2 border rounded-md"
-                                  >
-                                    <Download className="w-4 h-4 mr-2" />
-                                    Experience Certificate
-                                  </button>
-                                )}
-                              </div>
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-info flex items-center justify-center text-primary-foreground font-bold">
+                              {employee.details?.name?.charAt(0) || "E"}
+                            </div>
+                            <div>
+                              <p className="font-medium">{employee.details.name}</p>
+                              <p className="text-sm text-gray-500">{employee.details.designation}</p>
                             </div>
                           </div>
                         </td>
+
+                        <td className="p-4"><div className="flex items-center gap-2">
+                          <Building2 className="w-4 h-4 text-muted-foreground" />
+                          <span>{employee.details.department}</span>
+                        </div></td>
+
+                        <td className="p-4 text-sm text-gray-600">
+                          <div>{employee.details.email}</div>
+                          <div>{employee.details.phone}</div>
+                        </td>
+
+                        <td className="p-4 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              className="p-2 hover:bg-gray-100 rounded"
+                              onClick={() => handleEditClick(employee)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              className="p-2 hover:bg-red-100 text-red-600 rounded"
+                              onClick={() => handleDeleteClick(employee)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
-                    )}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      {employee?.details &&
+                      expandedRows.has(employee.details.employeeDetailId) && (
+                        <tr>
+                          <td colSpan="7" className="bg-gray-50 px-6 py-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                              {/* LEFT COLUMN */}
+                              <div className="space-y-6">
+
+                                {/* PERSONAL INFORMATION */}
+                                <Card>
+                                  <CardHeader>
+                                    <CardTitle className="text-lg font-semibold">
+                                      Personal Information
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Field label="Phone" value={employee.details.phone} />
+                                    <Field label="Gender" value={employee.details.gender} />
+                                    <Field label="Marital Status" value={employee.details.maritalStatus} />
+                                    <Field label="Nationality" value={employee.details.nationality} />
+                                    <Field
+                                      label="Date of Birth"
+                                      value={
+                                        employee.details.dateOfBirth
+                                          ? new Date(employee.details.dateOfBirth).toLocaleDateString("en-GB")
+                                          : null
+                                      }
+                                    />
+                                  </CardContent>
+                                </Card>
+
+                                {/* ADDRESS INFORMATION */}
+                                <Card>
+                                  <CardHeader>
+                                    <CardTitle className="text-lg font-semibold">
+                                      Address Information
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="space-y-4">
+                                    <Field
+                                      label="Current Address"
+                                      value={employee.details.currentAddress}
+                                    />
+                                    <Field
+                                      label="Permanent Address"
+                                      value={employee.details.permanentAddress}
+                                    />
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                      <Field label="City" value={employee.details.city} />
+                                      <Field label="State" value={employee.details.state} />
+                                      <Field label="Pincode" value={employee.details.pincode} />
+                                    </div>
+                                  </CardContent>
+                                </Card>
+
+                                {/* FINANCIAL INFORMATION */}
+                                <Card>
+                                  <CardHeader>
+                                    <CardTitle className="text-lg font-semibold">
+                                      Financial Information
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Field label="Bank Name" value={employee.details.bankName} />
+                                    <Field label="Account Number" value={employee.details.accountNumber} />
+                                    <Field label="IFSC Code" value={employee.details.ifscCode} />
+                                    <Field label="PAN Number" value={employee.details.panNumber} />
+                                    <Field label="Aadhar Number" value={employee.details.aadharNumber} />
+                                    <Field label="UAN Number" value={employee.details.uanNumber} />
+                                  </CardContent>
+                                </Card>
+
+                              </div>
+
+                              {/* RIGHT COLUMN */}
+                              <div className="space-y-6">
+
+                                {/* EMPLOYMENT DETAILS */}
+                                <Card>
+                                  <CardHeader>
+                                    <CardTitle className="text-lg font-semibold">
+                                      Employment Details
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Field
+                                      label="Date of Joining"
+                                      value={
+                                        employee.details.dateOfJoining
+                                          ? new Date(employee.details.dateOfJoining).toLocaleDateString("en-GB")
+                                          : null
+                                      }
+                                    />
+                                    <Field label="Department" value={employee.details.department} />
+                                  </CardContent>
+                                </Card>
+
+                                {/* CONTACT DETAILS */}
+                                <Card>
+                                  <CardHeader>
+                                    <CardTitle className="text-lg font-semibold">
+                                      Contact Details
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Field label="Email" value={employee.details.email} />
+                                    <Field label="Phone" value={employee.details.phone} />
+                                    <Field
+                                      label="Emergency Contact"
+                                      value={employee.details.emergencyContactName}
+                                    />
+                                    <Field
+                                      label="Emergency Phone"
+                                      value={employee.details.emergencyContactPhone}
+                                    />
+                                  </CardContent>
+                                </Card>
+
+                                {/* DOCUMENTS */}
+                                <Card>
+                                  <CardHeader>
+                                    <CardTitle className="text-lg font-semibold">
+                                      Documents
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                                    {!employee.details.documentsPanCard &&
+                                      !employee.details.documentsAadhar &&
+                                      !employee.details.documentsDegree &&
+                                      !employee.details.documentsExperience && (
+                                        <p className="text-sm text-gray-500 col-span-full">
+                                          No documents submitted
+                                        </p>
+                                      )}
+
+                                    {employee.details.documentsPanCard && (
+                                      <Button
+                                        variant="outline"
+                                        className="gap-2"
+                                        onClick={() =>
+                                          handleDownload(employee.details.documentsPanCard)
+                                        }
+                                      >
+                                        <Download className="w-4 h-4" />
+                                        PAN Card
+                                      </Button>
+                                    )}
+
+                                    {employee.details.documentsAadhar && (
+                                      <Button
+                                        variant="outline"
+                                        className="gap-2"
+                                        onClick={() =>
+                                          handleDownload(employee.details.documentsAadhar)
+                                        }
+                                      >
+                                        <Download className="w-4 h-4" />
+                                        Aadhar Card
+                                      </Button>
+                                    )}
+
+                                    {employee.details.documentsDegree && (
+                                      <Button
+                                        variant="outline"
+                                        className="gap-2"
+                                        onClick={() =>
+                                          handleDownload(employee.details.documentsDegree)
+                                        }
+                                      >
+                                        <Download className="w-4 h-4" />
+                                        Degree Certificate
+                                      </Button>
+                                    )}
+
+                                    {employee.details.documentsExperience && (
+                                      <Button
+                                        variant="outline"
+                                        className="gap-2"
+                                        onClick={() =>
+                                          handleDownload(employee.details.documentsExperience)
+                                        }
+                                      >
+                                        <Download className="w-4 h-4" />
+                                        Experience Certificate
+                                      </Button>
+                                    )}
+
+                                  </CardContent>
+                                </Card>
+
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {/* Edit Modal */}
-      {editOpen && editingEmployee && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl p-6 my-8">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">
-                Edit Employee - {editingEmployee.details.name}
-              </h3>
-              <button
-                className="text-gray-500 hover:text-gray-700"
-                onClick={() => setEditOpen(false)}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* Edit Dialog */}
+      <Dialog
+        open={editOpen}
+        onOpenChange={(open) => {
+          if (!open) handleCancelEdit();
+        }}
+      >
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="flex flex-row items-center justify-between">
+            <DialogTitle className="text-lg font-semibold">
+              Edit Employee – {editingEmployee?.details?.name}
+            </DialogTitle>
 
-            <div className="max-h-[70vh] overflow-y-auto space-y-6">
-              {/* Personal Information */}
-              <div>
-                <h4 className="text-md font-semibold text-blue-600 mb-3">
-                  Personal Information
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <label className="text-sm">
-                    Name
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.name}
-                      onChange={(e) =>
-                        setForm({ ...form, name: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Email
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.email}
-                      onChange={(e) =>
-                        setForm({ ...form, email: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Phone
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.phone}
-                      onChange={(e) =>
-                        setForm({ ...form, phone: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Date of Birth
-                    <input
-                      type="date"
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.dateOfBirth}
-                      onChange={(e) =>
-                        setForm({ ...form, dateOfBirth: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Gender
-                    <select
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.gender}
-                      onChange={(e) =>
-                        setForm({ ...form, gender: e.target.value })
-                      }
-                    >
-                      <option value="">Select</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </label>
-                  <label className="text-sm">
-                    Marital Status
-                    <select
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.maritalStatus}
-                      onChange={(e) =>
-                        setForm({ ...form, maritalStatus: e.target.value })
-                      }
-                    >
-                      <option value="">Select</option>
-                      <option value="Single">Single</option>
-                      <option value="Married">Married</option>
-                      <option value="Divorced">Divorced</option>
-                    </select>
-                  </label>
-                  <label className="text-sm col-span-2">
-                    Nationality
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.nationality}
-                      onChange={(e) =>
-                        setForm({ ...form, nationality: e.target.value })
-                      }
-                    />
-                  </label>
+          </DialogHeader>
+
+          <div className="space-y-8">
+
+            {/* PERSONAL INFORMATION */}
+            <section>
+              <h4 className="text-base font-semibold text-blue-600 mb-4">
+                Personal Information
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>Name</Label>
+                  <Input value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>Email</Label>
+                  <Input value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>Phone</Label>
+                  <Input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>Date of Birth</Label>
+                  <Input type="date" value={form.dateOfBirth} onChange={e=>setForm({...form,dateOfBirth:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>Gender</Label>
+                  <select
+                    className="w-full border rounded-md px-3 py-2"
+                    value={form.gender}
+                    onChange={e=>setForm({...form,gender:e.target.value})}
+                  >
+                    <option value="">Select</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Label>Marital Status</Label>
+                  <select
+                    className="w-full border rounded-md px-3 py-2"
+                    value={form.maritalStatus}
+                    onChange={e=>setForm({...form,maritalStatus:e.target.value})}
+                  >
+                    <option value="">Select</option>
+                    <option value="Single">Single</option>
+                    <option value="Married">Married</option>
+                    <option value="Divorced">Divorced</option>
+                  </select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <Label>Nationality</Label>
+                  <Input value={form.nationality} onChange={e=>setForm({...form,nationality:e.target.value})}/>
                 </div>
               </div>
+            </section>
 
-              {/* Address Information */}
-              <div>
-                <h4 className="text-md font-semibold text-blue-600 mb-3">
-                  Address Information
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <label className="text-sm col-span-2">
-                    Current Address
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.currentAddress}
-                      onChange={(e) =>
-                        setForm({ ...form, currentAddress: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm col-span-2">
-                    Permanent Address
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.permanentAddress}
-                      onChange={(e) =>
-                        setForm({ ...form, permanentAddress: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    City
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.city}
-                      onChange={(e) =>
-                        setForm({ ...form, city: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    State
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.state}
-                      onChange={(e) =>
-                        setForm({ ...form, state: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Pincode
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.pincode}
-                      onChange={(e) =>
-                        setForm({ ...form, pincode: e.target.value })
-                      }
-                    />
-                  </label>
+            {/* ADDRESS INFORMATION */}
+            <section>
+              <h4 className="text-base font-semibold text-blue-600 mb-4">
+                Address Information
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <Label>Current Address</Label>
+                  <Input value={form.currentAddress} onChange={e=>setForm({...form,currentAddress:e.target.value})}/>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <Label>Permanent Address</Label>
+                  <Input value={form.permanentAddress} onChange={e=>setForm({...form,permanentAddress:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>City</Label>
+                  <Input value={form.city} onChange={e=>setForm({...form,city:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>State</Label>
+                  <Input value={form.state} onChange={e=>setForm({...form,state:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>Pincode</Label>
+                  <Input value={form.pincode} onChange={e=>setForm({...form,pincode:e.target.value})}/>
                 </div>
               </div>
+            </section>
 
-              {/* Employment Details */}
-              <div>
-                <h4 className="text-md font-semibold text-blue-600 mb-3">
-                  Employment Details
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <label className="text-sm">
-                    Department
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.department}
-                      onChange={(e) =>
-                        setForm({ ...form, department: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Designation
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.designation}
-                      onChange={(e) =>
-                        setForm({ ...form, designation: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Date of Joining
-                    <input
-                      type="date"
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.dateOfJoining}
-                      onChange={(e) =>
-                        setForm({ ...form, dateOfJoining: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Salary
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.salary}
-                      onChange={(e) =>
-                        setForm({ ...form, salary: e.target.value })
-                      }
-                    />
-                  </label>
+            {/* EMPLOYMENT DETAILS */}
+            <section>
+              <h4 className="text-base font-semibold text-blue-600 mb-4">
+                Employment Details
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>Department</Label>
+                  <Input value={form.department} onChange={e=>setForm({...form,department:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>Designation</Label>
+                  <Input value={form.designation} onChange={e=>setForm({...form,designation:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>Date of Joining</Label>
+                  <Input type="date" value={form.dateOfJoining} onChange={e=>setForm({...form,dateOfJoining:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>Salary</Label>
+                  <Input value={form.salary} onChange={e=>setForm({...form,salary:e.target.value})}/>
                 </div>
               </div>
+            </section>
 
-              {/* Financial Information */}
-              <div>
-                <h4 className="text-md font-semibold text-blue-600 mb-3">
-                  Financial Information
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <label className="text-sm">
-                    Name as per Bank
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.nameAsPerBank}
-                      onChange={(e) =>
-                        setForm({ ...form, nameAsPerBank: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Bank Name
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.bankName}
-                      onChange={(e) =>
-                        setForm({ ...form, bankName: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Account Number
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.accountNumber}
-                      onChange={(e) =>
-                        setForm({ ...form, accountNumber: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    IFSC Code
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.ifscCode}
-                      onChange={(e) =>
-                        setForm({ ...form, ifscCode: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    PAN Number
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.panNumber}
-                      onChange={(e) =>
-                        setForm({ ...form, panNumber: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Aadhar Number
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.aadharNumber}
-                      onChange={(e) =>
-                        setForm({ ...form, aadharNumber: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    UAN Number
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.uanNumber}
-                      onChange={(e) =>
-                        setForm({ ...form, uanNumber: e.target.value })
-                      }
-                    />
-                  </label>
+            {/* FINANCIAL INFORMATION */}
+            <section>
+              <h4 className="text-base font-semibold text-blue-600 mb-4">
+                Financial Information
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>Name as per Bank</Label>
+                  <Input value={form.nameAsPerBank} onChange={e=>setForm({...form,nameAsPerBank:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>Bank Name</Label>
+                  <Input value={form.bankName} onChange={e=>setForm({...form,bankName:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>Account Number</Label>
+                  <Input value={form.accountNumber} onChange={e=>setForm({...form,accountNumber:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>IFSC Code</Label>
+                  <Input value={form.ifscCode} onChange={e=>setForm({...form,ifscCode:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>PAN Number</Label>
+                  <Input value={form.panNumber} onChange={e=>setForm({...form,panNumber:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>Aadhar Number</Label>
+                  <Input value={form.aadharNumber} onChange={e=>setForm({...form,aadharNumber:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>UAN Number</Label>
+                  <Input value={form.uanNumber} onChange={e=>setForm({...form,uanNumber:e.target.value})}/>
                 </div>
               </div>
+            </section>
 
-              {/* Emergency Contact */}
-              <div>
-                <h4 className="text-md font-semibold text-blue-600 mb-3">
-                  Emergency Contact
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <label className="text-sm">
-                    Contact Name
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.emergencyContactName}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          emergencyContactName: e.target.value,
-                        })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Contact Relation
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.emergencyContactRelation}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          emergencyContactRelation: e.target.value,
-                        })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Contact Phone
-                    <input
-                      className="mt-1 w-full border rounded p-2"
-                      value={form.emergencyContactPhone}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          emergencyContactPhone: e.target.value,
-                        })
-                      }
-                    />
-                  </label>
+            {/* EMERGENCY CONTACT */}
+            <section>
+              <h4 className="text-base font-semibold text-blue-600 mb-4">
+                Emergency Contact
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>Contact Name</Label>
+                  <Input value={form.emergencyContactName} onChange={e=>setForm({...form,emergencyContactName:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>Contact Relation</Label>
+                  <Input value={form.emergencyContactRelation} onChange={e=>setForm({...form,emergencyContactRelation:e.target.value})}/>
+                </div>
+
+                <div>
+                  <Label>Contact Phone</Label>
+                  <Input value={form.emergencyContactPhone} onChange={e=>setForm({...form,emergencyContactPhone:e.target.value})}/>
                 </div>
               </div>
-            </div>
+            </section>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                className="px-4 py-2 border rounded text-gray-700 bg-gray-100 hover:bg-gray-200"
-                onClick={handleCancelEdit}
-              >
+            {/* ACTION BUTTONS */}
+            <div className="flex justify-end gap-3 pt-6">
+              <Button variant="outline" onClick={handleCancelEdit}>
                 Cancel
-              </button>
-              <button
-                className="px-4 py-2 border rounded"
-                onClick={()=> updateEmployee(editingEmployee._id, form)}
-              >
-                Save
-              </button>
+              </Button>
+              <Button onClick={() => updateEmployee(editingEmployee._id, form)}>
+                Save Changes
+              </Button>
             </div>
+
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteOpen(false);
+            setDeletingEmployee(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">
+              Confirm Delete
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-gray-900">
+                {deletingEmployee?.details?.name}
+              </span>
+              ?
+              <br />
+              <span className="text-sm text-gray-500">
+                This action cannot be undone.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteOpen(false);
+                setDeletingEmployee(null);
+              }}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              variant="destructive"
+              onClick={() =>
+                deleteEmployee(deletingEmployee?._id)
+              }
+            >
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Employee details options dialog */}
+      <Dialog open={exportOpen} onOpenChange={setExportOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export Employees</DialogTitle>
+            <DialogDescription>
+              Choose how you want to export employee data
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                value="all"
+                checked={exportType === "all"}
+                onChange={(e) => setExportType(e.target.value)}
+              />
+              Full Employee List
+            </label>
+
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                value="department"
+                checked={exportType === "department"}
+                onChange={(e) => setExportType(e.target.value)}
+              />
+              Specific Department
+            </label>
+
+            {exportType === "department" && (
+              <select
+                className="w-full border rounded px-3 py-2"
+                value={exportDepartment}
+                onChange={(e) => setExportDepartment(e.target.value)}
+              >
+                <option value="">Select Department</option>
+                {[...new Set(allEmployees.map(e => e.details?.department))]
+                  .filter(Boolean)
+                  .map(dep => (
+                    <option key={dep} value={dep}>{dep}</option>
+                ))}
+              </select>
+            )}
+
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                value="department-wise"
+                checked={exportType === "department-wise"}
+                onChange={(e) => setExportType(e.target.value)}
+              />
+              Department-wise Sheets
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <Button variant="outline" onClick={() => setExportOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleExportExcel}>
+              Export
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

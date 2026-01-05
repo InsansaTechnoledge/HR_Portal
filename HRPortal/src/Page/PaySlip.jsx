@@ -1,13 +1,26 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
-import { Building2, Mail, Phone, Download } from 'lucide-react';
+import { Building2,
+  Mail,
+  Phone,
+  Download,
+  FileCheck,
+  TrendingUp,
+  TrendingDown,
+  IndianRupee,
+  Wallet,
+  RotateCcw,
+  Save,
+  Check,
+  Loader2,
+  Badge,
+  FileText, 
+  ChevronDown} from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import API_BASE_URL from '../config';
 import axios from 'axios';
 import { userContext } from '../Context/userContext';
 import Loader from '../Components/Loader/Loader';
-import ErrorToast from '../Components/Toaster/ErrorToaster';
-import SuccessToast from '../Components/Toaster/SuccessToaser';
 import { companyDetails } from '../Constant/constant';
 import TemplateClassic from '../templates/TemplateClassic';
 import TemplateCorporate from '../templates/TemplateCorporate';
@@ -15,20 +28,26 @@ import TemplateMinimal from '../templates/TemplateMinimal';
 import TemplateModern from '../templates/TemplateModern';
 import TemplateDefault from '../templates/TemplateDefault';
 
+import { Card, CardHeader, CardTitle, CardContent } from '../Components/ui/Card';
+import { Input } from '../Components/ui/Input';
+import { Label } from '../Components/ui/Label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../Components/ui/Select';
+import { RadioGroup, RadioGroupItem } from '../Components/ui/RadioGroup';
+import { Briefcase, Calculator, User, Hash, Calendar, CreditCard } from 'lucide-react';
+import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription} from '../Components/ui/Dialog';
+import {Tabs, TabsList, TabsTrigger} from '../Components/ui/Tabs';
+import { Button } from '../Components/ui/Button';
+import { toast } from '../hooks/useToast';
+
 const PayslipGenerator = () => {
     const payslipRef = useRef();
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
     const [payslip, setPayslip] = useState();
     const professionalTax = 200;
-    const [employees, setEmployees] = useState();
-    const [selectedEmployee, setSelectedEmployee] = useState(null);
+    const [employees, setEmployees] = useState([]);
     const {user} = useContext(userContext);
     const [taxType, setTaxType] = useState("Professional Tax");
     const [loading, setLoading] = useState(true);
-    const [toastSuccessMessage, setToastSuccessMessage] = useState();
-    const [toastErrorMessage, setToastErrorMessage] = useState();
-    const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
-    const [toastErrorVisible, setToastErrorVisible] = useState(false);
     
     // NEW: state to show template selection after clicking generate
     const [showTemplateDialog, setShowTemplateDialog] = useState(false);
@@ -55,6 +74,11 @@ const PayslipGenerator = () => {
             } catch (err) {
                 if (axios.isCancel?.(err)) return;
                 console.error("Error fetching employees for payslip generator:", err);
+                toast ({    
+                    variant: "destructive",
+                    title: "Error",
+                    description: "Failed to fetch employees.",
+                });
             } finally {
                 setLoading(false);
             }
@@ -127,10 +151,9 @@ const PayslipGenerator = () => {
         }));
     };
 
-    const handleEmployeeSelect = (e) => {
-        const selectedEmp = employees.find(emp => emp.name === e.target.value);
-        if (selectedEmp && selectedEmp.details) {
-            setSelectedEmployee(selectedEmp);
+    const handleEmployeeSelect = (value) => {
+        const selectedEmployee = employees.find(emp => emp.name === value);
+        if (selectedEmployee && selectedEmployee.details) {
             setEmployeeData({
                 ...employeeData,
                 name: selectedEmp.name,
@@ -150,9 +173,11 @@ const PayslipGenerator = () => {
             });
         }
         else{
-            setToastErrorMessage("employee detail not available");
-            setToastErrorVisible(true);
-            setTimeout(() => setToastErrorVisible(false), 3500);
+            toast ({
+                variant: "destructive",
+                title: "Error",
+                description: "Employee details are incomplete.",
+            });
         }
     };
 
@@ -181,6 +206,7 @@ const PayslipGenerator = () => {
         const totalEarnings = calculateTotalEarnings();
         if(taxType==="Professional Tax"){
             const { professionalTax } = calculateDeductions();
+            if(!totalEarnings) return totalEarnings;
             return totalEarnings - professionalTax;
         }
         else{
@@ -192,9 +218,11 @@ const PayslipGenerator = () => {
     const handleGeneratePayslip = (e) => {
         e.preventDefault();
     if (!employeeData.name || !employeeData.month) {
-        setToastErrorMessage("Please fill required fields");
-        setToastErrorVisible(true);
-        setTimeout(() => setToastErrorVisible(false), 3000);
+        toast ({
+            // variant: "destructive",
+            title: "Error",
+            description: "Please fill required fields.",
+        });
         return;
     }
 
@@ -245,23 +273,22 @@ const handleConfirmTemplate = async () => {
         setShowTemplateDialog(false);
         setShowPayslipPreview(true);
 
-        setToastSuccessMessage("Payslip generated successfully");
-        setToastSuccessVisible(true);
-        setTimeout(() => setToastSuccessVisible(false), 3000);
+        toast ({    
+            variant: "success",
+            title: "Success",
+            description: "Payslip generated successfully.",
+        });
 
     } catch (err) {
-        setToastErrorMessage(
-            err.response?.data?.message || "Failed to generate payslip"
-        );
-        setToastErrorVisible(true);
-        setTimeout(() => setToastErrorVisible(false), 3000);
+        toast ({
+            variant: "destructive", 
+            title: "Error",
+            description: "Failed to generate payslip.",
+        });
     } finally {
         setIsGeneratingPDF(false);
     }
 };
-
-
-
 
     const handleReset = () => {
         setEmployeeData({
@@ -282,8 +309,8 @@ const handleConfirmTemplate = async () => {
         });
         setShowPayslipPreview(false);
         
-        setTemplateForPDF(null);
-        setShowTemplateSelection(false);
+        // setTemplateForPDF(null);
+        // setShowTemplateSelection(false);
     };
 
     const generatePDF = async () => {
@@ -320,6 +347,11 @@ const handleConfirmTemplate = async () => {
             pdf.save(`payslip-${employeeData.name}-${employeeData.month}.pdf`);
         } catch (error) {
             console.error('Error generating PDF:', error);
+            toast ({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to generate PDF.",
+            });
         } finally {
             setIsGeneratingPDF(false);
         }
@@ -328,218 +360,485 @@ const handleConfirmTemplate = async () => {
     if(loading){
         return <Loader/>
     }
-
+    const templateOptions = [
+        { id: "classic", name: "Classic" },
+        { id: "modern", name: "Modern" },
+        { id: "minimal", name: "Minimal" },
+        { id: "corporate", name: "Corporate" },
+        { id: "default", name: "Default" },
+    ];
     return (
         <>
-        {
-            toastSuccessVisible ? <SuccessToast message={toastSuccessMessage}/> : null
-        }
-        {
-            toastErrorVisible ? <ErrorToast error={toastErrorMessage}/> : null
-        }
-        <div className="max-w-5xl mx-auto p-4">
-            <div className="bg-white shadow-md rounded-lg p-6 mb-6">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-indigo-600">Employee Payslip Generator</h2>
-                    <div className="text-right">
-                        <Building2 className="inline-block mb-2" size={24} />
-                        <p className="font-bold text-gray-800">{companyDetails.name}</p>
+        <div className="min-h-screen bg-background p-4 lg:p-8">
+            <div className="max-w-5xl mx-auto space-y-6">
+                {/* Header */}
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-6 lg:p-8 text-primary-foreground">
+                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
+                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-white/10 backdrop-blur-sm">
+                        <FileCheck className="w-6 h-6" />
                     </div>
-
-
-                    
-                </div>  
-
-                <div className="space-y-4 mt-4 mb-4">
-                    <label htmlFor="employeeSelect" className="block text-sm font-medium text-gray-700">
-                        Select Employee
-                    </label>
-                    <select
-                        id="employeeSelect"
-                        onChange={handleEmployeeSelect}
-                        className="block w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    >
-                        <option value="">-- Select Employee --</option>
-                        {employees && employees.map(emp => (
-                            <option key={emp.employeeId} value={emp.name}>
-                                {emp.name}
-                            </option>
-                        ))}
-                    </select>
+                    <div>
+                        <h1 className="text-2xl lg:text-3xl font-bold">Payslip Generator</h1>
+                        <p className="text-primary-foreground/80">Generate professional payslips for employees</p>
+                    </div>
+                    </div>
+                    <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3">
+                    <Building2 className="w-5 h-5" />
+                    <div className="text-right">
+                        <p className="font-semibold">{companyDetails.name}</p>
+                        <p className="text-xs text-primary-foreground/70">{companyDetails.city}</p>
+                    </div>
+                    </div>
+                </div>
+                {/* Decorative elements */}
+                <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
+                <div className="absolute -right-5 -bottom-10 w-32 h-32 rounded-full bg-white/10 blur-xl" />
                 </div>
 
-                <div className="space-y-4 mt-4 mb-4">
-                    <label htmlFor="taxSelect" className="block text-sm font-medium text-gray-700">
-                        Select Tax Type
-                    </label>
-                    <div className="flex items-center space-x-4">
-                        <div className="flex items-center">
-                            <input
-                                id="professionalTax"
-                                type="radio"
-                                defaultChecked
-                                name="tax"
-                                value="Professional Tax"
-                                className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-                            />
-                            <label
-                                htmlFor="professionalTax"
-                                className="ml-2 text-sm text-gray-700"
-                            >
-                                Professional Tax
-                            </label>
+                {/* Main Form */}
+                {!showPayslipPreview ? (
+                <form onSubmit={handleGeneratePayslip} className="space-y-6">
+                    {/* Employee Selection & Tax Type */}
+                    <div className="grid lg:grid-cols-2 gap-6">
+                    {/* Employee Selection */}
+                    <Card className="border-0 shadow-card">
+                        <CardHeader className="pb-4">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                            <User className="w-5 h-5 text-primary" />
+                            Select Employee
+                        </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                        <div className="relative">
+                            <Select onValueChange={handleEmployeeSelect} value={employeeData.name}>
+                                <SelectTrigger className="w-full">
+                                <SelectValue placeholder="-- Select Employee --" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                {employees.map(emp => (
+                                    <SelectItem key={emp.empId} value={emp.name}>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                        <User className="w-4 h-4 text-primary" />
+                                        </div>
+                                        <div>
+                                        <p className="font-medium">{emp.name}</p>
+                                        <p className="text-xs text-muted-foreground">{emp.empId} • {emp.department}</p>
+                                        </div>
+                                    </div>
+                                    </SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
                         </div>
-                        <div className="flex items-center">
-                            <input
-                                id="tds"
-                                type="radio"
-                                name="tax"
-                                value="TDS"
-                                className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-                            />
-                            <label
-                                htmlFor="tds"
-                                className="ml-2 text-sm text-gray-700"
-                            >
-                                TDS
-                            </label>
-                        </div>
+                        
+                        </CardContent>
+                    </Card>
+
+                    {/* Tax Type Selection */}
+                    <Card className="border-0 shadow-card">
+                        <CardHeader className="pb-4">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                            <Calculator className="w-5 h-5 text-hr-amber" />
+                            Tax Type
+                        </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                        <RadioGroup value={taxType} onValueChange={setTaxType} className="flex gap-6">
+                            <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="Professional Tax" id="professionalTax" />
+                            <Label htmlFor="professionalTax" className="cursor-pointer">
+                                <span className="font-medium">Professional Tax</span>
+                                <p className="text-xs text-muted-foreground">Fixed ₹200</p>
+                            </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="TDS" id="tds" />
+                            <Label htmlFor="tds" className="cursor-pointer">
+                                <span className="font-medium">TDS</span>
+                                <p className="text-xs text-muted-foreground">10% of salary</p>
+                            </Label>
+                            </div>
+                        </RadioGroup>
+                        </CardContent>
+                    </Card>
                     </div>
-                </div>e
 
+                    {/* Employee Details */}
+                    <Card className="border-0 shadow-card">
+                    <CardHeader className="pb-4">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                        <Briefcase className="w-5 h-5 text-info" />
+                        Employee Details
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        <div className="space-y-2">
+                            <Label htmlFor="name">Employee Name <span className="text-destructive">*</span></Label>
+                            <Input
+                            id="name"
+                            name="name"
+                            value={employeeData.name}
+                            onChange={handleInputChange}
+                            placeholder="Enter name"
+                            required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="employeeId">Employee ID <span className="text-destructive">*</span></Label>
+                            <div className="relative">
+                            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                                id="employeeId"
+                                name="employeeId"
+                                value={employeeData.employeeId}
+                                onChange={handleInputChange}
+                                placeholder="EMP-001"
+                                className="pl-10"
+                                required
+                            />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="department">Department <span className="text-destructive">*</span></Label>
+                            <Input
+                            id="department"
+                            name="department"
+                            value={employeeData.department}
+                            onChange={handleInputChange}
+                            placeholder="Engineering"
+                            required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="designation">Designation <span className="text-destructive">*</span></Label>
+                            <Input
+                            id="designation"
+                            name="designation"
+                            value={employeeData.designation}
+                            onChange={handleInputChange}
+                            placeholder="Software Engineer"
+                            required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="month">Pay Period <span className="text-destructive">*</span></Label>
+                            <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                                id="month"
+                                name="month"
+                                type="month"
+                                value={employeeData.month}
+                                onChange={handleInputChange}
+                                className="pl-10"
+                                required
+                            />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="bankAccount">Bank Account <span className="text-destructive">*</span></Label>
+                            <div className="relative">
+                            <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                                id="bankAccount"
+                                name="bankAccount"
+                                value={employeeData.bankAccount}
+                                onChange={handleInputChange}
+                                placeholder="XXXX1234"
+                                className="pl-10"
+                                required
+                            />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="panNumber">PAN Number <span className="text-destructive">*</span></Label>
+                            <Input
+                            id="panNumber"
+                            name="panNumber"
+                            value={employeeData.panNumber}
+                            onChange={handleInputChange}
+                            placeholder="ABCDE1234F"
+                            required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="uanNumber">UAN Number</Label>
+                            <Input
+                            id="uanNumber"
+                            name="uanNumber"
+                            value={employeeData.uanNumber}
+                            onChange={handleInputChange}
+                            placeholder="123456789012"
+                            />
+                        </div>
+                        </div>
+                    </CardContent>
+                    </Card>
 
-                <form onSubmit ={handleGeneratePayslip} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {[
-                            { label: 'Employee Name', name: 'name' },
-                            { label: 'Employee ID', name: 'employeeId' },
-                            { label: 'Department', name: 'department' },
-                            { label: 'Designation', name: 'designation' },
-                            { label: 'Month', name: 'month', type: 'month' },
-                            { label: 'Bank Account', name: 'bankAccount' },
-                            { label: 'PAN Number', name: 'panNumber' },
-                            { label: 'UAN Number', name: 'uanNumber' },
-                            { label: 'Basic Salary', name: 'salary', type: 'number' },
-                            { label: 'HRA', name: 'hra', type: 'number', disabled: true },
-                            { label: 'Conveyance Allowance', name: 'conveyanceAllowance', type: 'number', disabled: true },
-                            { label: 'Medical Allowance', name: 'medicalAllowance', type: 'number', disabled: true },
-                            { label: 'Special Allowance', name: 'specialAllowance', type: 'number', disabled: true },
-                        ].map(({ label, name, type = 'text', disabled }) => (
-                            <div key={name} className="space-y-2">
-                                <label htmlFor={name} className="block text-sm font-medium text-gray-700">
-                                    {label}
-                                </label>
-                                <input
-                                    id={name}
-                                    name={name}
-                                    type={type}
-                                    value={employeeData[name]}
-                                    onChange={handleInputChange}
-                                    required = {label==="UAN Number" ? false : true}
-                                    disabled={disabled}
-                                    className="block w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    {/* Salary & Allowances */}
+                    <div className="grid lg:grid-cols-2 gap-6">
+                    {/* Earnings */}
+                    <Card className="border-0 shadow-card">
+                        <CardHeader className="pb-4">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                            <TrendingUp className="w-5 h-5 text-success" />
+                            Earnings
+                        </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="salary">Basic Salary <span className="text-destructive">*</span></Label>
+                            <div className="relative">
+                            <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                                id="salary"
+                                name="salary"
+                                type="number"
+                                value={employeeData.salary}
+                                onChange={handleInputChange}
+                                placeholder="0"
+                                className="pl-10"
+                                required
+                            />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                            <Label htmlFor="hra">HRA</Label>
+                            <div className="relative">
+                                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <Input
+                                id="hra"
+                                name="hra"
+                                type="number"
+                                value={employeeData.hra}
+                                onChange={handleInputChange}
+                                placeholder="0"
+                                className="pl-10"
+                                disabled
                                 />
                             </div>
-                        ))}
+                            </div>
+                            <div className="space-y-2">
+                            <Label htmlFor="conveyanceAllowance">Conveyance</Label>
+                            <div className="relative">
+                                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <Input
+                                id="conveyanceAllowance"
+                                name="conveyanceAllowance"
+                                type="number"
+                                value={employeeData.conveyanceAllowance}
+                                onChange={handleInputChange}
+                                placeholder="0"
+                                className="pl-10"
+                                disabled
+                                />
+                            </div>
+                            </div>
+                            <div className="space-y-2">
+                            <Label htmlFor="medicalAllowance">Medical</Label>
+                            <div className="relative">
+                                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <Input
+                                id="medicalAllowance"
+                                name="medicalAllowance"
+                                type="number"
+                                value={employeeData.medicalAllowance}
+                                onChange={handleInputChange}
+                                placeholder="0"
+                                className="pl-10"
+                                disabled
+                                />
+                            </div>
+                            </div>
+                            <div className="space-y-2">
+                            <Label htmlFor="specialAllowance">Special</Label>
+                            <div className="relative">
+                                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <Input
+                                id="specialAllowance"
+                                name="specialAllowance"
+                                type="number"
+                                value={employeeData.specialAllowance}
+                                onChange={handleInputChange}
+                                placeholder="0"
+                                className="pl-10"
+                                disabled
+                                />
+                            </div>
+                            </div>
+                        </div>
+                        <div className="pt-3 border-t flex justify-between items-center">
+                            <span className="font-medium text-muted-foreground">Total Earnings</span>
+                            <span className="text-xl font-bold text-success">₹{calculateTotalEarnings().toLocaleString('en-IN')}</span>
+                        </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Deductions */}
+                    <Card className="border-0 shadow-card">
+                        <CardHeader className="pb-4">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                            <TrendingDown className="w-5 h-5 text-destructive" />
+                            Deductions
+                        </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                        <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+                            {taxType === 'Professional Tax' ? (
+                            <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Professional Tax</span>
+                                <Badge variant="outline" className="font-mono">₹{professionalTax}</Badge>
+                            </div>
+                            ) : (
+                            <div className="flex justify-between items-center">
+                                <div>
+                                <span className="text-muted-foreground">TDS (10%)</span>
+                                <p className="text-xs text-muted-foreground">Tax Deducted at Source</p>
+                                </div>
+                                <Badge variant="outline" className="font-mono">
+                                ₹{((parseFloat(String(employeeData.salary)) || 0) * 0.1).toLocaleString('en-IN')}
+                                </Badge>
+                            </div>
+                            )}
+                        </div>
+                        <div className="pt-3 border-t flex justify-between items-center">
+                            <span className="font-medium text-muted-foreground">Total Deductions</span>
+                            <span className="text-xl font-bold text-destructive">
+                            -₹{Object.values(calculateDeductions()).reduce((a, b) => a + b, 0).toLocaleString('en-IN')}
+                            </span>
+                        </div>
+                        </CardContent>
+                    </Card>
                     </div>
-                    {/* Expense summary removed: expenses are now paid separately, not via payslip */}
-                    <div className="flex gap-4 justify-end">
-                        <button
-                            type="submit"
-                            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
-                        >
-                            Generate Payslip
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleReset}
-                            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
-                        >
+
+                    {/* Net Salary Summary */}
+                    <Card className="shadow-elevated bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border-2 border-primary/20">
+                    <CardContent className="p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 rounded-xl bg-primary/10">
+                            <Wallet className="w-6 h-6 text-primary" />
+                            </div>
+                            <div>
+                            <p className="text-sm text-muted-foreground">Net Salary</p>
+                            <p className="text-3xl lg:text-4xl font-bold text-primary">
+                                ₹{calculateNetSalary().toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </p>
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <Button type="button" variant="outline" onClick={handleReset} className="gap-2">
+                            <RotateCcw className="w-4 h-4" />
                             Reset
-                        </button>
-                    </div>
+                            </Button>
+                            <Button type="submit" className="gap-2">
+                            <Save className="w-4 h-4" />
+                            Generate Payslip
+                            </Button>
+                        </div>
+                        </div>
+                    </CardContent>
+                    </Card>
                 </form>
-            </div>
-
-            {/* NEW: Template selection dialog after clicking generate */}
-            {showTemplateDialog && (
-                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
-                    <div className="bg-white rounded-xl w-[90%] max-w-4xl max-h-[90vh] p-5 flex flex-col">
-
-                        {/* HEADER */}
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-semibold">Select Payslip Template</h3>
-                            <button
-                                onClick={() => setShowTemplateDialog(false)}
-                                className="text-gray-500 hover:text-gray-800"
-                            >
-                                ✕
-                            </button>
+                ) : (
+                /* Payslip Preview */
+                <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-muted/30 rounded-xl p-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-success/10">
+                        <Check className="w-5 h-5 text-success" />
                         </div>
-
-                        {/* TABS */}
-                        <div className="flex gap-3 mb-4">
-                            {["classic", "modern", "minimal", "corporate", "Default"].map(tpl => (
-                                <button
-                                    key={tpl}
-                                    onClick={() => setActiveTemplate(tpl)}
-                                    className={`px-3 py-1.5 rounded-md text-sm font-medium
-                                        ${activeTemplate === tpl
-                                            ? "bg-indigo-600 text-white"
-                                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
-                                >
-                                    {tpl.charAt(0).toUpperCase() + tpl.slice(1)}
-                                </button>
-                            ))}
+                        <div>
+                        <p className="font-medium">Payslip Generated Successfully</p>
+                        <p className="text-sm text-muted-foreground">
+                            {employeeData.name} • {employeeData.month}
+                        </p>
                         </div>
+                    </div>
+                    <div className="flex gap-3">
+                        <Button variant="outline" onClick={handleReset} className="gap-2">
+                        <RotateCcw className="w-4 h-4" />
+                        Generate New
+                        </Button>
+                        <Button 
+                        onClick={generatePDF} 
+                        disabled={isGeneratingPDF}
+                        className="gap-2"
+                        >
+                        {isGeneratingPDF ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <Download className="w-4 h-4" />
+                        )}
+                        Download PDF
+                        </Button>
+                    </div>
+                    </div>
 
-                        {/* PREVIEW */}
-                        <div className="border rounded-lg p-3 h-[420px] overflow-auto bg-gray-50">
-                            {renderTemplate(activeTemplate)}
-                        </div>
-
-                        {/* ACTION */}
-                        <div className="flex justify-end gap-4 mt-6">
-                            <button
-                                onClick={() => setShowTemplateDialog(false)}
-                                className="px-5 py-2 rounded-lg bg-gray-200 text-gray-700"
-                            >
-                                Cancel
-                            </button>
-
-                            <button
-                                onClick={handleConfirmTemplate}
-                                className="px-6 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
-                            >
-                                Select Template
-                            </button>
-                        </div>
+                    {/* Payslip Template Preview */}
+                    <div className="overflow-auto rounded-xl border shadow-card bg-white" ref={payslipRef}>
+                    <div className="min-w-[800px]">
+                        {finalTemplate && renderTemplate(finalTemplate)}
+                    </div>
                     </div>
                 </div>
-            )}
+                )}
+            </div>
 
-
-            {/* Show Payslip preview after selecting template */}
-            {showPayslipPreview && finalTemplate && (
-                <>
-                    <div className="flex justify-end mb-4">
-                        <button
-                            onClick={generatePDF}
-                            disabled={isGeneratingPDF}
-                            className="flex items-center gap-2 px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                        >
-                            <Download size={18} />
-                            {isGeneratingPDF ? "Generating..." : "Download PDF"}
-                        </button>
+            {/* Template Selection Dialog */}
+            <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
+                <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-primary" />
+                    Select Payslip Template
+                    </DialogTitle>
+                    <DialogDescription>
+                    Choose a template design for the payslip
+                    </DialogDescription>
+                </DialogHeader>
+                
+                <div className="flex-1 overflow-hidden flex flex-col gap-4">
+                    {/* Template Tabs */}
+                    <Tabs value={activeTemplate} onValueChange={setActiveTemplate} className="flex-1 flex flex-col">
+                    <TabsList className="grid grid-cols-5 w-full">
+                        {templateOptions.map(template => (
+                        <TabsTrigger key={template.id} value={template.id} className="capitalize">
+                            {template.name}
+                        </TabsTrigger>
+                        ))}
+                    </TabsList>
+                    
+                    <div className="flex-1 mt-4 border rounded-xl bg-muted/30 p-4 overflow-auto max-h-[500px]">
+                        <div className="scale-[0.6] origin-top-left w-[166%]">
+                        {renderTemplate(activeTemplate)}
+                        </div>
                     </div>
+                    </Tabs>
+                </div>
 
-                    <div ref={payslipRef}>
-                        {renderTemplate(finalTemplate)}
-                    </div>
-                </>
-            )}
-
-        </div>
+                <DialogFooter className="gap-2 sm:gap-0">
+                    <Button variant="outline" onClick={() => setShowTemplateDialog(false)}>
+                    Cancel
+                    </Button>
+                    <Button onClick={handleConfirmTemplate} disabled={isGeneratingPDF} className="gap-2">
+                    {isGeneratingPDF ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                        <Check className="w-4 h-4" />
+                    )}
+                    Confirm & Generate
+                    </Button>
+                </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            </div>
         </>
     );
 };

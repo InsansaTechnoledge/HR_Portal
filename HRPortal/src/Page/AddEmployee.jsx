@@ -1,17 +1,23 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import {
-    User,
-    Mail,
-    Building2,
-    Save,
-    AlertCircle,
-    CheckCircle2
+  User,
+  Mail,
+  Phone,
+  Building2,
+  Briefcase,
+  Calendar,
+  Save,
+  ChevronDown,
 } from 'lucide-react';
 import API_BASE_URL from '../config';
-import ErrorToast from '../Components/Toaster/ErrorToaster';
-import SuccessToast from '../Components/Toaster/SuccessToaser';
+import { Card, CardContent, CardHeader, CardTitle } from '../Components/ui/card';
+import { Button } from '../Components/ui/button';
+import { Input } from '../Components/ui/input';
+import { Label } from '../Components/ui/label';
 import { DEPARTMENTS } from '../Constant/constant';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../Components/ui/select';
+import { toast } from '../hooks/useToast';
 
 
 const AddEmployeePage = () => {
@@ -28,10 +34,6 @@ const AddEmployeePage = () => {
         success: false,
         error: null
     });
-    const [toastSuccessMessage, setToastSuccessMessage] = useState();
-    const [toastErrorMessage, setToastErrorMessage] = useState();
-    const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
-    const [toastErrorVisible, setToastErrorVisible] = useState(false);
 
     // Handle input changes
     const handleChange = (e) => {
@@ -50,6 +52,14 @@ const AddEmployeePage = () => {
             department.trim() !== '';
     };
 
+    //reset fields
+    const handleCancel = () => {
+        setEmployeeData({
+            name: '',
+            email: '',
+            department: ''
+        });
+    }
     // Handle form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -66,9 +76,11 @@ const AddEmployeePage = () => {
 
             
             if (response.status === 201) {
-                setToastSuccessMessage(response.data.message);
-                setToastSuccessVisible(true);
-                setTimeout(() => setToastSuccessVisible(false), 3500);
+                toast({
+                  variant: "success",
+                  title: "Employee added successfully",
+                  description: "The new employee has been added to the system.",
+                });
 
                 // Success handling
                 setSubmitStatus({
@@ -85,9 +97,18 @@ const AddEmployeePage = () => {
                 });
             }
             else if (response.status === 202) {
-                setToastErrorMessage(response.data.message);
-                setToastErrorVisible(true);
-                setTimeout(() => setToastErrorVisible(false), 3500);
+                toast({
+                  variant: "destructive",
+                  title: "Failed to add employee",
+                description: response.data.message || "An error occurred while adding the employee.",
+                });
+
+                // Failure handling
+                setSubmitStatus({
+                    loading: false,
+                    success: false,
+                    error: response.data.message || 'An error occurred'
+                });
             }
             else {
                 // Success handling
@@ -106,149 +127,140 @@ const AddEmployeePage = () => {
             }
         } catch (error) {
             // Error handling
-            console.log("TTT");
-            setToastErrorMessage(response.data.message);
-            setToastErrorVisible(true);
-            setTimeout(() => setToastErrorVisible(false), 3500);
-            // setSubmitStatus({
-            //     loading: false,
-            //     success: false,
-            //     error: error.response?.data?.message || 'An error occurred'
-            // });
+            console.error("Error adding employee:", error);
+           toast({
+              variant: "destructive",
+              title: "Failed to add employee",
+              description: error.response?.data?.message || "An error occurred while adding the employee.",
+            });
+            setSubmitStatus({
+                loading: false,
+                success: false,
+                error: error.response?.data?.message || 'An error occurred'
+            });
         }
     };
 
     return (
         <>
-            {
-                toastSuccessVisible ? <SuccessToast message={toastSuccessMessage} /> : null
-            }
-            {
-                toastErrorVisible ? <ErrorToast error={toastErrorMessage} /> : null
-            }
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
-                <div className="max-w-md w-full bg-white shadow-md rounded-xl p-8">
-                    <div className="text-center mb-8">
-                        <h2 className="text-3xl font-bold text-gray-800 flex items-center justify-center">
-                            <User className="mr-3 text-blue-600" />
-                            Add New Employee
-                        </h2>
-                        <p className="text-gray-600 mt-2">
-                            Enter employee details to create a new profile
-                        </p>
+            <div className="min-h-screen bg-background px-4 py-6 sm:px-6 lg:px-8">
+                <div className="max-w-3xl space-y-6 mx-auto">
+                    {/* Header */}
+                    <div>
+                    <h1 className="text-2xl font-bold">Add New Employee</h1>
+                    <p className="text-muted-foreground">
+                        Create a new employee record
+                    </p>
                     </div>
 
+                    {/* Card */}
+                    <Card className="border-0 shadow-card">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                        <User className="w-5 h-5 text-primary" />
+                        Add Employee
+                        </CardTitle>
+                    </CardHeader>
+
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Name Input */}
-                        <div>
-                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                                Full Name
-                            </label>
+                        <CardContent className="space-y-6">
+                        {/* Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            {/* Full Name */}
+                            <div className="space-y-2">
+                            <Label htmlFor="name">Full Name *</Label>
+                            <Input
+                                id="name"
+                                name="name"
+                                value={employeeData.name}
+                                onChange={handleChange}
+                                required
+                                placeholder="Enter full name"
+                            />
+                            </div>
+
+                            {/* Email */}
+                            <div className="space-y-2">
+                            <Label htmlFor="email">Email *</Label>
                             <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <User className="text-gray-400" size={20} />
-                                </div>
-                                <input
-                                    type="text"
-                                    id="name"
-                                    name="name"
-                                    value={employeeData.name}
-                                    onChange={handleChange}
-                                    required
-                                    className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 transition"
-                                    placeholder="John Doe"
+                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                id="email"
+                                name="email"
+                                type="email"
+                                value={employeeData.email}
+                                onChange={handleChange}
+                                required
+                                placeholder="Enter email"
+                                className="pl-10"
                                 />
                             </div>
-                        </div>
-
-                        {/* Email Input */}
-                        <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                                Email Address
-                            </label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Mail className="text-gray-400" size={20} />
-                                </div>
-                                <input
-                                    type="email"
-                                    id="email"
-                                    name="email"
-                                    value={employeeData.email}
-                                    onChange={handleChange}
-                                    required
-                                    className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 transition"
-                                    placeholder="john.doe@company.com"
-                                />
                             </div>
-                        </div>
 
-                        {/* Department Input */}
-                        <div>
-                            <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-2">
-                                Department
-                            </label>
+                            {/* Department */}
+                            <div className="space-y-2 sm:col-span-2">
+                            <Label htmlFor="department">Department *</Label>
                             <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Building2 className="text-gray-400" size={20} />
-                                </div>
-                                <select
-                                    id="department"
-                                    name="department"
+                                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+
+                                <Select
                                     value={employeeData.department}
-                                    onChange={handleChange}
-                                    required
-                                    className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 transition"
-                                >
-                                    <option value="">Select Department</option>
-                                    {DEPARTMENTS.map(dept => (
-                                        <option key={dept} value={dept}>
+                                    onValueChange={(value) =>
+                                        handleChange({
+                                        target: {
+                                            name: "department",
+                                            value,
+                                        },
+                                        })
+                                    }
+                                    >
+                                    <SelectTrigger
+                                        id="department"
+                                        className="flex h-10 w-full pl-10 pr-10"
+                                    >
+                                        <SelectValue placeholder="Select Department" />
+                                    </SelectTrigger>
+
+                                    <SelectContent>
+                                        {(DEPARTMENTS ?? []).map((dept) => (
+                                        <SelectItem key={dept} value={dept}>
                                             {dept}
-                                        </option>
-                                    ))}
-                                </select>
+                                        </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            </div>
                             </div>
                         </div>
+                        </CardContent>
 
-                        {/* Submission Status */}
-                        {submitStatus.error && (
-                            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded relative flex items-center">
-                                <AlertCircle className="mr-2 text-red-500" />
-                                {submitStatus.error}
-                            </div>
-                        )}
-
-                        {submitStatus.success && (
-                            <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded relative flex items-center">
-                                <CheckCircle2 className="mr-2 text-green-500" />
-                                Employee added successfully!
-                            </div>
-                        )}
-
-                        {/* Submit Button */}
-                        <div>
-                            <button
+                        {/* Actions */}
+                        <div className="flex flex-col sm:flex-row gap-3 px-6 pb-6">
+                            <Button
                                 type="submit"
+                                className="gap-2"
                                 disabled={!validateForm() || submitStatus.loading}
-                                className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white 
-                                ${validateForm() && !submitStatus.loading
-                                        ? 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-                                        : 'bg-blue-300 cursor-not-allowed'
-                                    }`}
                             >
                                 {submitStatus.loading ? (
-                                    <span>Saving...</span>
+                                "Adding Employee..."
                                 ) : (
-                                    <>
-                                        <Save className="mr-2" />
-                                        Add Employee
-                                    </>
+                                <>
+                                    <Save className="h-4 w-4" />
+                                    Add Employee
+                                </>
                                 )}
-                            </button>
+                            </Button>
+
+                            <Button variant="outline" type="button" onClick={handleCancel}>
+                                Cancel
+                            </Button>
                         </div>
                     </form>
+                    </Card>
                 </div>
             </div>
+
         </>
     );
 };

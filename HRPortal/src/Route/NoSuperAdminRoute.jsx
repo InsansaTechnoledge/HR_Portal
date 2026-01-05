@@ -2,10 +2,10 @@ import React, { useContext } from 'react'
 import { userContext } from '../Context/userContext'
 import { Navigate } from 'react-router-dom';
 
-const NoSuperAdminRoute = ({children}) => {
+const NoSuperAdminRoute = () => {
   const {user} = useContext(userContext);
     return (
-    user && user.role !== 'superAdmin' ? children : <Navigate to='/' replace />
+    user && user.role !== 'superAdmin' ? <Outlet /> : <Navigate to='/' replace />
   )
 }
 

@@ -1,10 +1,208 @@
 import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
-import { Upload, File, Trash2, Eye, Download, Plus, X } from "lucide-react";
+import { Upload, File, Trash2, Eye, Download, Plus, X, FolderOpen, FileText, Filter, Calendar, Image as ImageIcon, ChevronDown, Loader2} from "lucide-react";
 import API_BASE_URL from "../config";
 import { Search } from "lucide-react";
 import no_doc_img from "/images/no-document.avif"; 
 import { userContext } from "../Context/userContext";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "../Components/ui/dialog";
+import { Button } from '../Components/ui/button';
+import {Card, CardContent, CardHeader, CardTitle} from '../Components/ui/card';
+import {Input} from '../Components/ui/input';
+import {format} from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../Components/ui/select";
+import { toast } from "../hooks/useToast";
+
+const UploadDocumentDialog = ({
+  handleSubmit,
+  handleFileChange,
+  handleDrop,
+  handleDragOver,
+  formData,
+  setFormData,
+  fileName,
+  user,
+  employees,
+  loading,
+  setLoading,
+}) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      {/* Trigger Button */}
+      <DialogTrigger asChild>
+        <Button className="gap-2">
+          <Upload className="w-4 h-4" />
+          Upload Document
+        </Button>
+      </DialogTrigger>
+
+      {/* Modal */}
+      <DialogContent className="max-w-3xl" onOpenAutoFocus={(e) => {
+          e.preventDefault(); // prevent auto focus jump
+          document.getElementById("resume")?.focus();
+        }}>
+        <DialogHeader>
+          <DialogTitle>Upload Document</DialogTitle>
+          <DialogDescription>
+            Upload and assign documents to employees
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* FORM */}
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setLoading(true);
+
+            try {
+              await handleSubmit(e); // your upload logic
+              document.activeElement?.blur();
+              setOpen(false);        // close AFTER success
+            } finally {
+              setLoading(false);
+            }
+          }}
+          className="space-y-4"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* File Upload */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Document File
+              </label>
+
+              <div className="flex items-center justify-center w-full">
+                <label
+                  htmlFor="resume"
+                  className="flex items-center justify-center w-full h-12 border-2 border-dashed rounded-lg cursor-pointer bg-muted hover:bg-muted/70 px-4"
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                >
+                  <span className="text-sm text-muted-foreground">
+                    {fileName ? (
+                      <>
+                        Selected:{" "}
+                        <span className="font-medium">{fileName}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-semibold">Click to upload</span>{" "}
+                        or drag & drop
+                      </>
+                    )}
+                  </span>
+                  <input
+                    id="resume"
+                    type="file"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Document Type */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Document Type
+              </label>
+              <div className="relative">
+                  <Select
+                    value={formData.type}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, type: value })
+                    }
+                  >
+                  <SelectTrigger className="w-full p-2 rounded-lg border">
+                    <SelectValue placeholder="Select Type" />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    <SelectItem value="PDF">PDF</SelectItem>
+                    <SelectItem value="DOCX">DOCX</SelectItem>
+                    <SelectItem value="XLSX">XLSX</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Uploaded By */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Uploaded By
+              </label>
+              <input
+                type="text"
+                value={user.userName}
+                disabled
+                className="w-full p-2 border rounded-lg bg-muted cursor-not-allowed"
+              />
+            </div>
+
+            {/* Employee */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Employee
+              </label>
+              <div className="relative">
+                  <Select
+                    value={formData.employeeEmail}
+                    onValueChange={(value) =>
+                      setFormData({
+                        ...formData,
+                        employeeEmail: value,
+                      })
+                    }
+                  >
+                    <SelectTrigger className="w-full p-2 rounded-lg border">
+                      <SelectValue placeholder="Select employee" />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      {employees.map((emp) => (
+                        <SelectItem key={emp._id} value={emp.email}>
+                          {emp.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+                Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                'Upload'
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const DocumentManagement = () => {
 
@@ -14,6 +212,7 @@ const DocumentManagement = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
+    const [open, setOpen] = useState(false);
 
     const [fileName, setFileName] = useState("No file choosen")
     const {user} = useContext(userContext);
@@ -22,6 +221,19 @@ const DocumentManagement = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedId, setSelectedId] = useState("");
 
+    const [toastSuccessMessage, setToastSuccessMessage] = useState();
+    const [toastErrorMessage, setToastErrorMessage] = useState();
+    const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
+    const [toastErrorVisible, setToastErrorVisible] = useState(false);
+
+    const [sortByDate, setSortByDate] = useState("latest"); 
+
+    const [docStats, setDocStats] = useState({
+        total: 0,
+        pdf: 0,
+        docx: 0,
+        xlsx: 0,
+    });
     // Upload form state
     const [formData, setFormData] = useState({
         name: '',
@@ -30,7 +242,11 @@ const DocumentManagement = () => {
         email: '',
         document: null
     });
+    const isAdmin = user?.role === "admin" || user?.role === "superAdmin";
 
+    useEffect(() => {
+        fetchDocuments();
+    }, []);
 
     useEffect(() => {
         if (!user || user.role === "user") return;
@@ -38,7 +254,6 @@ const DocumentManagement = () => {
         const fetchEmployees = async () => {
             const response = await axios.get(`${API_BASE_URL}/api/employee`);
             const empList = response.data.employees;
-            console.log("Response: ", response.data.employees);
             setEmployees(empList);
 
             if(response.status===200){
@@ -48,7 +263,13 @@ const DocumentManagement = () => {
                         employeeEmail: response.data.employees[0].email
                     }));
                 }
-
+            }
+            if(response.status===500){  
+                toast({
+                    variant: "destructive",
+                    title: "Fetch Failed",
+                    description: "Failed to fetch employees.",
+                });
             }
         }
 
@@ -77,10 +298,6 @@ const DocumentManagement = () => {
     };
 
     useEffect(() => {
-        fetchDocuments();
-    }, []);
-
-    useEffect(() => {
         if (user) {
             setFormData((prev) => ({
                 ...prev,
@@ -90,38 +307,49 @@ const DocumentManagement = () => {
     }, [user]);
 
 
-
-
     // Fetch all documents
-    const fetchDocuments = async () => {
-        try {
-            setLoading(true);
-            const response = await axios.get(`${API_BASE_URL}/api/documents/all`);
-            const data = Array.isArray(response.data.data) ? response.data.data : [];
+   const fetchDocuments = async () => {
+    try {
+        setLoading(true);
 
-            if (user && user.role === "user") {
-                const filteredData = data.filter(doc => doc.employeeEmail === user.userEmail);
-                setDocuments(filteredData);
-            } else {
-                setDocuments(data);
-            }
-            
-            setLoading(false);
-        } catch (err) {
-            setError("Failed to fetch documents");
-            setLoading(false);
-        }
+        const res = await axios.get(`${API_BASE_URL}/api/documents/all`);
+        const allDocs = Array.isArray(res.data.data) ? res.data.data : [];
+
+        // Role-based filtering
+        const visibleDocs = isAdmin
+        ? allDocs
+        : allDocs.filter(doc => doc.employeeEmail === user?.userEmail);
+
+        // Calculate stats from visible docs
+        const stats = {
+        total: visibleDocs.length,
+        pdf: 0,
+        docx: 0,
+        xlsx: 0,
+        };
+
+        visibleDocs.forEach(doc => {
+        const type = doc.type?.toLowerCase();
+        if (type === "pdf") stats.pdf++;
+        if (type === "docx") stats.docx++;
+        if (type === "xlsx") stats.xlsx++;
+        });
+
+        //Update state
+        setDocuments(visibleDocs);
+        setDocStats(stats);
+
+    } catch (err) {
+        toast({
+            variant: "destructive",
+            title: "Fetch Failed",
+            description: err.response?.data?.message || "Failed to fetch documents.",
+        });
+    } finally {
+        setLoading(false);
+    }
     };
 
-    // Handle input changes in upload form
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-
-    };
 
     // Handle file selection
     const handleFileChange = (e) => {
@@ -140,6 +368,11 @@ const DocumentManagement = () => {
             
             if (!allowedMimeTypes.includes(file.type)) {
                 setError(`File type not allowed. Please upload PDF, DOCX, XLSX, PNG, or JPG files only.`);
+                toast({
+                    variant: "destructive",
+                    title: `${file.type} not allowed`,
+                    description: `File type not allowed. Please upload PDF, DOCX, XLSX, PNG, or JPG files only.`,
+                });
                 return;
             }
             
@@ -174,7 +407,7 @@ const DocumentManagement = () => {
 
         try {
             setLoading(true);
-            await axios.post(`${API_BASE_URL}/api/documents/upload/${selectedEmployee.email}`, uploadData, {
+            const response = await axios.post(`${API_BASE_URL}/api/documents/upload/${selectedEmployee.email}`, uploadData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
@@ -186,13 +419,27 @@ const DocumentManagement = () => {
             type: '',
             document: null
             }));
-            setSuccess("Document Uploaded Succesfully!");
+
+            if(response.status===201){
+              toast({
+                variant: "success",
+                title: "Document Uploaded",
+                description: "The document has been uploaded successfully.",
+              });
+            }
+            setLoading(false);
             setShowUploadForm(false);
             fetchDocuments();
-            setLoading(false);
             setFileName("");
         } catch (err) {
-            setError("Failed to upload document");
+            toast({
+                variant: "destructive",
+                title: "Upload Failed",
+                description: err.response?.data?.message || "Failed to upload document.",
+            });
+            setLoading(false);
+
+        } finally {
             setLoading(false);
         }
     };
@@ -211,11 +458,21 @@ const DocumentManagement = () => {
                 setLoading(true);
                 await axios.delete(`${API_BASE_URL}/api/documents/delete/${selectedId}`);
                 setShowDeleteModal(false);
-                setSuccess("Document Deleted Successfully");
+                toast({
+                    variant: "success",
+                    title: "Document Deleted",
+                    description: "The document has been deleted successfully.",
+                });
+
                 setSelectedId("");
                 fetchDocuments();
             } catch (err) {
-                setError("Failed to delete document");
+                toast({
+                    variant: "destructive",
+                    title: "Deletion Failed",
+                    description: err.response?.data?.message || "Failed to delete document.",
+                });
+                setLoading(false);
             } finally {
                 setLoading(false);
             }
@@ -225,279 +482,220 @@ const DocumentManagement = () => {
     const [searchTerm, setSearchTerm] = useState("");
 
     // Filtered documents based on search input
-    const filteredDocuments = documents.filter((doc) =>
-        doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.uploadedBy.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.employee.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    const viewDocument = async (doc) => {
-        try {
-            window.open(
-                `${API_BASE_URL}/api/documents/view/${doc._id}`,
-                "_blank"
-            );
-        } catch (error) {
-            console.error(error);
-            setError("Unable to preview document");
-        }
+    const filteredDocuments = documents.filter((doc) => {
+        const term = searchTerm.toLowerCase();
+
+        return (
+            doc.name?.toLowerCase().includes(term) ||
+            doc.type?.toLowerCase().includes(term) ||
+            doc.uploadedBy?.toLowerCase().includes(term) ||
+            doc.employee?.toLowerCase().includes(term)
+        );
+    });
+
+    const viewDocument = (doc) => {
+      if (!doc?.url) {
+        toast({
+          variant: "destructive",
+          title: "Preview unavailable",
+          description: "Document URL not found",
+        });
+        return;
+      }
+
+      const type = doc.type?.toUpperCase();
+
+      // Native browser preview
+      if (type === "PDF" || type === "IMAGE") {
+        window.open(doc.url, "_blank");
+        return;
+      }
+
+      // Google Docs Viewer (DOCX, XLSX)
+      const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(
+        doc.url
+      )}&embedded=true`;
+
+      window.open(googleViewerUrl, "_blank");
+  };
+
+
+
+
+    const downloadDocument = async (doc) => {
+        const link = document.createElement("a");
+        link.href = `${API_BASE_URL}/api/documents/download/${doc._id}`;
+        link.download = doc.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
 
+    //File type icon switch
+    const getFileIcon = (type) => {
+        switch (type) {
+            case 'PDF':
+            return <FileText className="w-5 h-5 text-destructive" />;
+            case 'IMAGE':
+            return <ImageIcon className="w-5 h-5 text-info" />;
+            default:
+            return <File className="w-5 h-5 text-muted-foreground" />;
+        }
+        };
+
     return (
-
-        <div className="p-6 bg-gray-50 min-h-screen">
-            {/* Error Message */}
-            {error  && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                    <span className="block sm:inline">{error}</span>
-                    <span
-                        onClick={() => setError(null)}
-                        className="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer"
-                    >
-                        <X className="h-5 w-5" />
-                    </span>
-                </div>
-            )}
-            {success && (
-                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-                    <span className="block sm:inline">{success}</span>
-                    <span
-                        onClick={() => setSuccess(null)}
-                        className="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer"
-                    >
-                        <X className="h-5 w-5" />
-                    </span>
-                </div>
-            )}
-
-            {/* No Documents Message at the Top */}
-            {filteredDocuments.length === 0 && (
-                <div className="bg-gradient-to-r from-red-400 to-red-600 text-white px-6 py-4 mb-8 rounded-lg shadow-lg text-center">
-                <span className="block text-xl font-bold tracking-wide">No documents found</span>
+        <div className="min-h-screen bg-background p-4 lg:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h1 className="text-2xl font-bold">Document Management</h1>
+                <p className="text-muted-foreground">Manage and organize your documents</p>
             </div>
             
-            )}
+            {/*Uplaod Document Button*/}
+            {user && user.role !== 'user' && (<UploadDocumentDialog
+                handleSubmit={handleSubmit}
+                handleFileChange={handleFileChange}
+                handleDrop={handleDrop}
+                handleDragOver={handleDragOver}
+                formData={formData}
+                setFormData={setFormData}
+                fileName={fileName}
+                user={user}
+                employees={employees}
+                loading={loading}
+                setLoading={setLoading}
+            />)}
+            </div>
 
-            {/* Loading Indicator */}
-            {loading && (
-                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+            {/* Stats */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+                { label: 'Total Documents', value: docStats.total, icon: FolderOpen, color: 'text-primary' },
+                { label: 'PDF Files', value: docStats.pdf, icon: FileText, color: 'text-destructive' },
+                { label: 'Docs Files', value: docStats.docx, icon: ImageIcon, color: 'text-info' },
+                { label: 'Excel Files', value: docStats.xlsx, icon: File, color: 'text-hr-amber' },
+            ].map((stat, i) => (
+                <Card key={i} className="border-0 shadow-card">
+                <CardContent className="p-4 flex items-center gap-4">
+                    <div className={`p-3 rounded-xl bg-secondary ${stat.color}`}>
+                    <stat.icon className="w-5 h-5" />
+                    </div>
+                    <div>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className="text-xl font-bold">{stat.value}</p>
+                    </div>
+                </CardContent>
+                </Card>
+            ))}
+            </div>
+
+            {/* Search & Filter */}
+            <Card className="border-0 shadow-card">
+            <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                    {/* {user && user.role !== 'user' && (
+                      <> */}
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search documents..."
+                            className="pl-10"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                      {/* </>
+                    )} */}
                 </div>
-            )}
-
-            <div className="bg-white shadow-md rounded-lg p-6">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-xl font-bold text-gray-700">Document Management</h1>
-                    {
-                        user.role==="user" ? null :
-                        <button
-                        onClick={() => setShowUploadForm(!showUploadForm)}
-                        className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                <div className="flex gap-2">
+                    {/* <Button variant="outline" className="gap-2">
+                    <Filter className="w-4 h-4" />
+                    Filter
+                    </Button> */}
+                    <Button
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() =>
+                            setSortByDate(prev => (prev === "latest" ? "oldest" : "latest"))
+                        }
                         >
-                        {showUploadForm ? (
-                            <>
-                                <X className="mr-2 h-4 w-4" /> Cancel
-                            </>
-                        ) : (
-                            <>
-                                <Plus className="mr-2 h-4 w-4" /> Upload Document
-                            </>
-                        )}
-                    </button>
-                    }
+                        <Calendar className={`w-4 h-4 transition-transform ${
+                            sortByDate === "latest" ? "" : "rotate-180"
+                        }`} />
+                        {sortByDate === "latest" ? "Latest" : "Oldest"}
+                    </Button>
+
                 </div>
+                </div>
+            </CardContent>
+            </Card>
 
-                {/* Upload Form */}
-                {showUploadForm && (
-                    <form onSubmit={handleSubmit} className="mb-6 p-4 bg-gray-100 rounded-lg">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-gray-700 mb-2">Document File</label>
-                                {/* <input
-                                    type="file"
-                                    onChange={handleFileChange}
-                                    className="w-full p-2 border rounded-lg"
-                                /> */}
-                                <div class="flex items-center justify-center w-full">
-                                    <label for="resume" class="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
-                                        onDrop={handleDrop}
-                                        onDragOver={handleDragOver}
-                                        >
-                                        <div class="flex items-center justify-center">
-                                            <svg class="w-8 h-8 text-gray-500 " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
-                                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2" />
-                                            </svg>
-                                            {fileName ?
-                                                (
-                                                    <p className="ml-3 text-sm text-gray-500">
-                                                        Selected file: <span className="font-medium">{fileName}</span>
-                                                    </p>
-                                                )
-                                                :
-                                                (<p class="ml-3 text-sm text-gray-500 "><span class="font-semibold">Click to upload</span> or drag and drop</p>)
-                                            }
-                                        </div>
-                                        <input id="resume" type="file" class="hidden" onChange={handleFileChange} accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" />
-                                    </label>
+            {/* Document List */}
+            <Card className="border-0 shadow-card">
+            <CardHeader>
+                { isAdmin ?
+                  <CardTitle className="text-lg">Recent Documents</CardTitle>
+                :
+                  <CardTitle className="text-lg">Employee Documents</CardTitle>
+                }
+            </CardHeader>
+            <CardContent className="p-0">
+                <div className="divide-y divide-border">
+                {filteredDocuments.length === 0 && (
+                    <p className="p-6 text-center text-muted-foreground">
+                        No documents found
+                    </p>
+                )}
+                {[...filteredDocuments]
+                    .sort((a, b) => {
+                        const dateA = new Date(a.createdAt || a.uploadDate);
+                        const dateB = new Date(b.createdAt || b.uploadDate);
 
+                        return sortByDate === "latest"
+                        ? dateB - dateA
+                        : dateA - dateB;
+                    }).map((doc) => (
+                        <div 
+                        key={doc.id}
+                        className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors"
+                        >
+                            <div className="p-3 rounded-xl bg-secondary">
+                                {getFileIcon(doc.type)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">{doc.name}</p>
+                                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                                <span>{doc.size}</span>
+                                <span>•</span>
+                                <span>{format(doc.uploadDate, 'dd-MM-yyyy')}</span>
+                                {/* <span className="hidden sm:inline">•</span>
+                                <span className="hidden sm:inline px-2 py-0.5 rounded-full bg-secondary text-xs">
+                                    {doc.category}
+                                </span> */}
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-gray-700 mb-2">Document Type</label>
-                                <select
-                                    name="type"
-                                    value={formData.type}
-                                    onChange={handleInputChange}
-                                    className="w-full p-2 border rounded-lg"
-                                >
-                                    <option value="">Select Type</option>
-                                    <option value="PDF">PDF</option>
-                                    <option value="DOCX">DOCX</option>
-                                    <option value="XLSX">XLSX</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-gray-700 mb-2">Uploaded By</label>
-                                <input
-                                    type="text"
-                                    name="uploadedBy"
-                                    value={user.userName}
-                                    disabled
-                                    placeholder="Your Name"
-                                    className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-gray-700 mb-2">Employee Name</label>
-                                <select
-                                    value={formData.employeeEmail}
-                                    onChange={(e) =>
-                                        setFormData(prev => ({
-                                        ...prev,
-                                        employeeEmail: e.target.value
-                                        }))
-                                    }
-                                    className="w-full p-2 border rounded-lg"
-                                    >
-                                    <option value="">Select employee</option>
-
-                                    {employees.map(emp => (
-                                        <option key={emp._id} value={emp.email}>
-                                        {emp.name}
-                                        </option>
-                                    ))}
-                                </select>
-
-                                {/* <input
-                                    type="text"
-                                    name="employee"
-                                    value={formData.employee}
-                                    onChange={handleInputChange}
-                                    placeholder="Employee Name"
-                                    className="w-full p-2 border rounded-lg"
-                                /> */}
+                            <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="icon-sm" onClick={() => viewDocument(doc)}>
+                                <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon-sm" onClick={() => downloadDocument(doc)}>
+                                <Download className="w-4 h-4" />
+                                </Button>
+                                { isAdmin &&
+                                  <Button variant="ghost" size="icon-sm" className="text-destructive hover:text-destructive" onClick={() => openDeleteModal(doc._id)}>
+                                  <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                }
                             </div>
                         </div>
-                        <div className="mt-4 flex justify-end">
-                            <button
-                                type="submit"
-                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                            >
-                                Upload Document
-                            </button>
-                        </div>
-                    </form>
-                )}
-
-                {/* Table and Search */}
-                <div className="overflow-x-auto">
-                    <div className="mb-4 flex items-center">
-                        <div className="relative w-full">
-                            <input
-                                type="text"
-                                placeholder="Search documents..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full p-3 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                            />
-                            <div className="absolute left-3 top-3">
-                                <Search className="h-5 w-5 text-gray-400" />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Table */}
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b">
-                                <th className="p-2 font-semibold text-gray-700">Document Name</th>
-                                <th className="p-2 font-semibold text-gray-700">Type</th>
-                                <th className="p-2 font-semibold text-gray-700">Upload Date</th>
-                                <th className="p-2 font-semibold text-gray-700">Uploaded By</th>
-                                <th className="p-2 font-semibold text-gray-700">Employee</th>
-                                <th className="p-2 font-semibold text-right text-gray-700">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredDocuments.map((doc) => (
-                                <tr key={doc._id} className="border-b">
-                                    <td className="p-2 flex items-center">
-                                        <File className="mr-2 text-blue-500" /> {doc.name}
-                                    </td>
-                                    <td className="p-2">{doc.type}</td>
-                                    <td className="p-2">{new Date(doc.createdAt).toLocaleDateString()}</td>
-                                    <td className="p-2">{doc.uploadedBy}</td>
-                                    <td className="p-2">{doc.employee}</td>
-                                    <td className="p-2 text-right flex space-x-2 justify-end">
-                                        <button
-                                            onClick={() => viewDocument(doc)}
-                                            className="flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
-                                        >
-                                            <Eye className="mr-1 h-4 w-4" /> View
-                                        </button>
-
-                                        <a
-                                            href={`${API_BASE_URL}/api/documents/download/${doc._id}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200"
-                                        >
-                                            <Download className="mr-1 h-4 w-4" /> Download
-                                        </a>
-
-                                        {
-                                            user && user.role==="user"
-                                            ?
-                                            null
-                                            :
-                                            <button onClick={() => openDeleteModal(doc._id)}
-                                                className="flex items-center px-3 py-1 bg-red-100 text-red-600 rounded-lg hover:bg-red-200">
-                                                <Trash2 className="mr-1 h-4 w-4" /> Delete
-                                            </button>
-
-                                        }
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                ))}
                 </div>
-            </div>
-                    {
-                        documents.length===0 ? 
-                    <div className="mt-4 flex justify-center items-center">
-                        <img
-                        className="rounded-full md:w-4/12 w-8/12" 
-                        src={no_doc_img}></img>
-                    </div>
-                    :
-                    null    
-                }
-                {showDeleteModal && (
+            </CardContent>
+            </Card>
+        </div>
+        {showDeleteModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 animate-scale-in">
                         <h2 className="text-xl font-bold text-gray-800 mb-2">
@@ -513,6 +711,7 @@ const DocumentManagement = () => {
                             <button
                                 onClick={() => setShowDeleteModal(false)}
                                 className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
+                                disabled={loading}
                             >
                                 Cancel
                             </button>
@@ -521,17 +720,21 @@ const DocumentManagement = () => {
                                 onClick={confirmDelete}
                                 className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
                             >
-                                Delete
+                                {loading ? (
+                                    <>
+                                    <Loader2 className="w-4 h-4 animate-spin inline-block mr-2" />
+                                    Deleting...
+                                    </>
+                                ) : (
+                                    'Delete'
+                                ) }
                             </button>
                         </div>
                     </div>
                 </div>
             )}
-
-        </div>
-
+    </div>
     );
 };
 
 export default DocumentManagement;
-

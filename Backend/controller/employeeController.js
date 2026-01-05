@@ -191,6 +191,10 @@ export const uploadDetails = async (req,res) => {
 
         // Check if employee exists
         const existingEmployee = await Employee.findOne({email: email});
+        if(existingEmployee && existingEmployee.details && Object.keys(existingEmployee.details).length > 0) {
+            return res.status(401).json({message: "Employee details already exists"});
+        }
+
         if (!existingEmployee) {
             console.error("Employee not found:", email);
             return res.status(404).json({message: "Employee not found with this email"});
@@ -245,7 +249,7 @@ export const uploadDetails = async (req,res) => {
             return res.status(404).json({message: "Failed to update employee"});
         }
 
-        return res.status(201).json({message: "Details uploaded", updatedEmp});
+        return res.status(200).json({message: "Details uploaded", updatedEmp});
     } catch(err) {
         console.error("[uploadDetails] Error:", err);
         return res.status(500).json({message: err.message || "Failed to upload details"});

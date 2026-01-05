@@ -1,120 +1,177 @@
 import React from "react";
 
-/**
- * TemplateMinimal
- * Props:
- *  - data: employee details
- *  - company: company info
- *  - calculations: salary calculations
- *  - expenses: optional reimbursable expenses
- */
 const TemplateMinimal = ({ data, company, calculations }) => {
-  const formatCurrency = (v) => `₹${Number(v || 0).toFixed(2)}`;
+  const formatCurrency = (value) => {
+    const num = Number(value || 0);
+    return `₹${num.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  const earnings = [
+    { label: "Basic Salary", value: data.salary },
+    { label: "HRA", value: data.hra },
+    { label: "Conveyance Allowance", value: data.conveyanceAllowance },
+    { label: "Medical Allowance", value: data.medicalAllowance },
+    { label: "Special Allowance", value: data.specialAllowance },
+  ].filter((item) => Number(item.value) > 0);
 
   return (
-    <div
-      className="w-[794px] min-h-[1123px] bg-white mx-auto font-['Inter'] text-gray-800 p-12 text-sm"
-    >
+    <div className="w-[210mm] min-h-[297mm] bg-white mx-auto font-sans text-slate-800 p-12 print:shadow-none shadow-xl">
       {/* Header */}
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-gray-900">{company.name}</h1>
-        <p className="text-gray-600">{company.address}, {company.city}</p>
-        <p className="text-gray-600">{company.email} | {company.phone}</p>
-        <hr className="mt-4 border-gray-300" />
+      <div className="text-center mb-10 pb-6 border-b-2 border-slate-200">
+        <h1 className="text-3xl font-light tracking-wide text-slate-900">
+          {company.name}
+        </h1>
+        <p className="text-slate-500 mt-2">
+          {company.address}, {company.city}
+        </p>
+        <p className="text-slate-500 text-sm">
+          {company.email} | {company.phone}
+        </p>
       </div>
 
       {/* Payslip Title */}
-      <div className="mb-8 text-center">
-        <h2 className="text-2xl font-semibold text-gray-900">Payslip</h2>
-        <p className="text-gray-600">Salary Statement for <span className="font-medium">{data.month}</span></p>
+      <div className="text-center mb-10">
+        <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">
+          Payslip
+        </h2>
+        <div className="flex items-center justify-center gap-2 mt-2">
+          <div className="h-px w-12 bg-slate-300" />
+          <p className="text-slate-600">{data.month}</p>
+          <div className="h-px w-12 bg-slate-300" />
+        </div>
       </div>
 
       {/* Employee & Payment Details */}
-      <div className="grid grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-2 gap-12 mb-10">
+        {/* Employee Details */}
         <div>
-          <h3 className="font-semibold mb-2">Employee Details</h3>
-          <p><span className="font-medium">Name:</span> {data.name}</p>
-          <p><span className="font-medium">Employee ID:</span> {data.employeeId}</p>
-          <p><span className="font-medium">Department:</span> {data.department}</p>
-          <p><span className="font-medium">Designation:</span> {data.designation}</p>
-          <p><span className="font-medium">PAN:</span> {data.panNumber}</p>
-          <p><span className="font-medium">UAN:</span> {data.uanNumber || "-"}</p>
+          <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-400 mb-4">
+            Employee Details
+          </h3>
+          <div className="space-y-2 text-sm">
+            <DetailRow label="Name" value={data.name} />
+            <DetailRow label="Employee ID" value={data.employeeId} />
+            <DetailRow label="Department" value={data.department} />
+            <DetailRow label="Designation" value={data.designation} />
+            <DetailRow label="PAN" value={data.panNumber} />
+            <DetailRow label="UAN" value={data.uanNumber || "-"} last />
+          </div>
         </div>
 
+        {/* Payment Details */}
         <div>
-          <h3 className="font-semibold mb-2">Payment Details</h3>
-          <p><span className="font-medium">Bank Account:</span> {data.bankAccount}</p>
-          <p><span className="font-medium">Month:</span> {data.month}</p>
-          <p><span className="font-medium">Salary:</span> {formatCurrency(data.salary)}</p>
-        </div>
-      </div>
-
-      {/* Earnings Table */}
-      <div className="mb-6">
-        <h3 className="font-semibold mb-2">Earnings</h3>
-        <div className="border border-gray-300 rounded overflow-hidden">
-          <div className="grid grid-cols-2 bg-gray-100 font-semibold px-4 py-2">
-            <span>Description</span>
-            <span className="text-right">Amount</span>
-          </div>
-
-          {[
-            { label: "Basic Salary", value: data.salary },
-            { label: "HRA", value: data.hra },
-            { label: "Conveyance Allowance", value: data.conveyanceAllowance },
-            { label: "Medical Allowance", value: data.medicalAllowance },
-            { label: "Special Allowance", value: data.specialAllowance },
-          ]
-            .filter(item => Number(item.value) > 0)
-            .map((item, idx) => (
-              <div key={idx} className="grid grid-cols-2 border-t px-4 py-2">
-                <span>{item.label}</span>
-                <span className="text-right">{formatCurrency(item.value)}</span>
-              </div>
-            ))}
-
-          <div className="grid grid-cols-2 border-t bg-gray-50 font-semibold px-4 py-2">
-            <span>Total Earnings</span>
-            <span className="text-right">{formatCurrency(calculations.totalEarnings)}</span>
+          <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-400 mb-4">
+            Payment Details
+          </h3>
+          <div className="space-y-2 text-sm">
+            <DetailRow label="Bank Account" value={data.bankAccount} />
+            <DetailRow label="Month" value={data.month} />
+            <DetailRow
+              label="Base Salary"
+              value={formatCurrency(data.salary)}
+              last
+            />
           </div>
         </div>
       </div>
 
-      {/* Deductions Table */}
-      <div className="mb-6">
-        <h3 className="font-semibold mb-2">Deductions</h3>
-        <div className="border border-gray-300 rounded overflow-hidden">
-          <div className="grid grid-cols-2 bg-gray-100 font-semibold px-4 py-2">
-            <span>Description</span>
-            <span className="text-right">Amount</span>
-          </div>
+      {/* Earnings */}
+      <SectionTable
+        title="Earnings"
+        items={earnings.map((e) => ({
+          label: e.label,
+          value: formatCurrency(e.value),
+        }))}
+        totalLabel="Total Earnings"
+        totalValue={formatCurrency(calculations.totalEarnings)}
+        totalClass="bg-emerald-50 text-emerald-700"
+      />
 
-          {Object.entries(calculations.deductions).map(([key, value]) => (
-            <div key={key} className="grid grid-cols-2 border-t px-4 py-2 text-gray-600">
-              <span>{key.replace(/([A-Z])/g, " $1")}</span>
-              <span className="text-right">{formatCurrency(value)}</span>
-            </div>
-          ))}
-
-          <div className="grid grid-cols-2 border-t bg-gray-50 font-semibold px-4 py-2">
-            <span>Total Deductions</span>
-            <span className="text-right">{formatCurrency(calculations.totalDeductions)}</span>
-          </div>
-        </div>
-      </div>
+      {/* Deductions */}
+      <SectionTable
+        title="Deductions"
+        items={Object.entries(calculations.deductions).map(
+          ([key, value]) => ({
+            label: key.replace(/([A-Z])/g, " $1"),
+            value: formatCurrency(value),
+          })
+        )}
+        totalLabel="Total Deductions"
+        totalValue={formatCurrency(calculations.totalDeductions)}
+        totalClass="bg-rose-50 text-rose-700"
+      />
 
       {/* Net Salary */}
-      <div className="p-4 bg-gray-50 rounded-lg text-center font-bold text-lg mb-3">
-        Net Salary: {formatCurrency(calculations.netSalary)}
+      <div className="bg-slate-900 text-white rounded-lg p-6 text-center mb-10">
+        <p className="text-slate-400 text-sm uppercase tracking-wider mb-2">
+          Net Salary
+        </p>
+        <p className="text-4xl font-light tracking-tight">
+          {formatCurrency(calculations.netSalary)}
+        </p>
       </div>
 
 
       {/* Footer */}
-      <div className="mt-12 text-xs text-gray-500 text-center">
+      <div className="text-xs text-slate-400 text-center pt-6 border-t border-slate-200">
         This is a computer-generated payslip and does not require a signature.
       </div>
     </div>
   );
 };
+
+/* Helper Components */
+
+const DetailRow = ({ label, value, last }) => (
+  <div
+    className={`flex ${
+      !last ? "border-b border-dashed border-slate-200 pb-2" : ""
+    }`}
+  >
+    <span className="w-28 text-slate-500">{label}</span>
+    <span className="font-medium">{value}</span>
+  </div>
+);
+
+const SectionTable = ({
+  title,
+  items,
+  totalLabel,
+  totalValue,
+  totalClass,
+}) => (
+  <div className="mb-8">
+    <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-400 mb-4">
+      {title}
+    </h3>
+
+    <div className="border border-slate-200 rounded-lg overflow-hidden">
+      <div className="grid grid-cols-2 bg-slate-50 text-sm font-semibold px-4 py-3 border-b">
+        <span>Description</span>
+        <span className="text-right">Amount</span>
+      </div>
+
+      {items.map((item, idx) => (
+        <div
+          key={idx}
+          className="grid grid-cols-2 text-sm px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors"
+        >
+          <span className="text-slate-700 capitalize">{item.label}</span>
+          <span className="text-right font-medium">{item.value}</span>
+        </div>
+      ))}
+
+      <div
+        className={`grid grid-cols-2 text-sm font-semibold px-4 py-3 ${totalClass}`}
+      >
+        <span>{totalLabel}</span>
+        <span className="text-right">{totalValue}</span>
+      </div>
+    </div>
+  </div>
+);
 
 export default TemplateMinimal;

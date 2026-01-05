@@ -13,6 +13,7 @@ export const createExpense = async (req, res) => {
 
     const uploadedReceipts = req.uploadedReceipts || [];
 
+    console.log("UPLOADED RECIEPTS: ", req.uploadedReceipts);
     if (!uploadedReceipts.length) {
       return res
         .status(400)
