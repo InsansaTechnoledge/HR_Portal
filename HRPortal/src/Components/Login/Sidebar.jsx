@@ -1,471 +1,444 @@
-import React, { useState, useContext, useEffect } from "react";
-import {
-  IconHome,
-  IconGridDots,
-  IconSettings,
-  IconUser,
-  IconLogout,
-  IconChevronDown,
-  IconChevronUp,
-  IconBriefcase,
-  IconUsers,
-  IconFolder,
-  IconCalendar,
-  IconId,
-  IconFilePlus,
-  IconFileText,
-  IconKey,
-} from "@tabler/icons-react";
-import { NavLink, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useContext, useRef } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { userContext } from "../../Context/userContext";
-import axios from "axios";
-import API_BASE_URL from "../../config";
-import { use } from "react";
-import ErrorToast from "../Toaster/ErrorToaster";
-import SuccessToast from "../Toaster/SuccessToaser";
-import UserProfile from "../../Page/UserProfile";
-import { ReceiptIndianRupee } from "lucide-react";
+import { Button } from '../ui/button';
+import { cn } from '../../lib/utils';
+// import { toast } from '../../hooks/use-toast';
+import {
+  Home,
+  Users,
+  FolderOpen,
+  Calendar,
+  FileText,
+  Briefcase,
+  ClipboardList,
+  UserPlus,
+  Shield,
+  Settings,
+  LogOut,
+  ChevronDown,
+  ChevronRight,
+  Building2,
+  Menu,
+  X,
+  Key,
+  Receipt,
+  UserCircle,
+  Sparkles,
+  ReceiptIndianRupee,
+  FilePlus,
+  FileSearch
+} from 'lucide-react';
+import ErrorToast from '../Toaster/ErrorToaster';
+import SuccessToast from '../Toaster/SuccessToaser';
+import useLogout from "../../Context/useLogout";
+import {Tooltip, TooltipContent, TooltipTrigger, TooltipProvider} from '../ui/tooltip';
 
-// Logout function to handle user logout
-const handleLogout = async (setUser) => {
-  try {
-    const response = await axios.post(`${API_BASE_URL}/api/auth/logout`, null, {
-      withCredentials: true,
+const navItems = [
+  { icon: Home, label: 'Dashboard', path: '/', roles: ['user', 'admin', 'superAdmin', 'accountant'] },
+  { 
+    icon: Users, 
+    label: 'Management',
+    roles: ['user'],
+    children: [
+      { icon: FolderOpen, label: 'Documents', path: '/docs', roles: ['user'] },
+      { icon: UserCircle, label: 'My Profile', path: '/user-profile', roles: ['user'] },
+      { icon: Calendar, label: 'Leave Tracker', path: '/leave-tracker', roles: ['user'] },
+      { icon: FileText, label: 'Payslip Tracker', path: '/payslip-tracker', roles: ['user'] },
+      { icon: Key, label: 'Change Password', path: '/change-password', roles: ['user'] },
+      { icon: ReceiptIndianRupee, label: 'Add Expense', path: '/add-expense', roles: ['user']},
+      { icon: FileText, label: 'Expense Tracker', path: '/expense-tracker', roles: ['user'] },
+    ]
+  },
+  { icon: UserPlus, label: 'Employee Registration', path: '/emp-info-register', roles: ['admin', 'superAdmin'] },
+  {
+    icon: Settings,
+    label: 'Apps',
+    roles: ['admin', 'superAdmin'],
+    children: [
+      {
+        icon: Users,
+        label: 'Employee Management',
+        children: [
+          { icon: FolderOpen, label: 'Employee Documents', path: '/docs', roles: ['admin', 'superAdmin'] },
+          { icon: Calendar, label: 'Leave Tracker', path: '/leave-tracker', roles: ['admin', 'superAdmin'] },
+          { icon: UserPlus, label: 'Add Employee', path: '/add-employee', roles: ['admin', 'superAdmin'] },
+          { icon: ClipboardList, label: 'Employee Details', path: '/emp-list', roles: ['superAdmin'] },
+        ]
+      },
+      {
+        icon: Briefcase,
+        label: 'Job Management',
+        children: [
+          { icon: Briefcase, label: 'Post Job Openings', path: '/post-job', roles: ['admin', 'superAdmin'] },
+          { icon: ClipboardList, label: 'Job Applications', path: '/application', roles: ['admin', 'superAdmin'] },
+        ]
+      }
+    ]
+  },
+  {
+    icon: UserPlus,
+    label: 'Talent Management',
+    roles: ['admin', 'superAdmin'],
+    children: [
+      { icon: UserPlus, label: 'Register Candidate', path: '/register-candidate', roles: ['admin', 'superAdmin'] },
+      { icon: Users, label: 'Candidate Roster', path: '/candidate-detail', roles: ['admin', 'superAdmin'] },
+    ]
+  },
+  {
+    icon: Receipt,
+    label: 'Payslip Management',
+    roles: ['admin', 'superAdmin', 'accountant'],
+    children: [
+      { icon: FileText, label: 'PaySlip Tracker', path: '/payslip-tracker', roles: ['admin', 'superAdmin', 'accountant'] },
+      { icon: Receipt, label: 'PaySlip Generator', path: '/payslip', roles: ['superAdmin', 'accountant'] },
+    ]
+  },
+
+  {
+        icon: ReceiptIndianRupee,
+        label: 'Expense Management',
+        children: [
+          { icon: FileText, label: 'Expense Tracker', path: '/expense-tracker', roles: ['accountant', 'superAdmin'] },
+          { icon: FilePlus, label: 'Expense Generator', path: '/expense', roles: ['accountant', 'superAdmin'] },
+        ]
+  },
+  { icon: FileSearch, label: 'Resume Analyzer', path: '/resume-analyzer', isAI: true, roles: ['admin'] },
+  { icon: Shield, label: 'Authentication', path: '/auth', roles: ['admin', 'superAdmin'] },
+  { icon: ClipboardList, label: 'Employee Details', path: '/emp-list', roles: ['accountant'] },
+  { icon: Calendar, label: 'Leave Tracker', path: '/leave-tracker', roles: ['accountant'] },
+  { icon: Key, label: 'Change Password', path: '/change-password', roles: ['accountant'] },
+];
+
+const SidebarItem = ({
+  item,
+  isCollapsed,
+  userRole,
+  onMobileClose,
+  openMenus,
+  setOpenMenus,
+}) => {
+  const location = useLocation();
+  const Icon = item.icon;
+
+  const filteredChildren = item.children?.filter(
+    child => !child.roles || child.roles.includes(userRole)
+  );
+
+  const hasChildren = filteredChildren?.length > 0;
+
+  const isActive = item.path === location.pathname;
+
+  const hasActiveChild = filteredChildren?.some(
+    child =>
+      child.path === location.pathname ||
+      child.children?.some(gc => gc.path === location.pathname)
+  );
+
+  const menuKey = item.path ?? item.label;
+
+  /* SINGLE SOURCE OF TRUTH */
+  const isOpen = openMenus.has(menuKey);
+
+  /* MANUAL TOGGLE ONLY */
+  const toggleMenu = () => {
+    setOpenMenus(prev => {
+      const next = new Set(prev);
+      next.has(menuKey) ? next.delete(menuKey) : next.add(menuKey);
+      return next;
     });
+  };
 
-    if (response.status === 201) {
-      setUser(null);
-    } else {
-      // console.error("Logout failed:", response.data.message || response.statusText);
-      // alert("Logout failed. Please try again");
-      setToastErrorMessage("Logout failed. Please try again");
-      setToastErrorVisible(true);
-      setTimeout(() => setToastErrorVisible(false), 3500);
-    }
-  } catch (error) {
-    // console.error("Logout error:", error);
-    // alert("An error occurred during logout.");
-    setToastErrorMessage("An error occurred during logout.");
-    setToastErrorVisible(true);
-    setTimeout(() => setToastErrorVisible(false), 3500);
+  /* ================= MENU WITH CHILDREN ================= */
+  if (hasChildren) {
+    return (
+      <div className="space-y-1">
+        <button
+          onClick={toggleMenu}
+          className={cn(
+            "group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
+            "hover:bg-sidebar-accent/80 text-sidebar-foreground/80 hover:text-sidebar-foreground",
+            (isOpen || hasActiveChild) &&
+              "bg-sidebar-accent/60 text-sidebar-foreground",
+            isCollapsed && "justify-center px-2"
+          )}
+        >
+          <div
+            className={cn(
+              "flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200",
+              (isOpen || hasActiveChild)
+                ? "bg-sidebar-primary/20 text-sidebar-primary"
+                : "group-hover:bg-sidebar-accent"
+            )}
+          >
+            <Icon className="w-4 h-4" />
+          </div>
+
+          {!isCollapsed && (
+            <>
+              <span className="flex-1 text-left text-sm font-medium">
+                {item.label}
+              </span>
+              <div className={cn(
+                "transition-transform duration-200",
+                isOpen && "rotate-180"
+              )}>
+                <ChevronDown className="w-4 h-4 opacity-60" />
+              </div>
+            </>
+          )}
+        </button>
+
+        <div
+          className={cn(
+            "overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out",
+            isOpen && !isCollapsed
+              ? "max-h-[1000px] opacity-100 pointer-events-auto"
+              : "max-h-0 opacity-0 pointer-events-none"
+          )}
+        >
+          <div className={"ml-5 mt-1 space-y-1 border-l-2 border-sidebar-border/50 pl-3"}>
+            {filteredChildren.map(child => (
+              <SidebarItem
+                key={child.path ?? child.label}
+                item={child}
+                isCollapsed={isCollapsed}
+                userRole={userRole}
+                openMenus={openMenus}
+                setOpenMenus={setOpenMenus}
+                onMobileClose={onMobileClose}
+              />
+            ))}
+          </div>
+        </div>
+
+      </div>
+    );
   }
+
+  /* ================= LEAF ITEM ================= */
+  if (!item.path) return null;
+
+  return (
+    <NavLink
+      to={item.path}
+      onClick={onMobileClose}
+      className={({ isActive }) =>
+        cn(
+          "group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
+          isActive
+            ? "bg-gradient-to-r from-sidebar-primary to-sidebar-primary/80 text-sidebar-primary-foreground shadow-lg"
+            : "hover:bg-sidebar-accent/80 text-sidebar-foreground/80 hover:text-sidebar-foreground",
+          isCollapsed && "justify-center px-2"
+        )
+      }
+    >
+      <div
+        className={cn(
+          "flex items-center justify-center w-8 h-8 rounded-lg transition-all",
+          isActive ? "bg-white/20" : "group-hover:bg-sidebar-accent"
+        )}
+      >
+        <Icon className="w-4 h-4" />
+      </div>
+      {!isCollapsed && 
+        <div className="flex items-center gap-2">
+        <span className="text-sm font-medium">
+          {item.label}
+        </span>
+        {item.isAI && (
+          <span className={cn(
+            "ml-auto flex items-center gap-1 px-2 py-[2px] text-[10px] font-medium rounded-full translate-x-2 -translate-y-1",
+            isActive
+              ? "border-primary-foreground/40 text-primary-foreground bg-primary-foreground/10"
+              : "border-purple-500/30 text-purple-500 bg-purple-500/5")}
+            >
+            AI
+          </span>
+        )}
+        </div>
+      }
+    </NavLink>
+  );
 };
 
-// Sidebar component
+
 const Sidebar = () => {
-  const [isOpen, setIsOpen] = useState(true);
-  const [dropdowns, setDropdowns] = useState({
-    apps: false,
-    user: false,
-    job: false,
-    talent: false,
-    payslip: false,
-  });
-  const { user, setUser } = useContext(userContext);
-  const Name = user?.userName; // fetching the name of user
-  const [toastSuccessMessage, setToastSuccessMessage] = useState();
-  const [toastErrorMessage, setToastErrorMessage] = useState();
-  const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
-  const [toastErrorVisible, setToastErrorVisible] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
+    const [openMenus, setOpenMenus] = useState(new Set());
 
-  const toggleSidebar = () => {
-    setIsOpen((prevState) => {
-      const newIsOpen = !prevState;
-      if (!newIsOpen) {
-        // Close all dropdowns when sidebar is closed
-        setDropdowns({
-          apps: false,
-          user: false,
-          job: false,
-          talent: false,
-          payslip: false,
-        });
-      }
-      return newIsOpen;
-    });
-  };
+    const { user } = useContext(userContext);
+    const { handleLogout } = useLogout();
 
-  const toggleDropdown = (name) => {
-    setIsOpen(true);
-    setDropdowns((prev) => ({ ...prev, [name]: !prev[name] }));
-  };
+    const filteredNavItems = navItems.filter(item => 
+    !item.roles || item.roles.includes(user?.role || '')
+  );
 
-  const navigate = useNavigate();
+  const closeMobile = () => setIsMobileOpen(false);
 
-  useEffect(() => {
-    if (user === null) {
-      navigate("/", { replace: true }); // Redirect to login after user is null
-    }
-  }, [user, navigate]);
+  const SidebarContent = ({ isMobile = false }) => (
+    <TooltipProvider>
+      <div className="flex flex-col h-full bg-gradient-to-b from-sidebar via-sidebar to-sidebar/95 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-sidebar-primary/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-20 left-0 w-24 h-24 bg-sidebar-primary/5 rounded-full blur-2xl" />
+          <div className={cn(
+            "relative flex items-center gap-3 p-4 border-b border-sidebar-border/50",
+            isCollapsed && !isMobile ? "justify-center" : "justify-between"
+          )}>
+            {(!isCollapsed || isMobile) && (
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sidebar-primary to-sidebar-primary/70 flex items-center justify-center shadow-lg shadow-sidebar-primary/30">
+                    <Building2 className="w-5 h-5 text-sidebar-primary-foreground" />
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-success rounded-full border-2 border-sidebar animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <h2 className="font-bold text-sidebar-foreground text-sm">HR Portal</h2>
+                    <Sparkles className="w-3 h-3 text-sidebar-primary" />
+                  </div>
+                  <p className="text-xs text-sidebar-foreground/50 truncate max-w-[120px]">
+                    Welcome back
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {!isMobile && (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60 h-8 w-8"
+                  >
+                    <Menu className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  {isCollapsed ? "Expand" : "Collapse"}
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+            {filteredNavItems.map(item => (
+              <SidebarItem
+                key={item.path ?? item.label}
+                item={item}
+                isCollapsed={isCollapsed && !isMobile}
+                userRole={user?.role || "user"}
+                openMenus={openMenus}
+                setOpenMenus={setOpenMenus}
+                onMobileClose={isMobile ? closeMobile : undefined}
+              />
+            ))}
+          </nav>
+
+          <div className="relative p-3 border-t border-sidebar-border/50 space-y-3">
+            {(!isCollapsed || isMobile) && (
+              <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-gradient-to-r from-sidebar-accent/40 to-sidebar-accent/20 backdrop-blur-sm">
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sidebar-primary/30 to-sidebar-primary/10 flex items-center justify-center ring-2 ring-sidebar-primary/20">
+                    <span className="text-base font-bold text-sidebar-primary">
+                      {user?.userName?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-sidebar-foreground truncate">
+                    {user?.userName}
+                  </p>
+                  <p className="text-xs text-sidebar-foreground/50 capitalize flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-success" />
+                    {user?.role === 'superAdmin' ? 'Super Admin' : user?.role}
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {isCollapsed && !isMobile ? (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleLogout}
+                    className="w-full text-destructive/80 hover:text-destructive hover:bg-destructive/10 justify-center px-2"
+                  >
+                    <LogOut className="w-5 h-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="text-destructive">
+                  Sign out
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Button
+                variant="ghost"
+                onClick={handleLogout}
+                className="w-full text-destructive/80 hover:text-destructive hover:bg-destructive/10 justify-start gap-3 rounded-xl"
+              >
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg">
+                  <LogOut className="w-4 h-4" />
+                </div>
+                <span className="font-medium">Sign out</span>
+              </Button>
+            )}
+          </div>
+      </div>
+    </TooltipProvider>
+    
+  );
 
   return (
     <>
-      {toastSuccessVisible ? (
-        <SuccessToast message={toastSuccessMessage} />
-      ) : null}
-      {toastErrorVisible ? <ErrorToast error={toastErrorMessage} /> : null}
-      <div className="flex h-screen">
-        <aside
-          className={`bg-gray-800 overflow-auto text-white transition-width duration-300 ${
-            isOpen ? "w-64" : "w-16"
-          } flex flex-col`}
+      <aside
+        className={cn(
+          "hidden lg:flex flex-col h-screen bg-sidebar border-r transition-all",
+           "transition-[max-width] duration-300 ease-in-out",
+          isCollapsed ? "max-w-[72px]" : "max-w-64"
+        )}
+      >
+        <SidebarContent />
+      </aside>
+
+      <Button
+        variant="default"
+        size="icon"
+        onClick={() => setIsMobileOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-40 shadow-lg bg-primary hover:bg-primary/90"
+      >
+        <Menu className="w-5 h-5" />
+      </Button>
+
+      <div 
+        className={cn(
+          "lg:hidden fixed inset-0 bg-foreground/60 backdrop-blur-sm z-40 transition-opacity duration-300",
+          isMobileOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}
+        onClick={closeMobile}
+      />
+
+      <aside className={cn(
+        "lg:hidden fixed top-0 left-0 h-full w-72 bg-sidebar z-50 shadow-2xl transition-transform duration-300 ease-out",
+        isMobileOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={closeMobile}
+          className="absolute top-4 right-4 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
-            {isOpen && (
-              <h1 className="text-sm font-semibold text-white">
-                {`Hey, ${Name}`}
-              </h1>
-            )}
-            <button
-              className="text-gray-400 hover:text-white"
-              onClick={toggleSidebar}
-            >
-              ☰
-            </button>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 mt-6">
-            <ul className="space-y-2">
-              <SidebarItem
-                icon={<IconHome />}
-                label="Home"
-                isOpen={isOpen}
-                to="/"
-              />
-
-              {/* Apps Dropdown for User */}
-              {user && user.role === "user" && (
-                <SidebarDropdown
-                  icon={<IconGridDots />}
-                  label="Management"
-                  isOpen={isOpen}
-                  isExpanded={dropdowns.user}
-                  toggleDropdown={() => toggleDropdown("user")}
-                >
-                  <SidebarItem
-                    icon={<IconFolder />}
-                    label="Docs Management"
-                    isOpen={isOpen}
-                    to="/docs"
-                  />
-                  <SidebarItem
-                    icon={<IconUser />}
-                    label="Profile"
-                    isOpen={isOpen}
-                    to="/user-profile"
-                  />
-                  <SidebarItem
-                    icon={<IconCalendar />}
-                    label="Leave Tracker"
-                    isOpen={isOpen}
-                    to="/leave-tracker"
-                  />
-                  <SidebarItem
-                    icon={<IconKey />}
-                    label="Payslip Tracker"
-                    isOpen={isOpen}
-                    to="/payslip-tracker"
-                  />
-
-                  <SidebarItem
-                    icon={<ReceiptIndianRupee />}
-                    label="Add Expense"
-                    isOpen={isOpen}
-                    to="/add-expense"
-                  />
-
-                  <SidebarItem
-                    icon={<IconSettings />}
-                    label="Expense Tracker"
-                    isOpen={isOpen}
-                    to="/expense-tracker"
-                  />
-
-                  <SidebarItem
-                    icon={<IconKey />}
-                    label="Change Password"
-                    isOpen={isOpen}
-                    to="/change-password"
-                  />
-                  {/* <SidebarItem icon={<IconId />} label="Employee Registration" isOpen={isOpen} to="/emp-info" />   */}
-                </SidebarDropdown>
-              )}
-
-              {/* Apps Dropdown for Admin/SuperAdmin */}
-              {user &&
-                (user.role === "admin" || user.role === "superAdmin") && (
-                  <>
-                    {(user && user.role === "admin") ||
-                    user.role === "superAdmin" ? (
-                      <SidebarItem
-                        icon={<IconId />}
-                        label="Employee Registration"
-                        isOpen={isOpen}
-                        to="/emp-info-register"
-                      />
-                    ) : null}
-
-                    <SidebarDropdown
-                      icon={<IconGridDots />}
-                      label="Apps"
-                      isOpen={isOpen}
-                      isExpanded={dropdowns.apps}
-                      toggleDropdown={() => toggleDropdown("apps")}
-                    >
-                      {/* Employee Management Dropdown */}
-                      <SidebarDropdown
-                        icon={<IconUsers />}
-                        label="Employee Management"
-                        isOpen={isOpen}
-                        isExpanded={dropdowns.user}
-                        toggleDropdown={() => toggleDropdown("user")}
-                      >
-                        <SidebarItem
-                          icon={<IconFolder />}
-                          label="Employee Docs Management"
-                          isOpen={isOpen}
-                          to="/docs"
-                        />
-                        <SidebarItem
-                          icon={<IconCalendar />}
-                          label="Leave Tracker"
-                          isOpen={isOpen}
-                          to="/leave-tracker"
-                        />
-                        <SidebarItem
-                          icon={<IconUsers />}
-                          label="Add Employee"
-                          isOpen={isOpen}
-                          to="/add-employee"
-                        />
-                        {user && user.role === "superAdmin" ? (
-                          <SidebarItem
-                            icon={<IconId />}
-                            label="Employee Details"
-                            isOpen={isOpen}
-                            to="/emp-list"
-                          />
-                        ) : null}
-                      </SidebarDropdown>
-
-                      {/* Job Management Dropdown */}
-                      <SidebarDropdown
-                        icon={<IconBriefcase />}
-                        label="Job Management"
-                        isOpen={isOpen}
-                        isExpanded={dropdowns.job}
-                        toggleDropdown={() => toggleDropdown("job")}
-                      >
-                        <SidebarItem
-                          icon={<IconBriefcase />}
-                          label="Post Current Job Openings"
-                          isOpen={isOpen}
-                          to="/post-job"
-                        />
-                        <SidebarItem
-                          icon={<IconBriefcase />}
-                          label="Job Application Management"
-                          isOpen={isOpen}
-                          to="/application"
-                        />
-                      </SidebarDropdown>
-                    </SidebarDropdown>
-
-                    {/* Talent Management */}
-                    <SidebarDropdown
-                      icon={<IconUser />}
-                      label="Talent Management"
-                      isOpen={isOpen}
-                      isExpanded={dropdowns.talent}
-                      toggleDropdown={() => toggleDropdown("talent")}
-                    >
-                      <SidebarItem
-                        icon={<IconUser />}
-                        label="Register Candidate"
-                        isOpen={isOpen}
-                        to="/register-candidate"
-                      />
-                      <SidebarItem
-                        icon={<IconUser />}
-                        label="Candidate Roster"
-                        isOpen={isOpen}
-                        to="/candidate-detail"
-                      />
-                    </SidebarDropdown>
-
-                    <SidebarDropdown
-                      icon={<IconUsers />}
-                      label="Payslip Management"
-                      isOpen={isOpen}
-                      isExpanded={dropdowns.payslip}
-                      toggleDropdown={() => toggleDropdown("payslip")}
-                    >
-                      <SidebarItem
-                        icon={<IconFileText />}
-                        label="PaySlip Tracker"
-                        isOpen={isOpen}
-                        to="/payslip-tracker"
-                      />
-                      {user && user.role === "superAdmin" ? (
-                        <SidebarItem
-                          icon={<IconFilePlus />}
-                          label="PaySlip Generator"
-                          isOpen={isOpen}
-                          to="/payslip"
-                        />
-                      ) : null}
-                    </SidebarDropdown>
-
-                    {user && user.role === "superAdmin" && (
-                      <SidebarItem
-                        icon={<IconSettings />}
-                        label="Expense Tracker"
-                        isOpen={isOpen}
-                        to="/expense-tracker"
-                      />
-                    )}
-
-                    <SidebarItem
-                      label="Resume Analyzer"
-                      icon={<IconFilePlus />}
-                      isOpen={isOpen}
-                      to="/resume-analyze"
-                    />
-
-                    {/* Authentication Management */}
-                    <SidebarItem
-                      icon={<IconSettings />}
-                      label="Authentication Management"
-                      isOpen={isOpen}
-                      to="/auth"
-                    />
-                  </>
-                )}
-              {user && user.role === "accountant" && (
-                <>
-                  <SidebarItem
-                    icon={<IconId />}
-                    label="Employee Details"
-                    isOpen={isOpen}
-                    to="/emp-list"
-                  />
-                  <SidebarDropdown
-                    icon={<IconUsers />}
-                    label="Payslip Management"
-                    isOpen={isOpen}
-                    isExpanded={dropdowns.payslip}
-                    toggleDropdown={() => toggleDropdown("payslip")}
-                  >
-                    <SidebarItem
-                      icon={<IconFileText />}
-                      label="PaySlip Tracker"
-                      isOpen={isOpen}
-                      to="/payslip-tracker"
-                    />
-
-                    <SidebarItem
-                      icon={<IconFilePlus />}
-                      label="PaySlip Generator"
-                      isOpen={isOpen}
-                      to="/payslip"
-                    />
-                  </SidebarDropdown>
-
-                  <SidebarDropdown
-                    icon={<IconUsers />}
-                    label="Expense Management"
-                    isOpen={isOpen}
-                    isExpanded={dropdowns.expense}
-                    toggleDropdown={() => toggleDropdown("expense")}
-                  >
-
-                    <SidebarItem
-                      icon={<IconFileText />}
-                      label="Expense Tracker"
-                      isOpen={isOpen}
-                      to="/expense-tracker"
-                    />
-
-                    <SidebarItem
-                      icon={<IconFilePlus />}
-                      label="Expense Generator" 
-                      isOpen={isOpen}
-                      to="/expense"
-                    />
-                  </SidebarDropdown>
-                </>
-              )}
-            </ul>
-          </nav>
-
-          {/* Logout Button */}
-          <div className="mt-auto px-6 py-4">
-            <button
-              onClick={() => handleLogout(setUser)}
-              className="flex items-center w-full px-4 py-2 text-red-500 rounded-md hover:bg-red-700 hover:text-white"
-            >
-              <IconLogout className="text-lg" />
-              {isOpen && <span className="ml-3 text-sm">Logout</span>}
-            </button>
-          </div>
-        </aside>
-      </div>
+          <X className="w-5 h-5" />
+        </Button>
+        <SidebarContent isMobile />
+      </aside>
     </>
   );
 };
 
-// Sidebar item component
-const SidebarItem = ({ icon, label, isOpen, to }) => {
-  return (
-    <li>
-      <NavLink
-        to={to}
-        className={({ isActive }) =>
-          `flex items-center space-x-4 px-6 py-2 rounded-md ${
-            isActive ? "bg-indigo-600 text-white" : "hover:bg-gray-700"
-          }`
-        }
-      >
-        <span className="text-xl">{icon}</span>
-        <span
-          className={`${
-            isOpen ? "block" : "hidden"
-          } text-sm font-medium duration-300`}
-        >
-          {label}
-        </span>
-      </NavLink>
-    </li>
-  );
-};
-
-// Sidebar dropdown component
-const SidebarDropdown = ({
-  icon,
-  label,
-  isOpen,
-  isExpanded,
-  toggleDropdown,
-  children,
-}) => (
-  <li>
-    <button
-      onClick={toggleDropdown}
-      className={`flex items-center justify-between w-full px-6 py-2 rounded-md ${
-        isExpanded ? "bg-gray-700" : "hover:bg-gray-700"
-      }`}
-    >
-      <div className="flex items-center space-x-4">
-        {icon}
-        {isOpen && <span className="text-sm font-medium">{label}</span>}
-      </div>
-      {isOpen && (isExpanded ? <IconChevronUp /> : <IconChevronDown />)}
-    </button>
-    {isExpanded && <ul className="ml-6 mt-2 space-y-2">{children}</ul>}
-  </li>
-);
-
 export default Sidebar;
-export { handleLogout };

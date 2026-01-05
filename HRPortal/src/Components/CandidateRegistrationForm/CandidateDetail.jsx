@@ -8,13 +8,37 @@ import {
     Mail,
     Phone,
     Search,
-    X
+    X,
+    DownloadIcon,
+    MoreHorizontal,
+    Calendar,
+    Filter,
+    Eye
 } from 'lucide-react';
 import API_BASE_URL from '../../config';
 import axios from 'axios';
 import no_candidate from "/images/no-candidate.avif"
 import ErrorToast from '../Toaster/ErrorToaster.jsx'
 import SuccessToast from '../Toaster/SuccessToaser.jsx';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+
+import Loader from '../Loader/Loader.jsx'
+import { toast } from '../../hooks/useToast.js';
 
 const CandidatesTable = () => {
     const [candidates, setCandidates] = useState([]);
@@ -22,9 +46,13 @@ const CandidatesTable = () => {
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [toastSuccessMessage, setToastSuccessMessage] = useState();
-        const [toastErrorMessage, setToastErrorMessage] = useState();
-        const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
-        const [toastErrorVisible, setToastErrorVisible] = useState(false);
+    const [toastErrorMessage, setToastErrorMessage] = useState();
+    const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
+    const [toastErrorVisible, setToastErrorVisible] = useState(false);
+
+    const [openProfile, setOpenProfile] = useState(false);
+    const [selectedCandidate, setSelectedCandidate] = useState(null);
+    const [openMenuId, setOpenMenuId] = useState(null);
 
     const iconsMap = {
         name: User,
@@ -43,7 +71,12 @@ const CandidatesTable = () => {
                 setCandidates(response.data);
             } catch (err) {
                 console.error('Error fetching candidates:', err.message);
-                setError('Failed to fetch candidates.');
+                toast ({
+                    variant: "destructive",
+                    title: "Error",
+                    description: "Failed to fetch candidates.",
+                });
+                // setError('Failed to fetch candidates. Please try again later.');
             } finally {
                 setLoading(false);
             }
@@ -54,51 +87,57 @@ const CandidatesTable = () => {
 
     const downloadResume = (resume, candidateName) => {
         try {
-            if (!resume || !resume.data) {
-                console.error('No resume data available');
-                return;
+            if (!resume) {
+            throw new Error("Resume not found");
             }
 
-            // Convert data to Uint8Array if it's not already
-            const resumeData = resume.data instanceof ArrayBuffer
-                ? new Uint8Array(resume.data)
-                : typeof resume.data === 'string'
-                    ? new TextEncoder().encode(resume.data)
-                    : resume.data;
+            // BASE64 STRING
+            const base64String = resume.buffer
+            ? resume.buffer
+            : resume; // depends on how Mongo sends it
 
-            // Create a base64 encoded PDF
-            const base64Pdf = btoa(
-                String.fromCharCode.apply(null, resumeData)
-            );
+            // Decode base64 → binary
+            const byteCharacters = atob(base64String);
+            const byteNumbers = new Array(byteCharacters.length);
 
-            // Create a download link
-            const link = document.createElement('a');
-            link.href = `data:application/pdf;base64,${base64Pdf}`;
+            for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+
+            const byteArray = new Uint8Array(byteNumbers);
+
+            const blob = new Blob([byteArray], { type: "application/pdf" });
+
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
             link.download = `${candidateName}_Resume.pdf`;
-
-            // Append to body, click, and remove
-            document.body.appendChild(link);
             link.click();
-            document.body.removeChild(link);
 
+            URL.revokeObjectURL(url);
         } catch (err) {
-            // console.error('Error downloading resume:', err);
-            // alert('Failed to download resume');
-            setToastErrorMessage('Failed to download resume');
-                setToastErrorVisible(true);
-                setTimeout(() => setToastErrorVisible(false), 3500);
+            toast ({
+                variant: "destructive",
+                title: "Download Error",
+                description: "Failed to download resume.",
+            });
+            console.error("Error downloading resume:", err.message);
         }
     };
 
-    const filteredCandidates = useMemo(() => {
-        if (!searchTerm) return candidates;
 
-        const lowercasedSearchTerm = searchTerm.toLowerCase();
-        return candidates.filter(candidate =>
-            Object.values(candidate).some(value =>
-                value &&
-                value.toString().toLowerCase().includes(lowercasedSearchTerm)
-            )
+
+    const filteredCandidates = useMemo(() => {
+        if (!searchTerm.trim()) return candidates;
+
+        const q = searchTerm.toLowerCase();
+
+        return candidates.filter(c =>
+            c.name?.toLowerCase().includes(q) ||
+            c.email?.toLowerCase().includes(q) ||
+            c.technology?.toLowerCase().includes(q) ||
+            c.client?.toLowerCase().includes(q) ||
+            c.source?.toLowerCase().includes(q)
         );
     }, [candidates, searchTerm]);
 
@@ -145,6 +184,11 @@ const CandidatesTable = () => {
                         </div>
                     );
                 } catch (err) {
+                    toast ({
+                        variant: "destructive",
+                        title: "Error",
+                        description: "Failed to render resume.",
+                    });
                     console.error('Error rendering resume:', err);
                     return null;
                 }
@@ -175,35 +219,18 @@ const CandidatesTable = () => {
     // Show loader when data is loading
     if (loading) {
         return (
-            <div className="flex justify-center items-center h-screen">
-                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                {error}
-            </div>
+            <Loader/>
         );
     }
 
     return (
         <>
-        {
-            toastSuccessVisible ? <SuccessToast message={toastSuccessMessage}/> : null
-        }
-        {
-            toastErrorVisible ? <ErrorToast error={toastErrorMessage}/> : null
-        }
-        <div className="bg-gray-50 min-h-screen p-8">
+        {/* <div className="bg-gray-50 min-h-screen p-8">
             <div className="container mx-auto">
                 <h1 className="text-4xl font-extrabold text-gray-800 mb-8 text-center">
                     Candidate Roster
                 </h1>
-
-                {/* Search Input */}
+                {/* Search Input *
                 <div className="mb-6 flex justify-center">
                     <div className="relative w-full max-w-md">
                         <input
@@ -266,7 +293,259 @@ const CandidatesTable = () => {
                 </>
                 )}
             </div>
+        </div> */}
+        <div className="min-h-screen bg-background p-4 lg:p-8">
+            <div className="max-w-7xl mx-auto space-y-6">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold">Candidate Roster</h1>
+                    <p className="text-muted-foreground">View and manage registered candidates</p>
+                </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* { label: 'Active', value: '256', color: 'text-success' },
+                    { label: 'In Pipeline', value: '48', color: 'text-hr-amber' },
+                    { label: 'Hired', value: '20', color: 'text-hr-purple' }, */}
+                {[
+                    { label: 'Total Candidates', value: candidates.length, color: 'text-primary' },
+                ].map((stat, i) => (
+                    <Card key={i} className="border-0 shadow-card">
+                        <CardContent className="p-5">
+                            <p className="text-sm text-muted-foreground">{stat.label}</p>
+                            <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
+                        </CardContent>
+                    </Card>
+                ))}
+                </div>
+
+                {/* Search */}
+                <Card className="border-0 shadow-card">
+                    <CardContent className="p-4">
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search candidates..."
+                                    className="pl-10"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            {/* <div className="flex gap-2">
+                                <Button variant="outline" className="gap-2">
+                                <Filter className="w-4 h-4" />
+                                Filter
+                                </Button>
+                            </div> */}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Candidates Grid */}
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredCandidates.map((candidate) => (
+                    <Card key={candidate.id} className="border-0 shadow-card card-hover">
+                    <CardContent className="p-5">
+                        <div className="flex items-start gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-hr-purple to-hr-indigo flex items-center justify-center text-primary-foreground text-xl font-bold">
+                            {candidate.name.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold truncate">{candidate.name}</h3>
+                            <p className="text-sm text-muted-foreground">{candidate.technology}</p>
+                            {/* <div className="flex items-center gap-1 mt-1">
+                            <Star className="w-3.5 h-3.5 text-hr-amber fill-hr-amber" />
+                            <span className="text-sm font-medium">{candidate.rating}</span>
+                            </div> */}
+                        </div>
+
+                        {/* Dropdown Menu on dots */}
+                        <DropdownMenu
+                        open={openMenuId === candidate._id}   // or candidate.id
+                        onOpenChange={(open) =>
+                            setOpenMenuId(open ? candidate._id : null)
+                        }
+                        >
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon-sm">
+                                <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+
+                            <DropdownMenuContent
+                                align="end"
+                                className="w-40"
+                                onCloseAutoFocus={(e) => e.preventDefault()}
+                            >
+                                <DropdownMenuItem
+                                className="cursor-pointer gap-2"
+                                onClick={() => {
+                                    setOpenMenuId(null);              // close only this menu
+                                    setSelectedCandidate(candidate);  // set candidate
+                                    setOpenProfile(true);             // open dialog
+                                }}
+                                >
+                                <Eye className="w-4 h-4" />
+                                View Profile
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+
+                        </div>
+
+                        <div className="mt-4 space-y-2 text-sm">
+                            {/* <div className="flex items-center gap-2 text-muted-foreground">
+                                <Briefcase className="w-4 h-4" />
+                                <span>{candidate.experience}</span>
+                            </div> */}
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                                <Mail className="w-4 h-4" />
+                                <span className="truncate">{candidate.email}</span>
+                            </div>
+                            {/* <div className="flex items-center gap-2 text-muted-foreground">
+                                <Calendar className="w-4 h-4" />
+                                <span>{candidate.source}</span>
+                            </div> */}
+                            <div className="flex items-center gap-2">
+                                <Phone className="w-4 h-4 text-muted-foreground" />
+                                <span>{candidate.contact_no}</span>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-border flex gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 gap-1"
+                            onClick={() => {
+                                if (candidate.linkedIn != null) {
+                                    window.open(candidate.linkedIn, "_blank", "noopener,noreferrer");
+                                } else {
+                                    toast ({
+                                        variant: "destructive",
+                                        title: "Error",
+                                        description: "LinkedIn profile not available.",
+                                    });
+                                }
+                            }}
+                        >
+                            <Linkedin className="w-4 h-4" />
+                            LinkedIn
+                        </Button>
+
+                        <Button
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => downloadResume(candidate.resume, candidate.name)}
+                            disabled={!candidate.resume?.data}
+                        >
+                            <DownloadIcon className="w-4 h-4" />
+                            Resume
+                        </Button>
+
+                        </div>
+                    </CardContent>
+                    </Card>
+                ))}
+                </div>
+            </div>
+            {filteredCandidates.length <= 0 && 
+                <div className="flex items-center justify-center text-gray-500 text-lg">
+                    No candidates found.
+                </div>
+            }
         </div>
+
+        <Dialog open={openProfile} onOpenChange={setOpenProfile}>
+            <DialogContent className="max-w-lg rounded-2xl">
+                {selectedCandidate && (
+                <>
+                    <DialogHeader>
+                    <DialogTitle className="text-xl font-bold">
+                        Candidate Profile
+                    </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                    {/* Header */}
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-hr-purple to-hr-indigo flex items-center justify-center text-primary-foreground text-xl font-bold">
+                        {selectedCandidate.name.charAt(0)}
+                        </div>
+                        <div>
+                        <h3 className="font-semibold">{selectedCandidate.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                            {selectedCandidate.technology}
+                        </p>
+                        </div>
+                    </div>
+
+                    {/* Details */}
+                    <div className="space-y-3 text-sm">
+                        <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-muted-foreground" />
+                        <span>{selectedCandidate.email}</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-muted-foreground" />
+                        <span>{selectedCandidate.contact_no}</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                        <Building className="w-4 h-4 text-muted-foreground" />
+                        <span>{selectedCandidate.client}</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        <span>{selectedCandidate.source}</span>
+                        </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="pt-4 border-t flex gap-2">
+                        <Button
+                        variant="outline"
+                        className="flex-1 gap-1"
+                        onClick={() => {
+                            if (selectedCandidate.linkedIn != null) {
+                            window.open(selectedCandidate.linkedIn, "_blank");
+                            }
+                            else {
+                                toast ({
+                                    variant: "destructive",
+                                    title: "Error",
+                                    description: "LinkedIn profile not available.",
+                                });
+                            }}}>
+                        <Linkedin className="w-4 h-4" />
+                        LinkedIn
+                        </Button>
+
+                        <Button
+                        className="flex-1 gap-1"
+                        onClick={() =>
+                            downloadResume(
+                            selectedCandidate.resume,
+                            selectedCandidate.name
+                            )
+                        }
+                        disabled={!selectedCandidate.resume}
+                        >
+                        <Download className="w-4 h-4" />
+                        Resume
+                        </Button>
+                    </div>
+                    </div>
+                </>
+                )}
+            </DialogContent>
+        </Dialog>
         </>
     );
 };

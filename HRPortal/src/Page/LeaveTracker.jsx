@@ -2,15 +2,21 @@
 import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
-import { Calendar as CalendarIcon, Clock, Users, Plus, X } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Users, Plus, X, User2, User as UserIcon, Filter, User, Loader2} from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
 import { userContext } from "../Context/userContext";
 import Loader from "../Components/Loader/Loader";
-import SuccessToast from "../Components/Toaster/SuccessToaser";
-import ErrorToast from "../Components/Toaster/ErrorToaster";
 
-
+import { Briefcase, ChevronDown } from "lucide-react";
+import { Button } from "../Components/ui/button";
+import { Checkbox } from "../Components/ui/checkbox";
+import { Label } from "../Components/ui/label";
+import { Input } from "../Components/ui/input";
+import {Card, CardContent, CardHeader, CardTitle} from "../Components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../Components/ui/dialog";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../Components/ui/select";
+import { toast } from "../hooks/useToast";
 const leaveTypes = [
   "Vacation",
   "Sick Leave",
@@ -55,13 +61,157 @@ const LeaveTracker = () => {
   const [newLeave, setNewLeave] = useState(initialForm);
   const [activeFilterOnlyApplied, setActiveFilterOnlyApplied] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
-  // toasts
-  const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
-  const [toastErrorVisible, setToastErrorVisible] = useState(false);
-  const [toastSuccessMessage, setToastSuccessMessage] = useState("");
-  const [toastErrorMessage, setToastErrorMessage] = useState("");
+  // Which view is active: my | employee | user
+  const [leaveViewMode, setLeaveViewMode] = useState("my");
+
+  // My leaves (logged-in user)
+  const myLeaves = useMemo(() => {
+    if (!authUser) return [];
+    return currentPerson && leaveViewMode === "my"
+      ? currentPerson.leaveHistory || []
+      : [];
+  }, [authUser, currentPerson, leaveViewMode]);
+
+
+  const leavesForView = useMemo(() => {
+  if (leaveViewMode === "my") {
+    return currentPerson?.leaveHistory || [];
+  }
+
+  if ((leaveViewMode === "employee" || leaveViewMode === "user") && currentPerson) {
+    return currentPerson.leaveHistory || [];
+  }
+
+  return [];
+}, [leaveViewMode, currentPerson]);
+
+// Calculates number of leave days within a month (inclusive)
+const getDaysInMonthRange = (startDate, endDate, monthStart, monthEnd) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  // normalize time (CRITICAL)
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+
+  const effectiveStart = new Date(
+    Math.max(start.getTime(), monthStart.getTime())
+  );
+  const effectiveEnd = new Date(
+    Math.min(end.getTime(), monthEnd.getTime())
+  );
+
+  if (effectiveStart > effectiveEnd) return 0;
+
+  return (
+    Math.floor(
+      (effectiveEnd - effectiveStart) / (1000 * 60 * 60 * 24)
+    ) + 1
+  );
+};
+
+
+// Normalize leave type by removing " Leave" suffix
+const normalizeLeaveType = (type) => {
+  if (!type) return type;
+  return type.replace(" Leave", "").trim();
+};
+
+
+// Calculate number of leave days between two dates (inclusive)
+const calculateLeaveDays = (from, to) => {
+  if (!from || !to) return 0;
+
+  const start = new Date(from);
+  const end = new Date(to);
+
+  // Remove time component (VERY IMPORTANT)
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+
+  const diffInMs = end - start;
+
+  return diffInMs >= 0
+    ? Math.floor(diffInMs / (1000 * 60 * 60 * 24)) + 1
+    : 0;
+};
+  
+
+const displayedLeaves = useMemo(() => {
+  if (!selectedMonth) return [];
+
+  const [year, month] = selectedMonth.split("-").map(Number);
+  const monthStart = new Date(year, month - 1, 1);
+  const monthEnd = new Date(year, month, 0);
+
+  monthStart.setHours(0, 0, 0, 0);
+  monthEnd.setHours(0, 0, 0, 0);
+
+  return leavesForView
+    .map((leave) => {
+      const days = getDaysInMonthRange(
+        leave.startDate,
+        leave.endDate,
+        monthStart,
+        monthEnd
+      );
+
+      if (days === 0) return null;
+
+      return {
+        ...leave,
+        days, 
+      };
+    })
+    .filter(Boolean);
+}, [leavesForView, selectedMonth]);
+
+// Leave statistics calculation
+const leaveStats = useMemo(() => {
+  const leaves = leavesForView; 
+  const calc = (types) =>
+    leaves
+      .filter((l) => types.includes(l.type))
+      .reduce(
+        (sum, l) => sum + calculateLeaveDays(l.startDate, l.endDate),
+        0
+      );
+    
+  return [
+    {
+      label: "Annual Leave",
+      total: 20,
+      used: calc(["Annual Leave", "Vacation"]),
+      color: "bg-primary",
+    },
+    {
+      label: "Sick Leave",
+      total: 12,
+      used: calc(["Sick Leave"]),
+      color: "bg-hr-amber",
+    },
+    {
+      label: "Personal Leave",
+      total: 15,
+      used: calc(["Personal"]),
+      color: "bg-hr-purple",
+    },
+    {
+      label: "Work from Home",
+      total: 24,
+      used: calc(["Work from Home"]),
+      color: "bg-info",
+    },
+  ];
+}, [leavesForView]); 
+
+  const overallUsedLeaves = useMemo(() => {
+    return leavesForView.reduce(
+      (sum, l) => sum + calculateLeaveDays(l.startDate, l.endDate),
+      0
+    );
+  }, [leavesForView]);
 
   // --- Fetch minimal data on mount / user change ---
   useEffect(() => {
@@ -91,6 +241,24 @@ const LeaveTracker = () => {
             leaveHistory: u.leaveHistory || [],
           }));
           setUsers(formattedUsers);
+
+          // IF ADMIN, set self as default selection
+          const selfUser = formattedUsers.find(
+            (u) => String(u.empId) === String(user._id)
+          );
+
+          if (selfUser) {
+            setLeaveViewMode("my");
+            setSelectedUserId(String(selfUser.empId));
+            setSelectedEmployeeId("");
+            setCurrentPerson(selfUser);
+
+            localStorage.setItem(
+              "leaveTracker:lastSelection",
+              JSON.stringify({ type: "user", id: selfUser.empId })
+            );
+          }
+
 
           const empList = empResp?.data?.employees || [];
           const formattedEmployees = empList.map((e) => ({
@@ -211,8 +379,6 @@ useEffect(() => {
   return () => controller.abort();
 }, [selectedEmployeeId, selectedUserId]);
 
-
-
   // --- Helper to compute available months and per-month lookup maps ---
   const { availableLeaveMonths, leaveLookupByMonth } = useMemo(() => {
     if (!currentPerson || !Array.isArray(currentPerson.leaveHistory)) {
@@ -249,6 +415,16 @@ useEffect(() => {
     };
   }, [currentPerson]);
 
+  // --- Auto-select first available month when currentPerson or available months change ---
+  useEffect(() => {
+  if (
+    availableLeaveMonths.length > 0 &&
+    !selectedMonth
+  ) {
+    setSelectedMonth(availableLeaveMonths[0]);
+  }
+}, [availableLeaveMonths, selectedMonth]);
+  
   const leaveLookupForSelectedMonth = useMemo(() => {
     if (!selectedMonth) return new Map();
     return leaveLookupByMonth.get(selectedMonth) || new Map();
@@ -307,23 +483,30 @@ useEffect(() => {
  const handleSaveLeave = async () => {
   // Validation
   if (!newLeave.type || !newLeave.startDate || !newLeave.endDate) {
-    setToastErrorMessage("Please fill all details");
-    setToastErrorVisible(true);
-    setTimeout(() => setToastErrorVisible(false), 3000);
+    toast({ 
+      variant: "destructive",
+      title: "Validation Error",
+      description: "Please fill in all required fields.",
+    });
     return;
   }
 
   if (new Date(newLeave.startDate) > new Date(newLeave.endDate)) {
-    setToastErrorMessage("End date can't be before start date");
-    setToastErrorVisible(true);
-    setTimeout(() => setToastErrorVisible(false), 3000);
+    toast({ 
+      variant: "destructive",
+      title: "Validation Error",
+      description: "End date can't be before start date.",
+    });
     return;
   }
 
   // SAFETY CHECK
   if (!authUser._id) {
-    setToastErrorMessage("Session expired. Please login again.");
-    setToastErrorVisible(true);
+    toast({ 
+      variant: "destructive",
+      title: "Session Expired",
+      description: "Session expired. Please login again.",
+    });
     return;
   }
 
@@ -342,9 +525,11 @@ useEffect(() => {
     try {
       // const resp = await axios.post(apiEndpoint, newLeave);
       if (resp.status === 201 || resp.status === 200) {
-        setToastSuccessMessage("Leave added successfully!");
-        setToastSuccessVisible(true);
-        setTimeout(() => setToastSuccessVisible(false), 3500);
+        toast({ 
+          variant: "success",
+          title: "Leave Added Successfully",
+          description: "Your leave has been added successfully.",
+        });
 
         // Optimistically merge the new leave into current view so previous leaves stay visible
         setCurrentPerson((prev) => {
@@ -360,20 +545,26 @@ useEffect(() => {
       }
     } catch (err) {
       console.error("Error adding leave", err);
-      setToastErrorMessage("Error adding leave. Please try again.");
-      setToastErrorVisible(true);
-      setTimeout(() => setToastErrorVisible(false), 3500);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.response?.data?.message || "Error adding leave. Please try again.",
+      });
     } finally {
       setShowAddLeaveModal(false);
     }
   } catch (err) {
     console.error("Error adding leave:", err);
-    setToastErrorMessage("Error adding leave. Please try again.");
-    setToastErrorVisible(true);
-    setTimeout(() => setToastErrorVisible(false), 3000);
+      toast({ 
+      variant: "destructive",
+      title: "Error",
+      description: err.response?.data?.message || "Error adding leave. Please try again.",
+      });
+      setLoading(false);
   } finally {
     setNewLeave(initialForm);
     setOneDayLeave(false);
+    setLoading(false);
   }
 };
 
@@ -390,242 +581,458 @@ useEffect(() => {
   }, [activeFilterOnlyApplied, employees]);
 
   // Loading state
-  if (loading) return <Loader />;
+  {loading && <Loader />}
+
+  const getStatusBadge = (status = "pending") => {
+  const styles = {
+    approved: "bg-success/10 text-success border-success/20",
+    pending: "bg-warning/10 text-warning border-warning/20",
+    rejected: "bg-destructive/10 text-destructive border-destructive/20",
+  };
+
+  return (
+    <span
+      className={`px-2.5 py-1 rounded-full text-xs font-medium border capitalize ${
+        styles[status] || styles.pending
+      }`}
+    >
+      {status}
+    </span>
+  );
+}
+
+// Date formatting helper
+  const formatDate = (date) => {
+  if (!date) return "-";
+  return new Date(date).toLocaleDateString("en-GB"); 
+  // change locale if needed
+};
 
   return (
     <>
-      {toastSuccessVisible ? <SuccessToast message={toastSuccessMessage} /> : null}
-      {toastErrorVisible ? <ErrorToast error={toastErrorMessage} /> : null}
-
-      <div className="flex min-h-screen bg-gray-50">
-        {/* Sidebar */}
-        <div className="w-64 bg-white shadow-lg p-6 border-r">
-          <div className="flex items-center mb-8">
-            <Users className="mr-3 text-blue-600" />
-            <h2 className="text-xl font-bold text-gray-800">Leave Tracker</h2>
-          </div>
-
-          {/* Employee Selector (admins only) */}
-          <div className="mb-6">
-            {authUser && role !== "user" && role !== 'employee' && role !== 'accountant' && (
-              <>
-                <div className="flex justify-start space-x-1 mb-3">
-                  <input
-                    type="checkbox"
-                    id="activeLeave"
-                    className="hover:cursor-pointer"
-                    onChange={() => setActiveFilterOnlyApplied((v) => !v)}
-                    checked={activeFilterOnlyApplied}
-                  />
-                  <label htmlFor="activeLeave" className="text-sm hover:cursor-pointer">
-                    Only applied leaves
-                  </label>
+      <div className="min-h-screen bg-background">
+        <div className="flex flex-col lg:flex-row">
+          {/* Admin Sidebar - Only visible for admin/superAdmin */}
+          {authUser && (
+            <div className="w-full lg:w-72 xl:w-80 bg-card border-b lg:border-b-0 lg:border-r border-border p-4 lg:p-6 lg:min-h-screen shadow-md">
+              { authUser.role === "admin" && 
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 rounded-xl bg-primary/10">
+                    <Users className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold">Leave Management</h2>
+                    <p className="text-xs text-muted-foreground">Track employee leaves</p>
+                  </div>
                 </div>
+              }
+              {authUser.role === "admin" && (
+                <Button
+                  variant={leaveViewMode === "my" ? "default" : "outline"}
+                  className="w-full mb-4 gap-2"
+                  onClick={() => {
+                    setLeaveViewMode("my");
+                    setSelectedEmployeeId("");
+                    setSelectedUserId(user._id);
+                    setSelectedMonth(null);
+                  }}
+                >
+                  <UserIcon className="w-4 h-4" />
+                  My Leaves
+                </Button>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Employee</label>
-                  <select
-                    value={selectedEmployeeId}
-                    onChange={(e) => handleEmployeeSelect(e.target.value)}
-                    className="w-full rounded-md border-gray-300 shadow-sm"
-                  >
-                    <option value="">Select Employee</option>
-                    {employees.length === 0 && <option value="">No employees available</option>}
-                    {employees.map((emp) => (
-                      <option key={emp.empId} value={emp.empId}>
-                        {emp.name} - {emp.department}
-                      </option>
+              )}
+
+              {/* Filter checkbox */}
+              { authUser.role === 'admin' && (
+                <>
+                  <div className="flex items-center space-x-2 mb-4 p-3 rounded-lg bg-muted/50">
+                    <Checkbox 
+                      id="activeLeave" 
+                      checked={activeFilterOnlyApplied}
+                      onCheckedChange={() => setActiveFilterOnlyApplied(!activeFilterOnlyApplied)}
+                    />
+                    <Label htmlFor="activeLeave" className="text-sm cursor-pointer">
+                      Show only with leaves
+                    </Label>
+                  </div>
+
+                  {/* Employee Selector */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2 text-sm font-medium">
+                        <Briefcase className="w-4 h-4" />
+                        Select Employee
+                      </Label>
+                      <div className="relative">
+                        <Select
+                          value={selectedEmployeeId}
+                          onValueChange={(val) => {
+                            handleEmployeeSelect(val);
+                            setLeaveViewMode("employee");
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose employee" />
+                          </SelectTrigger>
+
+                          <SelectContent>
+                            <SelectGroup>
+                              {employees.map((emp) => (
+                                <SelectItem key={emp.empId} value={emp.empId}>
+                                  <div className="flex items-center gap-2">
+                                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                      <User className="w-4 h-4 text-primary" />
+                                      </div>
+                                      <div>
+                                      <p className="font-medium">{emp.name}</p>
+                                      <p className="text-xs text-muted-foreground">{emp.department}</p>
+                                      </div>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+
+                        <ChevronDown className="absolute right-3 top-4 h-4 w-4 opacity-50 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* User Selector */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2 text-sm font-medium">
+                        <UserIcon className="w-4 h-4" />
+                        Select User
+                      </Label>
+                      <div className="relative">
+                        <Select
+                          value={selectedUserId} // currently selected user ID
+                          onValueChange={(val) => {
+                            handleUserSelect(val);
+                            setLeaveViewMode("user");
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose user" />
+                          </SelectTrigger>
+
+                          <SelectContent>
+                            <SelectGroup>
+                              {users.map((u) => (
+                                <SelectItem key={u.empId} value={u.empId}>
+                                  <div className="flex items-center gap-2">
+                                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                      <User className="w-4 h-4 text-primary" />
+                                      </div>
+                                      <div>
+                                      <p className="font-medium">{u.name}</p>
+                                      <p className="text-xs text-muted-foreground">{u.role}</p>
+                                      </div>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                        <ChevronDown className="absolute right-3 top-4 h-4 w-4 opacity-50 pointer-events-none" />
+                      </div>
+                    </div>
+                  </div>
+                  </>
+                )}
+              {/* Header for Employees */}
+              {authUser.role !== "admin" && 
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 rounded-xl bg-primary/10">
+                    <Users className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold">Employee Leaves</h2>
+                    <p className="text-xs text-muted-foreground">Track your leaves</p>
+                  </div>
+                </div>
+              }
+              {/* Leave Months for selected person */}
+              {currentPerson && availableLeaveMonths.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4" />
+                    Leave Months
+                  </h3>
+                  <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
+                    {availableLeaveMonths.map((month) => (
+                      <button
+                        key={month}
+                        onClick={() => setSelectedMonth(month)}
+                        className={`w-full text-left px-3 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm ${
+                          selectedMonth === month 
+                            ? "bg-primary text-primary-foreground" 
+                            : "hover:bg-muted"
+                        }`}
+                      >
+                        <Clock className="w-4 h-4" />
+                        {new Date(`${month}-01`).toLocaleString("default", { month: "long", year: "numeric" })}
+                      </button>
                     ))}
-                  </select>
+                  </div>
                 </div>
+              )}
 
-              {/* USER SELECTOR */}
-              <div className="mt-4 mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select User</label>
-                <select
-                  value={selectedUserId}
-                  onChange={(e) => handleUserSelect(e.target.value)}
-                  className="w-full rounded-md border-gray-300 shadow-sm"
-                >
-                  <option value="">Select User</option>
-                  {users.length === 0 && <option value="">No users available</option>}
-                  {users.map((u) => (
-                    <option key={u.empId} value={String(u.empId)}>
-                      {u.name} — {u.department}
-                    </option>
-                  ))}
-                </select>
+              {/* Selected Person Info */}
+              {currentPerson && (
+                <Card className="mt-6 border-dashed">
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-sm mb-2">{currentPerson.name}</h4>
+                    <p className="text-xs text-muted-foreground">{currentPerson.email}</p>
+                    <p className="text-xs text-muted-foreground capitalize mt-1">{currentPerson.department}</p>
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <span className="text-xs font-medium">
+                        Total Leaves: {overallUsedLeaves || 0}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {/* Main Content */}
+          <div className="flex-1 p-4 lg:p-8">
+            <div className="max-w-6xl mx-auto space-y-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl font-bold">Leave Tracker</h1>
+                  <p className="text-muted-foreground">
+                    {authUser.role === 'admin' ? 'Manage and track all leave requests' : 'Manage your leave requests and balance'}
+                  </p>
+                </div>
+                <Button onClick={handleOpenAddLeave} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Request Leave
+                </Button>
               </div>
-              </>
-            )}
-          </div>
 
+              {/* Leave Balance - Always visible */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {leaveStats.map((leave, i) => (
+                  <Card key={i} className="border-0 shadow-card overflow-hidden">
+                    <CardContent className="p-5">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">{leave.label}</p>
+                          <p className="text-2xl font-bold">{Math.max(0, leave.total - leave.used)}</p>
+                          <p className="text-xs text-muted-foreground">days remaining</p>
+                        </div>
+                        <div className="p-2 rounded-lg bg-secondary">
+                          <CalendarIcon className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Used</span>
+                          <span>{leave.used} / {leave.total}</span>
+                        </div>
+                        <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full ${leave.color} rounded-full transition-all duration-500`}
+                            style={{
+                              width: leave.total
+                                ? `${Math.min(100, Math.round((leave.used / leave.total) * 100))}%`
+                                : "0%",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
-          {/* Add Leave Button */}
-          <button
-            onClick={handleOpenAddLeave}
-            className="w-full flex items-center justify-center bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition"
-          >
-            <Plus className="mr-2" /> Add Leave
-          </button>
+              {/* My Leave Requests */}
+              <Card className="border-0 shadow-card">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg">
+                    {leaveViewMode === "my"
+                      ? "My Leave Requests"
+                      : `${currentPerson?.name}'s Leave Requests`}
+                  </CardTitle>
 
-          {/* Leave Months */}
-          <div className="mt-6">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Leave Months</h3>
-            <div className="space-y-2">
-              {availableLeaveMonths.length === 0 && <div className="text-sm text-gray-500">No months available</div>}
-              {availableLeaveMonths.map((month) => (
-                <button
-                  key={month}
-                  onClick={() => setSelectedMonth(month)}
-                  className={`w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 transition flex items-center ${
-                    selectedMonth === month ? "bg-gray-100" : ""
-                  }`}
-                >
-                  <Clock className="mr-2 text-gray-500" size={16} />
-                  {new Date(`${month}-01`).toLocaleString("default", { month: "long", year: "numeric" })}
-                </button>
-              ))}
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Filter className="w-4 h-4" />
+                    Filter
+                  </Button>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/30">
+                          <th className="text-left p-4 text-sm font-medium text-muted-foreground">Type</th>
+                          <th className="text-left p-4 text-sm font-medium text-muted-foreground">From</th>
+                          <th className="text-left p-4 text-sm font-medium text-muted-foreground">To</th>
+                          <th className="text-left p-4 text-sm font-medium text-muted-foreground">Days</th>
+                          <th className="text-left p-4 text-sm font-medium text-muted-foreground">Status</th>
+                          <th className="text-left p-4 text-sm font-medium text-muted-foreground hidden lg:table-cell">Reason</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayedLeaves.map((request, idx) => (
+                          <tr key={idx} className="border-b border-border hover:bg-muted/30 transition-colors">
+                            <td className="p-4">
+                              <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-lg ${LeaveTypeColors[request.type] || 'bg-secondary'}`}>
+                                  <Clock className="w-4 h-4" />
+                                </div>
+                                <span className="font-medium">{request.type}</span>
+                              </div>
+                            </td>
+                            <td className="p-4 text-muted-foreground">{formatDate(request.startDate)}</td>
+                            <td className="p-4 text-muted-foreground">{formatDate(request.endDate)}</td>
+                            <td className="p-4">
+                              <span className="font-semibold">{request.days}</span>
+                            </td>
+                            <td className="p-4">{getStatusBadge(request.status || 'pending')}</td>
+                            <td className="p-4 text-muted-foreground hidden lg:table-cell">{request.reason || '-'}</td>
+                          </tr>
+                        ))}
+                        {displayedLeaves.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                              No leave requests found
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
 
-        {/* Main Content Area */}
-        <div className="flex-1 p-8">
-          {selectedMonth ? (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">
-                  {new Date(`${selectedMonth}-01`).toLocaleString("default", { month: "long", year: "numeric" })}
-                </h2>
-                <button onClick={() => setSelectedMonth(null)} className="text-gray-600 hover:text-gray-900 transition">
-                  <X />
-                </button>
+        {/* Add Leave Dialog */}
+        <Dialog open={showAddLeaveModal} onOpenChange={(open) => {
+          if (!loading) {
+            setShowAddLeaveModal(open);
+          }
+        }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                Request Leave
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* Leave Type */}
+              <div className="space-y-2">
+                <Label htmlFor="leaveType">Leave Type *</Label>
+                <div className="relative">
+                  <Select
+                    value={newLeave.type} 
+                    onValueChange={(val) =>
+                      setNewLeave({ ...newLeave, type: val })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select leave type" />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      <SelectGroup>
+                        {leaveTypes.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {t}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <ChevronDown className="absolute right-3 top-4 h-4 w-4 opacity-50" />
+                </div>
               </div>
 
-              {/* Calendar */}
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <Calendar
-                  value={selectedMonth ? new Date(`${selectedMonth}-01`) : null}
-                  tileClassName={({ date }) => (isLeaveDate(date) ? "bg-blue-100 rounded-full text-blue-800 font-bold" : "")}
-                  tileContent={({ date }) => {
-                    const leaveType = getLeaveTypeForDate(date);
-                    return leaveType ? (
-                      <div className="text-[10px] text-center mt-1">
-                        <span className={`px-1 rounded ${LeaveTypeColors[leaveType]} text-[8px]`}>{leaveType}</span>
-                      </div>
-                    ) : null;
-                  }}
+              {/* One Day Leave Toggle */}
+              <div className="flex items-center space-x-2 p-3 rounded-lg bg-muted/50">
+                <Checkbox 
+                  id="oneDayLeave" 
+                  checked={oneDayLeave}
+                  onCheckedChange={handleToggleOneDay}
+                />
+                <Label htmlFor="oneDayLeave" className="text-sm cursor-pointer">
+                  One day leave
+                </Label>
+              </div>
+
+              {/* Start Date / Leave Date */}
+              <div className="space-y-2">
+                <Label htmlFor="startDate">{oneDayLeave ? "Leave Date *" : "Start Date *"}</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={newLeave.startDate}
+                  onChange={(e) =>
+                    setNewLeave(prev =>
+                      oneDayLeave 
+                        ? { ...prev, startDate: e.target.value, endDate: e.target.value }
+                        : { ...prev, startDate: e.target.value }
+                    )
+                  }
+                  className="w-full"
                 />
               </div>
 
-              {/* Leave Details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                {currentPerson?.leaveHistory
-                  ?.filter((leave) => {
-                    const start = new Date(leave.startDate);
-                    const [year, month] = selectedMonth.split("-");
-                    // Filter leaves that span or start in the selected month
-                    return (
-                        (start.getFullYear() === parseInt(year) && start.getMonth() + 1 === parseInt(month)) ||
-                        (new Date(leave.endDate).getFullYear() === parseInt(year) && new Date(leave.endDate).getMonth() + 1 === parseInt(month))
-                    );
-                  })
-                  .map((leave, idx) => (
-                    <div key={idx} className={`p-4 rounded-lg shadow-md ${LeaveTypeColors[leave.type] || ""}`}>
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">{leave.type}</span>
-                        <CalendarIcon size={16} />
-                      </div>
-                      <div className="mt-2 text-sm">
-                        {leave.startDate === leave.endDate
-                          ? new Date(leave.startDate).toLocaleDateString()
-                          : new Date(leave.startDate).toLocaleDateString() + " - " + new Date(leave.endDate).toLocaleDateString()}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center text-gray-500 py-16">Select a month to view leave details</div>
-          )}
-        </div>
-
-        {/* Add Leave Modal */}
-        {showAddLeaveModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Add Leave</h3>
-                <button onClick={() => setShowAddLeaveModal(false)}>
-                  <X className="text-gray-600" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Leave Type</label>
-                  <select
-                    value={newLeave.type}
-                    onChange={(e) => setNewLeave((p) => ({ ...p, type: e.target.value }))}
-                    className="w-full rounded-md border-gray-300"
-                  >
-                    <option value="" disabled>
-                      Select Leave Type
-                    </option>
-                    {leaveTypes.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <div className="flex justify-start space-x-1 mb-3">
-                    <input type="checkbox" id="oneDayLeave" checked={oneDayLeave} onChange={handleToggleOneDay} />
-                    <label htmlFor="oneDayLeave" className="text-sm">
-                      One day leave
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{oneDayLeave ? "Leave Date" : "Start Date"}</label>
-                  <input
-                    id="startDate"
+              {/* End Date - Only show if not one day leave */}
+              {!oneDayLeave && (
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">End Date *</Label>
+                  <Input
+                    id="endDate"
                     type="date"
-                    value={newLeave.startDate}
-                    onChange={(e) =>
-                      setNewLeave((p) =>
-                        oneDayLeave ? { ...p, startDate: e.target.value, endDate: e.target.value } : { ...p, startDate: e.target.value }
-                      )
-                    }
-                    className="w-full rounded-md border-gray-300"
+                    value={newLeave.endDate}
+                    onChange={(e) => setNewLeave(prev => ({ ...prev, endDate: e.target.value }))}
+                    className="w-full"
+                    min={newLeave.startDate}
                   />
                 </div>
+              )}
 
-                {!oneDayLeave && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                    <input id="endDate" type="date" value={newLeave.endDate} onChange={(e) => setNewLeave((p) => ({ ...p, endDate: e.target.value }))} className="w-full rounded-md border-gray-300" />
-                  </div>
-                )}
-
-                <div className="flex justify-end space-x-2">
-                  <button onClick={() => setShowAddLeaveModal(false)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
-                    Cancel
-                  </button>
-                  <button onClick={handleSaveLeave} className={`px-4 py-2 rounded ${
-                      saving ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
-                    } text-white`}>
-                    {saving ? "Saving..." : "Save"}
-                  </button>
-                </div>
-              </div>
+              {/* Reason */}
+              {/* <div className="space-y-2">
+                <Label htmlFor="reason">Reason (Optional)</Label>
+                <Input
+                  id="reason"
+                  type="text"
+                  value={newLeave.reason}
+                  onChange={(e) => setNewLeave(prev => ({ ...prev, reason: e.target.value }))}
+                  placeholder="Brief description..."
+                  className="w-full"
+                />
+              </div> */}
             </div>
-          </div>
-        )}
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowAddLeaveModal(false)}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSaveLeave}
+                disabled={loading}
+              > {loading ?
+                <Loader size="sm" /> + "Requesting..." : "Request Leave"
+                }
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   );

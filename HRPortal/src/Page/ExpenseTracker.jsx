@@ -1,19 +1,40 @@
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext, useRef } from "react";
 import axios from "axios";
 import API_BASE_URL from "../config";
 import { userContext } from "../Context/userContext";
+import { Receipt, FileText, TrendingUp, Clock, CheckCircle2, Search, Filter, Calendar, User, Building2, ExternalLink, Wallet, Download, ChevronDown } from "lucide-react";
+import {Card, CardContent, CardHeader, CardTitle} from '../Components/ui/card';
+import { Input } from "../Components/ui/input";
+import { Button } from "../Components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../Components/ui/select";
+import { Badge } from "../Components/ui/badge";
+import { Table, TableBody, TableCell, TableHeader, TableFooter, TableRow, TableHead } from "../Components/ui/table";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import ExpensePreview from '../templates/ExpensePreview'
 
 const ExpenseTracker = () => {
   const { user } = useContext(userContext);
   const [expenses, setExpenses] = useState([]);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const payslipRef = useRef(null);
+  const [selectedExpense, setSelectedExpense] = useState(null);
+
+
+  const role = user?.role;
+
+  const isEmployee = role === "user" || role === "employee";
+  const isFinance = role === "accountant" || role === "superAdmin";
+  const isAdmin = role === "superAdmin";
+
 
   const [filters, setFilters] = useState({
     status: "",
     reimbursementMonth: "",
   });
-
-  const [loading, setLoading] = useState(false);
   const fetchExpenses = async () => {
     try {
       setLoading(true);
@@ -39,19 +60,19 @@ const ExpenseTracker = () => {
   };
 
   useEffect(() => {
-  }, []);
-
-  useEffect(() => {
     fetchExpenses();
   }, [filters]);
 
-  const handleFilterChange = (e) => {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
+  // const handleFilterChange = (e) => {
+  //   setFilters({ ...filters, [e.target.name]: e.target.value });
+  // };
+  const handleFilterChange = (name, value) => {
+    setFilters((prev) => ({ ...prev, [name]: value }));
   };
-
+  
   const handleStatusChange = async (expenseId, newStatus) => {
     // Only send update when moving away from PENDING to APPROVED/REJECTED
-    if (newStatus === "PENDING") return;
+     if (!isFinance || newStatus === "PENDING") return;
 
     // Only superAdmin and accountant can approve/reject
     if (!user || !["superAdmin", "accountant"].includes(user.role)) {
@@ -80,199 +101,450 @@ const ExpenseTracker = () => {
     }
   };
 
+  //downlaod func for slip
+  const downloadExpensePDF = async (expense) => {
+    setSelectedExpense(expense);
+
+    // wait for preview to render
+    setTimeout(async () => {
+      if (!payslipRef.current) return;
+
+      const canvas = await html2canvas(payslipRef.current, {
+        scale: 2,
+        useCORS: true,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Expense_${expense.employeeId.name}.pdf`);
+    }, 300);
+  };
+
+
+  const filteredExpenses = expenses.filter((exp) => {
+    const matchesStatus = !filters.status || exp.status === filters.status;
+    const matchesMonth =
+      !filters.reimbursementMonth ||
+      exp.reimbursementMonth === filters.reimbursementMonth;
+    const matchesSearch =
+      !searchTerm ||
+      exp.employeeId.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      exp.expenseType.toLowerCase().includes(searchTerm.toLowerCase());
+
+    return matchesStatus && matchesMonth && matchesSearch;
+  });
+  const statsExpenses = isEmployee
+  ? filteredExpenses.filter(
+      (exp) => exp.employeeId?.email === user?.userEmail
+    )
+  : filteredExpenses;
+
+  const totalRequests = statsExpenses.length;
+
+  const totalAmount = statsExpenses.reduce(
+    (sum, exp) => sum + (Number(exp.amount) || 0),
+    0
+  );
+
+  const pendingCount = statsExpenses.filter(
+    (e) => e.status === "PENDING"
+  ).length;
+
+const approvedAmount = statsExpenses
+  .filter((e) => e.status === "APPROVED" || e.status === "PAID")
+  .reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+
+
+  const getStatusConfig = (status) => {
+    switch (status) {
+      case "PENDING":
+        return { icon: Clock, className: "bg-warning/10 text-warning", label: "Pending" };
+      case "APPROVED":
+        return { icon: CheckCircle2, className: "bg-info/10 text-info", label: "Approved" };
+      case "PAID":
+        return { icon: Wallet, className: "bg-success/10 text-success", label: "Paid" };
+      case "REJECTED":
+        return { icon: XCircle, className: "bg-destructive/10 text-destructive", label: "Rejected" };
+      default:
+        return { icon: Clock, className: "bg-muted", label: status };
+    }
+  };
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Expense Tracker</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Monitor employee reimbursements and track their status.
+    <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/10">
+                <Receipt className="h-6 w-6 text-primary" />
+              </div>
+              Expense Tracker
+            </h1>
+            <p className="text-muted-foreground">
+              Monitor employee reimbursements and track their status
             </p>
           </div>
         </div>
 
+        {/* Error Alert */}
         {error && (
-          <div className="mb-4 rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-center gap-2">
+            <XCircle className="h-4 w-4" />
             {error}
           </div>
         )}
 
-        <div className="mb-4 flex flex-wrap gap-4 text-sm text-gray-600">
-          <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
-            <div className="text-xs uppercase tracking-wide text-gray-400">Total Requests</div>
-            <div className="mt-1 text-lg font-semibold text-gray-900">{expenses.length}</div>
-          </div>
-          <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
-            <div className="text-xs uppercase tracking-wide text-gray-400">Total Amount</div>
-            <div className="mt-1 text-lg font-semibold text-gray-900">
-              ₹
-              {expenses
-                .reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0)
-                .toLocaleString("en-IN")}
-            </div>
-          </div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            {
+              label: "Total Requests",
+              value: totalRequests,
+              icon: FileText,
+              color: "text-primary",
+              bg: "bg-primary/10",
+            },
+            {
+              label: "Total Amount",
+              value: `₹${totalAmount.toLocaleString("en-IN")}`,
+              icon: TrendingUp,
+              color: "text-success",
+              bg: "bg-success/10",
+            },
+            {
+              label: "Pending",
+              value: pendingCount,
+              icon: Clock,
+              color: "text-warning",
+              bg: "bg-warning/10",
+            },
+            {
+              label: "Approved/Paid",
+              value: `₹${approvedAmount.toLocaleString("en-IN")}`,
+              icon: CheckCircle2,
+              color: "text-info",
+              bg: "bg-info/10",
+            },
+          ].map((stat, i) => (
+            <Card key={i} className="border-border/50 shadow-card card-hover">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      {stat.label}
+                    </p>
+                    <p className="text-xl md:text-2xl font-bold text-foreground">
+                      {stat.value}
+                    </p>
+                  </div>
+                  <div className={`p-3 rounded-xl ${stat.bg}`}>
+                    <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        <div className="mb-6 grid grid-cols-1 gap-4 rounded-lg bg-white p-4 shadow-sm md:grid-cols-3">
-        {/* Status */}
-        <select
-          name="status"
-          value={filters.status}
-          onChange={handleFilterChange}
-          className="w-full rounded border border-gray-300 bg-white p-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-        >
-          <option value="">All Status</option>
-          <option value="PENDING">Pending</option>
-          <option value="APPROVED">Approved</option>
-          <option value="PAID">Paid</option>
-          <option value="REJECTED">Rejected</option>
-        </select>
+        {/* Filters */}
+        <Card className="border-border/50 shadow-card">
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              {isFinance && (
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by employee or expense type..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 bg-secondary/50 border-border/50"
+                  />
+                </div>
+              )}
+              <div className="relative">
+                <Select
+                  value={filters.status}
+                  onValueChange={(value) => handleFilterChange("status", value === "all" ? "" : value)}
+                >
+                  <SelectTrigger className="w-full md:w-[180px] bg-secondary/50 border-border/50">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="PENDING">Pending</SelectItem>
+                    <SelectItem value="APPROVED">Approved</SelectItem>
+                    <SelectItem value="PAID">Paid</SelectItem>
+                    <SelectItem value="REJECTED">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+                <ChevronDown className="absolute right-3 top-3 h-4 w-4 opacity-50 pointer-events-none"/>
+              </div>
+              
+              <div className="relative">
+                {/* <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" /> */}
+                {/* <Input
+                  type="month"
+                  value={filters.reimbursementMonth}
+                  onChange={(e) => handleFilterChange("reimbursementMonth", e.target.value)}
+                  className="pl-10 w-full md:w-[180px] bg-secondary/50 border-border/50"
+                /> */}
+                <input
+                  type="month"
+                  value={filters.reimbursementMonth}
+                  className="border rounded-lg px-4 py-1.5 bg-slate-50"
+                  onChange={(e) => handleFilterChange("reimbursementMonth", e.target.value)}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
+        {/* Expenses Table */}
+        <Card className="border-border/50 shadow-card overflow-hidden">
+          <CardHeader className="border-b border-border/50 bg-secondary/30">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-primary" />
+              Expense Records
+              <Badge variant="secondary" className="ml-2">
+                {filteredExpenses.length} records
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    {!isEmployee && <TableHead className="font-semibold">Employee</TableHead>}
+                    <TableHead className="font-semibold">Expense Type</TableHead>
+                    <TableHead className="font-semibold">Amount</TableHead>
+                    <TableHead className="font-semibold">Date</TableHead>
+                    <TableHead className="font-semibold">Month</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold">Receipts</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-12">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                          <span className="text-muted-foreground">Loading expenses...</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredExpenses.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-12">
+                        <div className="flex flex-col items-center gap-2">
+                          <Receipt className="h-12 w-12 text-muted-foreground/50" />
+                          <span className="text-muted-foreground">No expenses found</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredExpenses.map((exp) => {
+                      const statusConfig = getStatusConfig(exp.status);
+                      const StatusIcon = statusConfig.icon;
+                      return (
+                        <TableRow key={exp._id} className="group hover:bg-muted/30 transition-colors">
+                          {!isEmployee && (
+                            <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                <User className="h-5 w-5 text-primary" />
+                              </div>
+                              <div>
+                                <div className="font-medium text-foreground">{exp.employeeId.name}</div>
+                                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Building2 className="h-3 w-3" />
+                                  {exp.employeeId.department}
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          )}
+                          
+                          <TableCell className="font-medium">{exp.expenseType}</TableCell>
+                          <TableCell>
+                            <span className="font-semibold text-foreground">
+                              ₹{Number(exp.amount || 0).toLocaleString("en-IN")}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {exp.expenseDate
+                              ? new Date(exp.expenseDate).toLocaleDateString("en-IN", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric"
+                                })
+                              : "-"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {exp.reimbursementMonth || "-"}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Badge 
+                                variant="outline" 
+                                className={`${statusConfig.className} flex items-center gap-1`}
+                              >
+                                <StatusIcon className="h-3 w-3" />
+                                {statusConfig.label}
+                              </Badge>
+                              {isFinance && exp.status === "PENDING" && (
+                                <div className="relative">
+                                  <Select
+                                    value={exp.status}
+                                    onValueChange={(value) => handleStatusChange(exp._id, value)}
+                                  >
+                                    <SelectTrigger className="h-7 w-24 text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="PENDING">Pending</SelectItem>
+                                      <SelectItem value="APPROVED">Approve</SelectItem>
+                                      <SelectItem value="REJECTED">Reject</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <ChevronDown className="absolute right-2 top-2.5 h-3 w-3 opacity-50 pointer-events-none"/>
+                                </div>
+                                
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {exp.receipts && exp.receipts.length > 0 ? (
+                              <div className="flex flex-col gap-1">
+                                {exp.receipts.map((r, idx) => (
+                                  <Button
+                                    key={idx}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-primary hover:text-primary hover:bg-primary/10 justify-start"
+                                    asChild
+                                  >
+                                    <a href={r.url} target="_blank" rel="noreferrer">
+                                      <ExternalLink className="h-3 w-3 mr-1" />
+                                      Receipt {idx + 1}
+                                    </a>
+                                  </Button>
+                                ))}
+                               {exp.status === "PAID" && (isFinance || isEmployee) && (
+                                  <Button
+                                    size="sm"
+                                    className="h-7 bg-success hover:bg-success/90 text-success-foreground"
+                                    onClick={() => downloadExpensePDF(exp)}
+                                  >
+                                    <Download className="h-3 w-3 mr-1" />
+                                    Download PDF
+                                  </Button>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">No receipts</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
 
-        <input
-          type="month"
-          name="reimbursementMonth"
-          value={filters.reimbursementMonth}
-          onChange={handleFilterChange}
-          className="w-full rounded border border-gray-300 bg-white p-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-        />
-      </div>
-
-
-      <div className="overflow-x-auto rounded-lg bg-white shadow-sm">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Employee
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Expense Type
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Amount
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Date
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Month
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Status
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Receipts
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="7" className="px-4 py-6 text-center text-sm text-gray-500">
-                  Loading expenses...
-                </td>
-              </tr>
-            ) : expenses.length === 0 ? (
-              <tr>
-                <td colSpan="7" className="px-4 py-6 text-center text-sm text-gray-500">
-                  No expenses found for the selected filters.
-                </td>
-              </tr>
-            ) : (
-              expenses.map((exp) => (
-                <tr key={exp._id} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-3 align-top">
-                    <div className="text-sm font-medium text-gray-900">{exp.employeeId?.name}</div>
-                    <div className="mt-0.5 text-xs text-gray-500">
-                      {exp.employeeId?.department}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 align-top text-sm text-gray-700">
-                    {exp.expenseType}
-                  </td>
-                  <td className="px-4 py-3 align-top text-sm font-medium text-gray-900">
-                    ₹{Number(exp.amount || 0).toLocaleString("en-IN")}
-                  </td>
-                  <td className="px-4 py-3 align-top text-sm text-gray-700">
-                    {exp.expenseDate
-                      ? new Date(exp.expenseDate).toLocaleDateString("en-IN")
-                      : "-"}
-                  </td>
-                  <td className="px-4 py-3 align-top text-sm text-gray-700">
-                    {exp.reimbursementMonth || "-"}
-                  </td>
-                  <td className="px-4 py-3 align-top">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-semibold ${
-                          exp.status === "PENDING"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : exp.status === "APPROVED"
-                            ? "bg-blue-100 text-blue-700"
-                            : exp.status === "PAID"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        {exp.status}
-                      </span>
-                      {/* Only superAdmin/accountant can change status */}
-                      {user && ["superAdmin", "accountant"].includes(user.role) && (
-                        <select
-                          value={exp.status}
-                          disabled={exp.status !== "PENDING"}
-                          onChange={(e) =>
-                            handleStatusChange(exp._id, e.target.value)
-                          }
-                          className="ml-2 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-400"
+            {/* Mobile Cards */}
+            <div className="md:hidden divide-y divide-border">
+              {loading ? (
+                <div className="p-8 text-center">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-2" />
+                  <span className="text-muted-foreground">Loading...</span>
+                </div>
+              ) : filteredExpenses.length === 0 ? (
+                <div className="p-8 text-center">
+                  <Receipt className="h-12 w-12 text-muted-foreground/50 mx-auto mb-2" />
+                  <span className="text-muted-foreground">No expenses found</span>
+                </div>
+              ) : (
+                filteredExpenses.map((exp) => {
+                  const statusConfig = getStatusConfig(exp.status);
+                  const StatusIcon = statusConfig.icon;
+                  return (
+                    <div key={exp._id} className="p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                      {!isEmployee && (
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <div className="font-medium">{exp.employeeId.name}</div>
+                            <div className="text-xs text-muted-foreground">{exp.employeeId.department}</div>
+                          </div>
+                        </div>
+                      )}
+                        <Badge 
+                          variant="outline" 
+                          className={`${statusConfig.className} flex items-center gap-1`}
                         >
-                          <option value="PENDING">Pending</option>
-                          <option value="APPROVED">Approved</option>
-                          <option value="REJECTED">Rejected</option>
-                        </select>
+                          <StatusIcon className="h-3 w-3" />
+                          {statusConfig.label}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Type: </span>
+                          <span className="font-medium">{exp.expenseType}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Amount: </span>
+                          <span className="font-semibold">₹{Number(exp.amount).toLocaleString("en-IN")}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Date: </span>
+                          <span>{exp.expenseDate ? new Date(exp.expenseDate).toLocaleDateString("en-IN") : "-"}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Month: </span>
+                          <span>{exp.reimbursementMonth || "-"}</span>
+                        </div>
+                      </div>
+                      {exp.receipts && exp.receipts.length > 0 && (
+                        <div className="flex gap-2 flex-wrap">
+                          {exp.receipts.map((r, idx) => (
+                            <Button key={idx} variant="outline" size="sm" className="h-8" asChild>
+                              <a href={r.url} target="_blank" rel="noreferrer">
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                Receipt {idx + 1}
+                              </a>
+                            </Button>
+                          ))}
+                        </div>
                       )}
                     </div>
-                  </td>
-                  <td className="px-4 py-3 align-top text-sm text-gray-700">
-                    {exp.receipts && exp.receipts.length > 0 ? (
-                      <div className="space-y-1">
-                        {exp.receipts.map((r, idx) => (
-                          <a
-                            key={idx}
-                            href={r.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
-                          >
-                            View Receipt {idx + 1}
-                          </a>
-                        ))}
-
-                        {/* If expense is paid, allow download of receipt(s) */}
-                        {exp.status === "PAID" && exp.receipts[0]?.url && (
-                          <a
-                            href={exp.receipts[0].url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-block mt-1 rounded bg-green-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-green-700"
-                          >
-                            Download Expense
-                          </a>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-gray-400">No receipts</span>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                  );
+                })
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Hidden Expense Preview for PDF generation */}
+      <div className="fixed -left-[9999px] top-0">
+        {selectedExpense && (
+          <div ref={payslipRef} className="w-[800px] bg-white p-6">
+            <ExpensePreview expense={selectedExpense} />
+          </div>
+        )}
       </div>
     </div>
   );

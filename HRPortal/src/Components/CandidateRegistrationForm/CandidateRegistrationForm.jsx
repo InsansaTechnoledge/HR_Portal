@@ -1,8 +1,14 @@
 import React, { useState } from 'react'
 import API_BASE_URL from '../../config';
 import axios from 'axios';
-import ErrorToast from '../Toaster/ErrorToaster.jsx';
-import SuccessToast from '../Toaster/SuccessToaser.jsx'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card.jsx';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '../ui/select.jsx';
+
+import { Hourglass, Linkedin, Microchip, User, Mail, Phone, Upload, Save, ChevronDown } from 'lucide-react';
+import { toast } from '../../hooks/useToast.js';
 
 const CandidateRegistrationForm = () => {
 
@@ -10,10 +16,14 @@ const CandidateRegistrationForm = () => {
 
     const [fileName, setFileName] = useState("");
     const [file,setFile] = useState();
-    const [toastSuccessMessage, setToastSuccessMessage] = useState();
-        const [toastErrorMessage, setToastErrorMessage] = useState();
-        const [toastSuccessVisible, setToastSuccessVisible] = useState(false);
-        const [toastErrorVisible, setToastErrorVisible] = useState(false);
+    const [technology, setTechnology] = useState("");
+    const [status, setStatus] = useState("");
+
+    const [submitStatus, setSubmitStatus] = useState({
+            loading: false,
+            success: false,
+            error: null
+        });
 
     const fileChangeHandler = (event) => {
         const file = event.target.files[0];
@@ -35,23 +45,32 @@ const CandidateRegistrationForm = () => {
         event.preventDefault();
     };
 
-    const onSubmitHandler = async () => {
+    const onCancelHandler = () => {
+        document.getElementById("candidateForm").reset();
+        setFileName(null); // reset uploaded file name (important)
+    };
+
+    const onSubmitHandler = async (e) => {
+        e.preventDefault();
+
         const name = document.getElementById("name").value;
-        const technology = document.getElementById("technology").value;
         const client = document.getElementById("client").value;
         const email = document.getElementById("email").value;
         const contactno = document.getElementById("contact-no").value;
-        const source = document.getElementById("source").value;
         const linkedin = document.getElementById("linkedin").value;
         const resume = document.getElementById("resume").files[0] || file;
 
         if (!resume) {
             // alert("Please upload a resume.");
-            setToastErrorMessage("Please upload a resume.");
-                setToastErrorVisible(true);
-                setTimeout(() => setToastErrorVisible(false), 3500);
+            toast ({
+                variant: "destructive",
+                title: "Resume Missing",
+                description: "Please upload a resume.",
+            });
             return;
         }
+
+        setSubmitStatus({ loading: true, success: false, error: null });
 
         const formData = new FormData();
         formData.append("name", name);
@@ -69,231 +88,227 @@ const CandidateRegistrationForm = () => {
                     "Content-Type": "multipart/form-data",
                 },
             });
+
+            
             // alert(response.data.message);
-            setToastSuccessMessage(response.data.message);
-                    setToastSuccessVisible(true);
-                    setTimeout(() => setToastSuccessVisible(false), 3500);
+            setSubmitStatus({
+                    loading: false,
+                    success: true,
+                    error: null
+                });
+                    toast ({
+                        variant: "success",
+                        title: "Candidate Registered",
+                        description: response.data.message || "Candidate registered successfully.",
+                    });
+                    document.getElementById("candidateForm").reset();
+                    setFileName(null); // reset uploaded file name (important)
         } catch (error) {
-            // console.error("Error while registering candidate:", error.response?.data || error.message);
-            // alert("Error while registering candidate. Please try again.");
-            setToastErrorMessage("Error while registering candidate. Please try again.");
-                setToastErrorVisible(true);
-                setTimeout(() => setToastErrorVisible(false), 3500);
+                setSubmitStatus({
+                    loading: false,
+                    success: true,
+                    error: null
+                });
+
+                if(error.response.status === 409){
+                    toast ({
+                        variant: "destructive",
+                        title: "Registration Failed",
+                        description: "Candidate Already Registered.",
+                    });
+                }
+                else{
+                    toast ({
+                        variant: "destructive",
+                        title: "Registration Failed",
+                        description: error.response.data.message || "Failed to register candidate.",
+                    });
+                }
         }
     };
 
     return (
         <>
-        {
-            toastSuccessVisible ? <SuccessToast message={toastSuccessMessage}/> : null
-        }
-        {
-            toastErrorVisible ? <ErrorToast error={toastErrorMessage}/> : null
-        }
-        <div>
-            <div className="flex min-h-full flex-1 flex-col justify-center px-2 py-2 lg:px-8">
-                <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-
-                    <h1 className="mt-10 text-center text-4xl/6 font-bold tracking-tight text-gray-900">
-                        Register Candidate
-                    </h1>
+       <div className="min-h-screen bg-background px-4 py-6 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-4xl space-y-6">
+                {/* Header */}
+                <div>
+                <h1 className="text-2xl font-bold">Register Candidate</h1>
+                <p className="text-muted-foreground">
+                    Add a new candidate to the talent pool
+                </p>
                 </div>
 
-                <div className="mt-12 sm:mx-auto w-full sm:max-w-3xl">
-                    <form className="space-y-6">
-                        <div className="sm:grid grid-cols-2 gap-x-10 gap-y-7">
-                            <div>
-                                <div className='flex items-center justify-between'>
-                                    <label htmlFor="email" className="block text-base/6 font-medium text-gray-900">
-                                        Name
-                                    </label>
-                                </div>
-                                <div className="mt-2">
-                                    <input
-                                        id="name"
-                                        name="name"
-                                        type="text"
-                                        required
-                                        autoComplete="name"
-                                        className="block w-full rounded-md bg-white px-3 py-3 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
-                                    />
-                                </div>
-                            </div>
+                <form id="candidateForm" className="space-y-6" onSubmit={onSubmitHandler}>
+                {/* Candidate Information */}
+                <Card className="border-0 shadow-card">
+                    <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <User className="w-5 h-5 text-primary" />
+                        Candidate Information
+                    </CardTitle>
+                    </CardHeader>
 
-                            <div>
-                                <div className="flex items-center justify-between">
-                                    <label htmlFor="technology" className="block text-base/6 font-medium text-gray-900">
-                                        Technology
-                                    </label>
-                                </div>
-                                <div className="mt-2">
-                                    <select
-                                        id='technology'
-                                        className='block w-full rounded-md bg-white px-3 py-3.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6'>
-                                        <option value={"Select technology"}>Select technology</option>
-                                        {
-                                            technologies.map((tech, id) => {
-                                                return <option key={id} value={tech}>{tech}</option>
-                                            })
-                                        }
+                    <CardContent className="space-y-6">
+                    {/* FORM GRID */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        {/* Full Name */}
+                        <div className="space-y-2">
+                        <Label>Full Name *</Label>
+                        <Input
+                            placeholder="Enter full name"
+                            id="name"
+                            name="name"
+                            required
+                        />
+                        </div>
 
-                                    </select>
+                        {/* Email */}
+                        <div className="space-y-2">
+                        <Label>Email *</Label>
+                        <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                id="email"
+                                placeholder="Enter email"
+                                className="pl-10"
+                                type="email"
+                                required
+                            />
+                        </div>
+                        </div>
 
-                                </div>
-                            </div>
-                            <div>
-                                <div className='flex items-center justify-between'>
-                                    <label htmlFor="client" className="block text-base/6 font-medium text-gray-900">
-                                        Client
-                                    </label>
-                                </div>
-                                <div className="mt-2">
-                                    <input
-                                        id="client"
-                                        name="client"
-                                        type="text"
-                                        required
-                                        autoComplete="client"
-                                        className="block w-full rounded-md bg-white px-3 py-3 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
-                                    />
-                                </div>
-                            </div>
+                        {/* Contact */}
+                        <div className="space-y-2">
+                        <Label>Contact Number</Label>
+                        <div className="relative">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input type="number" id="contact-no" placeholder="Enter number" className="pl-10" />
+                        </div>
+                        </div>
 
-                            <div>
-                                <div className="flex items-center justify-between">
-                                    <label htmlFor="email" className="block text-base/6 font-medium text-gray-900">
-                                        Email
-                                    </label>
-                                </div>
-                                <div className="mt-2">
-                                    <input
-                                        id="email"
-                                        name="email"
-                                        type="email"
-                                        required
-                                        autoComplete="email"
-                                        className="block w-full rounded-md bg-white px-3 py-3 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
-                                    />
-                                </div>
+                        {/* Technology */}
+                        <div className="space-y-2">
+                            <Label>Technology</Label>
+                            <div className="relative">
+                                <Microchip className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Select value={technology} onValueChange={setTechnology}>
+                                    <SelectTrigger
+                                        id="technology"
+                                        className="h-10 w-full pl-10 pr-10"
+                                    >
+                                        <SelectValue placeholder="Select technology" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                        {technologies.map((tech, id) => (
+                                            <SelectItem key={id} value={tech}>
+                                            {tech}
+                                            </SelectItem>
+                                        ))}
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             </div>
-                            <div>
-                                <div className='flex items-center justify-between'>
-                                    <label htmlFor="contact-no" className="block text-base/6 font-medium text-gray-900">
-                                        Contact No
-                                    </label>
-                                </div>
-                                <div className="mt-2">
-                                    <input
-                                        id="contact-no"
-                                        name="contact-no"
-                                        type="number"
-                                        required
-                                        autoComplete="contact-no"
-                                        className="block w-full rounded-md bg-white px-3 py-3.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
-                                    />
-                                </div>
-                            </div>
+                        </div>
 
-                            <div>
-                                <div className="flex items-center justify-between">
-                                    <label htmlFor="source" className="block text-base/6 font-medium text-gray-900">
-                                        Status
-                                    </label>
-                                </div>
-                                <div className="mt-2">
-                                    <select id='source' name='source'
-                                    className="block w-full rounded-md bg-white px-3 py-3 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6">
-                                        <option value="Accepted">Accepted</option>
-                                        <option value="Rejected">Rejected</option>
-                                        <option value="On hold">On hold</option>
-                                    </select>
-                                    {/* <input
+                        {/* Client */}
+                        <div className="space-y-2">
+                            <Label>Client</Label>
+                            <Input type="text" id="client" placeholder="Client name" />
+                        </div>
+
+                        {/* Status */}
+                        <div className="space-y-2">
+                            <Label>Status</Label>
+                            <div className="relative">
+                                <Hourglass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Select value={status} onValueChange={setStatus}>
+                                    <SelectTrigger
                                         id="source"
                                         name="source"
-                                        type="text"
-                                        required
-                                        autoComplete="source"
-                                        className="block w-full rounded-md bg-white px-3 py-3 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
-                                    /> */}
-                                </div>
-                            </div>
-                            <div>
-                                <div className='flex items-center justify-between'>
-                                    <label htmlFor="linkedin" className="block text-base/6 font-medium text-gray-900">
-                                        LinkedIn Profile
-                                    </label>
-                                </div>
-                                <div className="mt-2">
-                                    <input
-                                        id="linkedin"
-                                        name="linkedin"
-                                        type="text"
-                                        required
-                                        autoComplete="linkedin"
-                                        className="block w-full rounded-md bg-white px-3 py-3 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
-                                    />
-                                </div>
-                            </div>
+                                        className="h-10 w-full pl-10 pr-10"
+                                    >
+                                        <SelectValue placeholder="Select Status" />
+                                    </SelectTrigger>
 
-                            <div>
-                                <div className="flex items-center justify-between">
-                                    <label htmlFor="resume-upload" className="block text-base/6 font-medium text-gray-900">
-                                        Upload Resume
-                                    </label>
-                                </div>
-                                <div className="mt-2">
-                                    {/* <input
-                                    id="resume-upload"
-                                    name="resume-upload"
-                                    type="file"
-                                    required
-                                    autoComplete="resume-upload"
-                                    className="block w-full rounded-md bg-white px-3 py-3 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
-                                /> */}
-
-                                    <div className="flex items-center justify-center w-full">
-                                        <label forName="resume" className="flex flex-col items-center justify-center p-4 w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 "
-                                            onDrop={handleDrop}
-                                            onDragOver={handleDragOver}>
-                                            <div className="flex items-center justify-center">
-                                                <svg className="w-8 h-8 text-gray-500 " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
-                                                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2" />
-                                                </svg>
-                                                {fileName ?
-                                                    (
-                                                        <p className="ml-3 text-sm text-gray-500">
-                                                            Selected file: <span className="font-medium">{fileName}</span>
-                                                        </p>
-                                                    )
-                                                    :
-                                                    (<p className="ml-3 text-sm text-gray-500 "><span className="font-semibold">Click to upload</span> or drag and drop</p>)
-                                                }
-                                            </div>
-                                            <input id="resume" type="file" className="hidden" onChange={fileChangeHandler} />
-                                        </label>
-
-                                    </div>
-
-                                </div>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                        <SelectItem value="Accepted">Accepted</SelectItem>
+                                        <SelectItem value="Rejected">Rejected</SelectItem>
+                                        <SelectItem value="On hold">On hold</SelectItem>
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             </div>
                         </div>
 
-                        <div>
-                            <button
-                                type="button"
-                                className="mt-10 flex w-full justify-center rounded-md bg-indigo-600 px-3 py-3 text-base font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                                onClick={onSubmitHandler}
-                            >
-                                Register
-                            </button>
+                        {/* LinkedIn */}
+                        <div className="space-y-2 sm:col-span-2">
+                        <Label>LinkedIn Profile</Label>
+                        <div className="relative">
+                            <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                type="text"
+                                id='linkedin'
+                                placeholder="Enter link"
+                                className="pl-10"
+                            />
                         </div>
-                    </form>
+                        </div>
 
+                        {/* Resume */}
+                        <div className="space-y-2 sm:col-span-2">
+                        <Label>Resume / CV</Label>
+                        <label
+                            htmlFor="resume"
+                            className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-6 text-center transition hover:border-primary/50"
+                        >
+                            <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
+                            <input
+                                id="resume"
+                                type="file"
+                                className="hidden"
+                                onChange={fileChangeHandler}
+                                onDrop={(e) => handleDrop(e)}
+                                onDragOver={(e) => handleDragOver(e)}
+                            />
+                            {fileName ? (
+                            <p className="text-sm">
+                                Selected file: <span className="font-medium">{fileName}</span>
+                            </p>
+                            ) : (
+                            <p className="text-sm text-muted-foreground">
+                                Click to upload or drag and drop
+                            </p>
+                            )}
+                        </label>
+                        </div>
+                    </div>
+                    </CardContent>
+                </Card>
 
+                {/* Actions */}
+                <div className="flex flex-col gap-3 sm:flex-row">
+                    <Button type="submit" className="gap-2">
+                        {submitStatus.loading ? (
+                            "Registering Candidate..."
+                            ) : (
+                            <>
+                                <Save className="h-4 w-4" />
+                                Register Candidate
+                            </>
+                        )}
+                    </Button>
+                    {/* <Button variant="outline">Save as Draft</Button> */}
+                    <Button type="button" variant="outline" onClick={onCancelHandler}>Cancel</Button>
                 </div>
+                </form>
             </div>
         </div>
-        </>
+    </>
     )
 }
 

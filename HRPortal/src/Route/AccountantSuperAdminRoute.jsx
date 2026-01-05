@@ -1,11 +1,11 @@
 import React, { useContext } from 'react'
 import { userContext } from '../Context/userContext'
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 
-const AccountantSuperAdminRoute = ({children}) => {
+const AccountantSuperAdminRoute = () => {
   const {user} = useContext(userContext);
   return (
-    user && (user.role==='superAdmin' || user.role==='accountant') ? children : <Navigate to='/' replace/>
+    user && (user.role==='superAdmin' || user.role==='accountant') ? <Outlet /> : <Navigate to='/' replace/>
   )
 }
 

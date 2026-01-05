@@ -4,38 +4,57 @@ import Candidate from '../models/Candidate.js';
 // Configure multer storage in memory
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
-
 export const addCandidate = [
-    // Multer middleware to handle file upload
-    upload.single('resume'),
-    async (req, res) => {
-        try {
-            const { name, technology, client, email, contact_no, source, linkedIn } = req.body;
-            // Get the uploaded file
-            const resumeBuffer = req.file?.buffer;
+  upload.single("resume"),
+  async (req, res) => {
+    try {
+      const {
+        name,
+        technology,
+        client,
+        email,
+        contact_no,
+        source,
+        linkedIn,
+      } = req.body;
 
-            if (!resumeBuffer) {
-                return res.status(400).json({ message: 'Resume file is required.' });
-            }
-            const candidate = {
-                name,
-                technology,
-                client,
-                email,
-                contact_no,
-                source,
-                linkedIn,
-                resume: resumeBuffer, // Store resume as Buffer
-            };
+      if (!req.file) {
+        return res.status(400).json({ message: "Resume file is required." });
+      }
 
-            const savedCandidate = await Candidate.create(candidate);
-            res.status(200).json({ message: 'Candidate saved successfully!', candidate: savedCandidate });
-        } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Error saving candidate', error: err.message });
-        }
-    },
+      const existingCandidate = await Candidate.findOne({ email });
+
+      if (existingCandidate) {
+        return res.status(409).json({
+          message: "Candidate already registered",
+        });
+      }
+
+      const candidate = await Candidate.create({
+        name,
+        technology,
+        client,
+        email,
+        contact_no,
+        source,
+        linkedIn,
+        resume: req.file.buffer, //RAW BUFFER
+      });
+
+      return res.status(201).json({
+        message: "Candidate saved successfully!",
+        candidateId: candidate._id,
+      });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({
+        message: "Error saving candidate",
+        error: err.message,
+      });
+    }
+  },
 ];
+
 
 export const getAllCandidates = async (req, res) => {
     try {
@@ -46,5 +65,17 @@ export const getAllCandidates = async (req, res) => {
         res.status(500).json({ message: 'Error fetching candidates', error: error.message });
     }
 };
+
+export const getCandidateByEmail = async (req, res) => {
+    try {
+        const {email} = req.params;
+        const candidate = await Candidate.findOne({email: email});
+
+        res.status(200).json(candidate);
+    } catch (error) {
+        console.error("Error Fetching candidate Details");
+        res.status(500).json({ message: 'Error fetching candidate', error: error.message });
+    }
+}
 
 

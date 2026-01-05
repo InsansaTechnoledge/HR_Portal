@@ -72,8 +72,15 @@ export const changePassword = async (req,res) => {
     }
 
     const {id} = req.params;
+    const currentPassword = req.body.currentPassword;
     const newPassword = req.body.newPassword;
 
+    const user = await User.findById(id);
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isMatch) {
+      return res.status(402).json({ message: 'Current password is incorrect' });
+    }
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     
     const updatedUser = await User.findByIdAndUpdate(
