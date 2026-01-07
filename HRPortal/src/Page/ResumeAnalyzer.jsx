@@ -2,16 +2,40 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import SuccessToaster from "../Components/Toaster/SuccessToaser";
 import ErrorToaster from "../Components/Toaster/ErrorToaster";
-import {apibaseURl} from "../config"
+import { apibaseURl } from "../config";
 import axios from "axios";
-import { FileText, Zap, Target, Sparkles, Upload, Briefcase, BarChart3, ArrowRight, ChevronDown, FileUp, X, Loader2 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../Components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../Components/ui/select";
+import {
+  FileText,
+  Zap,
+  Target,
+  Sparkles,
+  Upload,
+  Briefcase,
+  BarChart3,
+  ArrowRight,
+  ChevronDown,
+  FileUp,
+  X,
+  Loader2,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../Components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../Components/ui/select";
 import { Button } from "../Components/ui/button";
 import { Textarea } from "../Components/ui/textarea";
-import {Label} from '../Components/ui/label';
+import { Label } from "../Components/ui/label";
 import { cn } from "../lib/utils";
-
 
 export default function ResumeAnalyzer() {
   const navigate = useNavigate();
@@ -26,26 +50,26 @@ export default function ResumeAnalyzer() {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const analysisTypes = [
-    { 
-      value: "minimal", 
-      label: "Minimal Analysis", 
+    {
+      value: "minimal",
+      label: "Minimal Analysis",
       description: "Resume rewrite + ATS optimization",
       icon: Zap,
-      color: "text-amber-500"
+      color: "text-amber-500",
     },
-    { 
-      value: "full", 
-      label: "Full Analysis", 
+    {
+      value: "full",
+      label: "Full Analysis",
       description: "Complete rewrite + job matching",
       icon: Target,
-      color: "text-emerald-500"
+      color: "text-emerald-500",
     },
-    { 
-      value: "ats", 
-      label: "ATS Only", 
+    {
+      value: "ats",
+      label: "ATS Only",
       description: "ATS compatibility check only",
       icon: BarChart3,
-      color: "text-blue-500"
+      color: "text-blue-500",
     },
   ];
 
@@ -98,8 +122,12 @@ export default function ResumeAnalyzer() {
       setErrorMessage("");
       setIsLoading(true);
 
-      if (!resume_file || !job_role || !crew) {
-        setErrorMessage("Please fill all the details before submitting.");
+      const requiresJobRole = crew === "full";
+
+      if (!resume_file || !crew || (requiresJobRole && !job_role)) {
+        setErrorMessage(
+          "Please fill all the required details before submitting."
+        );
         setIsLoading(false);
         return;
       }
@@ -126,7 +154,7 @@ export default function ResumeAnalyzer() {
       if (response.data.success || response.status === 200) {
         setSuccessMessage("Resume analyzed successfully!");
         console.log("Analysis Result:", response.data);
-        
+
         // Navigate to results page after a short delay
         setTimeout(() => {
           navigate("/analysis-result", {
@@ -148,65 +176,6 @@ export default function ResumeAnalyzer() {
   const selectedAnalysis = analysisTypes.find((t) => t.value === crew);
 
   return (
-    // <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-    //   <div className="bg-white shadow-xl rounded-xl w-full max-w-2xl p-6">
-    //     <h1 className="text-2xl font-bold mb-6 text-center">Resume Analyzer</h1>
-
-    //     {successMessage && <SuccessToaster message={successMessage} />}
-    //     {errorMessage && <ErrorToaster message={errorMessage} />}
-
-    //     <form onSubmit={handleSubmit} className="space-y-5">
-    //       {/* File Upload */}
-    //       <div>
-    //         <label className="block font-medium mb-1">Upload Resume</label>
-    //         <input
-    //           type="file"
-    //           accept=".pdf,.doc,.docx"
-    //           onChange={(e) => setResumeFile(e.target.files[0])}
-    //           className="w-full border rounded-lg p-2"
-    //         />
-    //       </div>
-
-    //       {/* Text Area */}
-    //       <div>
-    //         <label className="block font-medium mb-1">
-    //           Job Description / Skills
-    //         </label>
-    //         <textarea
-    //           rows="5"
-    //           value={job_role}
-    //           onChange={(e) => setJobRole(e.target.value)}
-    //           placeholder="Paste job Title here..."
-    //           className="w-full border rounded-lg p-3"
-    //         ></textarea>
-    //       </div>
-
-    //       {/* Dropdown */}
-    //       <div>
-    //         <label className="block font-medium mb-1">Analysis Type</label>
-    //         <select
-    //           value={crew}
-    //           onChange={(e) => setCrew(e.target.value)}
-    //           className="w-full border rounded-lg p-2"
-    //         >
-    //           <option value="">Select</option>
-    //           <option value="minimal">Minimal (rewrite + ATS)</option>
-    //           <option value="full">Full (rewrite + job match)</option>
-    //           <option value="ats">ATS Only</option>
-    //         </select>
-    //       </div>
-
-    //       {/* Submit */}
-    //       <button
-    //         type="submit"
-    //         disabled={isLoading}
-    //         className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 rounded-lg transition"
-    //       >
-    //         {isLoading ? "Analyzing..." : "Analyze Resume"}
-    //       </button>
-    //     </form>
-    //   </div>
-    // </div>
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
@@ -218,18 +187,31 @@ export default function ResumeAnalyzer() {
             Resume Analyzer
           </h1>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            Upload your resume and get AI-powered insights to improve your chances of landing your dream job.
+            Upload your resume and get AI-powered insights to improve your
+            chances of landing your dream job.
           </p>
         </div>
 
         {/* Features Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           {[
-            { icon: Zap, title: "ATS Optimized", desc: "Beat applicant tracking systems" },
-            { icon: Target, title: "Job Matching", desc: "Tailored to your target role" },
-            { icon: Sparkles, title: "AI-Powered", desc: "Smart recommendations" },
+            {
+              icon: Zap,
+              title: "ATS Optimized",
+              desc: "Beat applicant tracking systems",
+            },
+            {
+              icon: Target,
+              title: "Job Matching",
+              desc: "Tailored to your target role",
+            },
+            {
+              icon: Sparkles,
+              title: "AI-Powered",
+              desc: "Smart recommendations",
+            },
           ].map((feature, idx) => (
-            <div 
+            <div
               key={idx}
               className="flex items-center gap-3 p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50"
             >
@@ -237,7 +219,9 @@ export default function ResumeAnalyzer() {
                 <feature.icon className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium text-foreground text-sm">{feature.title}</p>
+                <p className="font-medium text-foreground text-sm">
+                  {feature.title}
+                </p>
                 <p className="text-xs text-muted-foreground">{feature.desc}</p>
               </div>
             </div>
@@ -268,8 +252,8 @@ export default function ResumeAnalyzer() {
                   className={cn(
                     "relative border-2 border-dashed rounded-xl p-8 transition-all duration-200 cursor-pointer",
                     "hover:border-primary/50 hover:bg-primary/5",
-                    isDragOver 
-                      ? "border-primary bg-primary/10 scale-[1.02]" 
+                    isDragOver
+                      ? "border-primary bg-primary/10 scale-[1.02]"
                       : "border-border",
                     resume_file && "border-primary/30 bg-primary/5"
                   )}
@@ -281,7 +265,7 @@ export default function ResumeAnalyzer() {
                     onChange={handleFileChange}
                     className="hidden"
                   />
-                  
+
                   {resume_file ? (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -289,7 +273,9 @@ export default function ResumeAnalyzer() {
                           <FileUp className="w-6 h-6 text-primary" />
                         </div>
                         <div>
-                          <p className="font-medium text-foreground">{resume_file.name}</p>
+                          <p className="font-medium text-foreground">
+                            {resume_file.name}
+                          </p>
                           <p className="text-sm text-muted-foreground">
                             {(resume_file.size / 1024).toFixed(1)} KB
                           </p>
@@ -324,25 +310,6 @@ export default function ResumeAnalyzer() {
                 </div>
               </div>
 
-              {/* Job Description */}
-              <div className="space-y-2">
-                <Label htmlFor="jobRole" className="text-sm font-medium flex items-center gap-2">
-                  <Briefcase className="w-4 h-4 text-muted-foreground" />
-                  Target Job Role / Description
-                </Label>
-                <Textarea
-                  id="jobRole"
-                  value={job_role}
-                  onChange={(e) => setJobRole(e.target.value)}
-                  placeholder="Paste the job title or description you're targeting..."
-                  rows={4}
-                  className="resize-none bg-background/50"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Provide the job title or paste the full job description for better analysis
-                </p>
-              </div>
-
               {/* Analysis Type */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium flex items-center gap-2">
@@ -365,9 +332,8 @@ export default function ResumeAnalyzer() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 opacity-50 pointer-events-none"/>
+                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 opacity-50 pointer-events-none" />
                 </div>
-                
 
                 {/* Analysis Type Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
@@ -379,24 +345,55 @@ export default function ResumeAnalyzer() {
                       className={cn(
                         "p-4 rounded-xl border-2 text-left transition-all duration-200",
                         "hover:border-primary/50 hover:bg-primary/5",
-                        crew === type.value 
-                          ? "border-primary bg-primary/10" 
+                        crew === type.value
+                          ? "border-primary bg-primary/10"
                           : "border-border bg-background/50"
                       )}
                     >
                       <type.icon className={cn("w-5 h-5 mb-2", type.color)} />
-                      <p className="font-medium text-foreground text-sm">{type.label}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{type.description}</p>
+                      <p className="font-medium text-foreground text-sm">
+                        {type.label}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {type.description}
+                      </p>
                     </button>
                   ))}
                 </div>
               </div>
 
+              {/* Job Description - only for Full Analysis */}
+              {crew === "full" && (
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="jobRole"
+                    className="text-sm font-medium flex items-center gap-2"
+                  >
+                    <Briefcase className="w-4 h-4 text-muted-foreground" />
+                    Target Job Role / Description
+                  </Label>
+                  <Textarea
+                    id="jobRole"
+                    value={job_role}
+                    onChange={(e) => setJobRole(e.target.value)}
+                    placeholder="Paste the job title or description you're targeting..."
+                    rows={4}
+                    className="resize-none bg-background/50"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Provide the job title or paste the full job description for
+                    better analysis
+                  </p>
+                </div>
+              )}
+
               {/* Selected Analysis Preview */}
               {selectedAnalysis && (
                 <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
                   <div className="flex items-center gap-2 mb-1">
-                    <selectedAnalysis.icon className={cn("w-4 h-4", selectedAnalysis.color)} />
+                    <selectedAnalysis.icon
+                      className={cn("w-4 h-4", selectedAnalysis.color)}
+                    />
                     <span className="font-medium text-foreground text-sm">
                       {selectedAnalysis.label} Selected
                     </span>
@@ -410,7 +407,12 @@ export default function ResumeAnalyzer() {
               {/* Submit Button */}
               <Button
                 type="submit"
-                disabled={isLoading || !resume_file || !job_role || !crew}
+                disabled={
+                  isLoading ||
+                  !resume_file ||
+                  !crew ||
+                  (crew === "full" && !job_role)
+                }
                 className="w-full h-12 text-base font-semibold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25"
               >
                 {isLoading ? (
