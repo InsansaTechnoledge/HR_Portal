@@ -48,9 +48,17 @@ export const bulkUploadJobApplications = async (req, res) => {
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
 
-      const phone = String(row["Contact No"]).replace(/\D/g, "");
+      const contactCell = String(row["Contact No"] || "");
 
-      if (!phone || phone.length < 10) {
+      // extract 10–12 digit numbers → convert to Number
+      const phones = (contactCell.match(/\d{10,12}/g) || []).map((n) =>
+        Number(n)
+      );
+
+      // remove duplicates inside same cell
+      const uniquePhones = [...new Set(phones)];
+
+      if (!uniquePhones.length) {
         failedRows.push({
           rowNumber: i + 2,
           name: row["Candidate Name"] || "",
@@ -62,16 +70,15 @@ export const bulkUploadJobApplications = async (req, res) => {
           location: row["Location"] || "",
           noticePeriod: row["Notice Period /Availability"] || "",
           linkedIn: row["LinkedIn"] || "",
-          reason: "Invalid phone number"
+          reason: "Invalid phone number",
         });
         continue;
       }
 
       const email = row["E-mail ID"]?.toLowerCase() || "";
 
-      // Check Duplicate by email of phone
       const existingCandidate = await CandidateApplication.findOne({
-        $or: [{ phone }, { email }],
+        $or: [{ email }, { phone: { $in: uniquePhones } }],
       });
 
       if (existingCandidate) {
@@ -90,12 +97,12 @@ export const bulkUploadJobApplications = async (req, res) => {
         });
         continue;
       }
-      
+
       await CandidateApplication.create({
         name: row["Candidate Name"] || "",
-        email: row["E-mail ID"] || "",
-        phone,
-        rawJobTitle: null, // independent of Job collection
+        email,
+        phone: uniquePhones,
+        rawJobTitle: null,
         experience: row["Total Exp"] || "",
         relevantExperience: row["Relevant Exp"] || "",
         skills: row["Skill Set"]
@@ -159,14 +166,18 @@ export const bulkResumeUpload = async (req, res) => {
 
     for (const filePath of files) {
       const fileName = path.basename(filePath);
-      const mobile = fileName.split(".")[0];
+      const mobileStr = fileName.split(".")[0];
 
-      if (!/^\d{10}$/.test(mobile)) {
+      if (!/^\d{10}$/.test(mobileStr)) {
         failed.push({ file: fileName, reason: "Invalid filename" });
         continue;
       }
 
-      const application = await CandidateApplication.findOne({ phone: mobile });
+      const mobile = Number(mobileStr);
+
+      const application = await CandidateApplication.findOne({
+        phone: mobile,
+      });
 
       if (!application) {
         failed.push({ file: fileName, reason: "No matching application" });

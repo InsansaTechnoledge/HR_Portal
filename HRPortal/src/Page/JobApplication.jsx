@@ -946,7 +946,7 @@ const JobApplication = () => {
                                 <Mail className="w-3.5 h-3.5" /> {app.email}
                               </div>
                               <div className="flex items-center gap-1">
-                                <Phone className="w-3.5 h-3.5" /> {app.phone}
+                                <Phone className="w-3.5 h-3.5" /> {app.phone.join(", ")}
                               </div>
                             </div>
                           </TableCell>
