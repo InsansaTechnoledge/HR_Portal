@@ -4,7 +4,7 @@ const candidateApplication = new mongoose.Schema(
   {
     name: String,
     email: String,
-    phone: { type: Number, required: true, index: true },
+    phone: { type: [Number], required: true, index: true },
     rawJobTitle: String,
     experience: String,
     relevantExperience: String,
