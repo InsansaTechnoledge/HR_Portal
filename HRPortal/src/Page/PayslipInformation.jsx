@@ -8,26 +8,26 @@ import Loader from "../Components/Loader/Loader";
 
 const EmployeeManagementForm = () => {
 
-    const {user} = useContext(userContext);
-    const [employee,setEmployee] = useState();
+    const { user } = useContext(userContext);
+    const [employee, setEmployee] = useState();
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchEmployeeData = async () => {
             const response = await axios.get(`${API_BASE_URL}/api/employee/fetchEmployeeByEmail/${user.userEmail}`);
-            
-            if(response.status===201){
+
+            if (response.status === 201) {
                 setEmployee(response.data);
                 setLoading(false);
             }
         }
 
         fetchEmployeeData();
-    },[])
+    }, [])
 
-    if(loading){
-        return(
-            <Loader/>
+    if (loading) {
+        return (
+            <Loader />
         )
     }
 
@@ -35,10 +35,10 @@ const EmployeeManagementForm = () => {
         <div className="max-w-5xl mx-auto p-6">
             {
                 employee && employee.details
-                ?
-                <EmployeeDetailsDisplay employee={employee}/>
-                :
-                <EmployeeDetailsForm setEmployee={setEmployee}/>
+                    ?
+                    <EmployeeDetailsDisplay employee={employee} />
+                    :
+                    <EmployeeDetailsForm setEmployee={setEmployee} />
             }
 
         </div>

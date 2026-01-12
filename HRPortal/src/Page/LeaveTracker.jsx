@@ -2,7 +2,7 @@
 import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
-import { Calendar as CalendarIcon, Clock, Users, Plus, X, User2, User as UserIcon, Filter, User, Loader2} from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Users, Plus, X, User2, User as UserIcon, Filter, User, Loader2 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
 import { userContext } from "../Context/userContext";
@@ -13,7 +13,7 @@ import { Button } from "../Components/ui/button";
 import { Checkbox } from "../Components/ui/checkbox";
 import { Label } from "../Components/ui/label";
 import { Input } from "../Components/ui/input";
-import {Card, CardContent, CardHeader, CardTitle} from "../Components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../Components/ui/dialog";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../Components/ui/select";
 import { toast } from "../hooks/useToast";
@@ -61,6 +61,7 @@ const LeaveTracker = () => {
   const [newLeave, setNewLeave] = useState(initialForm);
   const [activeFilterOnlyApplied, setActiveFilterOnlyApplied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Which view is active: my | employee | user
   const [leaveViewMode, setLeaveViewMode] = useState("my");
@@ -75,136 +76,136 @@ const LeaveTracker = () => {
 
 
   const leavesForView = useMemo(() => {
-  if (leaveViewMode === "my") {
-    return currentPerson?.leaveHistory || [];
-  }
+    if (leaveViewMode === "my") {
+      return currentPerson?.leaveHistory || [];
+    }
 
-  if ((leaveViewMode === "employee" || leaveViewMode === "user") && currentPerson) {
-    return currentPerson.leaveHistory || [];
-  }
+    if ((leaveViewMode === "employee" || leaveViewMode === "user") && currentPerson) {
+      return currentPerson.leaveHistory || [];
+    }
 
-  return [];
-}, [leaveViewMode, currentPerson]);
+    return [];
+  }, [leaveViewMode, currentPerson]);
 
-// Calculates number of leave days within a month (inclusive)
-const getDaysInMonthRange = (startDate, endDate, monthStart, monthEnd) => {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  // Calculates number of leave days within a month (inclusive)
+  const getDaysInMonthRange = (startDate, endDate, monthStart, monthEnd) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
 
-  // normalize time (CRITICAL)
-  start.setHours(0, 0, 0, 0);
-  end.setHours(0, 0, 0, 0);
+    // normalize time (CRITICAL)
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
 
-  const effectiveStart = new Date(
-    Math.max(start.getTime(), monthStart.getTime())
-  );
-  const effectiveEnd = new Date(
-    Math.min(end.getTime(), monthEnd.getTime())
-  );
+    const effectiveStart = new Date(
+      Math.max(start.getTime(), monthStart.getTime())
+    );
+    const effectiveEnd = new Date(
+      Math.min(end.getTime(), monthEnd.getTime())
+    );
 
-  if (effectiveStart > effectiveEnd) return 0;
+    if (effectiveStart > effectiveEnd) return 0;
 
-  return (
-    Math.floor(
-      (effectiveEnd - effectiveStart) / (1000 * 60 * 60 * 24)
-    ) + 1
-  );
-};
-
-
-// Normalize leave type by removing " Leave" suffix
-const normalizeLeaveType = (type) => {
-  if (!type) return type;
-  return type.replace(" Leave", "").trim();
-};
+    return (
+      Math.floor(
+        (effectiveEnd - effectiveStart) / (1000 * 60 * 60 * 24)
+      ) + 1
+    );
+  };
 
 
-// Calculate number of leave days between two dates (inclusive)
-const calculateLeaveDays = (from, to) => {
-  if (!from || !to) return 0;
+  // Normalize leave type by removing " Leave" suffix
+  const normalizeLeaveType = (type) => {
+    if (!type) return type;
+    return type.replace(" Leave", "").trim();
+  };
 
-  const start = new Date(from);
-  const end = new Date(to);
 
-  // Remove time component (VERY IMPORTANT)
-  start.setHours(0, 0, 0, 0);
-  end.setHours(0, 0, 0, 0);
+  // Calculate number of leave days between two dates (inclusive)
+  const calculateLeaveDays = (from, to) => {
+    if (!from || !to) return 0;
 
-  const diffInMs = end - start;
+    const start = new Date(from);
+    const end = new Date(to);
 
-  return diffInMs >= 0
-    ? Math.floor(diffInMs / (1000 * 60 * 60 * 24)) + 1
-    : 0;
-};
-  
+    // Remove time component (VERY IMPORTANT)
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
 
-const displayedLeaves = useMemo(() => {
-  if (!selectedMonth) return [];
+    const diffInMs = end - start;
 
-  const [year, month] = selectedMonth.split("-").map(Number);
-  const monthStart = new Date(year, month - 1, 1);
-  const monthEnd = new Date(year, month, 0);
+    return diffInMs >= 0
+      ? Math.floor(diffInMs / (1000 * 60 * 60 * 24)) + 1
+      : 0;
+  };
 
-  monthStart.setHours(0, 0, 0, 0);
-  monthEnd.setHours(0, 0, 0, 0);
 
-  return leavesForView
-    .map((leave) => {
-      const days = getDaysInMonthRange(
-        leave.startDate,
-        leave.endDate,
-        monthStart,
-        monthEnd
-      );
+  const displayedLeaves = useMemo(() => {
+    if (!selectedMonth) return [];
 
-      if (days === 0) return null;
+    const [year, month] = selectedMonth.split("-").map(Number);
+    const monthStart = new Date(year, month - 1, 1);
+    const monthEnd = new Date(year, month, 0);
 
-      return {
-        ...leave,
-        days, 
-      };
-    })
-    .filter(Boolean);
-}, [leavesForView, selectedMonth]);
+    monthStart.setHours(0, 0, 0, 0);
+    monthEnd.setHours(0, 0, 0, 0);
 
-// Leave statistics calculation
-const leaveStats = useMemo(() => {
-  const leaves = leavesForView; 
-  const calc = (types) =>
-    leaves
-      .filter((l) => types.includes(l.type))
-      .reduce(
-        (sum, l) => sum + calculateLeaveDays(l.startDate, l.endDate),
-        0
-      );
-    
-  return [
-    {
-      label: "Annual Leave",
-      total: 20,
-      used: calc(["Annual Leave", "Vacation"]),
-      color: "bg-primary",
-    },
-    {
-      label: "Sick Leave",
-      total: 12,
-      used: calc(["Sick Leave"]),
-      color: "bg-hr-amber",
-    },
-    {
-      label: "Personal Leave",
-      total: 15,
-      used: calc(["Personal"]),
-      color: "bg-hr-purple",
-    },
-    {
-      label: "Work from Home",
-      total: 24,
-      used: calc(["Work from Home"]),
-      color: "bg-info",
-    },
-  ];
-}, [leavesForView]); 
+    return leavesForView
+      .map((leave) => {
+        const days = getDaysInMonthRange(
+          leave.startDate,
+          leave.endDate,
+          monthStart,
+          monthEnd
+        );
+
+        if (days === 0) return null;
+
+        return {
+          ...leave,
+          days,
+        };
+      })
+      .filter(Boolean);
+  }, [leavesForView, selectedMonth]);
+
+  // Leave statistics calculation
+  const leaveStats = useMemo(() => {
+    const leaves = leavesForView;
+    const calc = (types) =>
+      leaves
+        .filter((l) => types.includes(l.type))
+        .reduce(
+          (sum, l) => sum + calculateLeaveDays(l.startDate, l.endDate),
+          0
+        );
+
+    return [
+      {
+        label: "Annual Leave",
+        total: 20,
+        used: calc(["Annual Leave", "Vacation"]),
+        color: "bg-primary",
+      },
+      {
+        label: "Sick Leave",
+        total: 12,
+        used: calc(["Sick Leave"]),
+        color: "bg-hr-amber",
+      },
+      {
+        label: "Personal Leave",
+        total: 15,
+        used: calc(["Personal"]),
+        color: "bg-hr-purple",
+      },
+      {
+        label: "Work from Home",
+        total: 24,
+        used: calc(["Work from Home"]),
+        color: "bg-info",
+      },
+    ];
+  }, [leavesForView]);
 
   const overallUsedLeaves = useMemo(() => {
     return leavesForView.reduce(
@@ -324,60 +325,60 @@ const leaveStats = useMemo(() => {
 
   // --- Unified fetch for details when a selection changes ---
   // Whenever selectedEmployeeId or selectedUserId changes, we should fetch details for that person
-useEffect(() => {
-  if (!selectedEmployeeId && !selectedUserId) {
-    setCurrentPerson(null);
-    setSelectedMonth(null);
-    return;
-  }
-
-  const id = selectedUserId || selectedEmployeeId;
-  const isUser = Boolean(selectedUserId);
-
-  const controller = new AbortController();
-  const { signal } = controller;
-
-  const fetchDetails = async () => {
-    setLoading(true);
-    try {
-      if (isUser) {
-        const resp = await axios.get(`${API_BASE_URL}/api/user/${id}`, { signal });
-        const u = resp?.data?.user;
-        if (u) {
-          setCurrentPerson({
-            empId: u._id || u.userId,
-            name: u.userName || u.name,
-            email: u.userEmail || u.email,
-            department: u.role || "User",
-            leaveHistory: u.leaveHistory || [],
-          });
-        }
-      } else {
-        const resp = await axios.get(`${API_BASE_URL}/api/employee/${id}`, { signal });
-        const e = resp?.data?.employee;
-        if (e) {
-          setCurrentPerson({
-            empId: e._id,
-            name: e.name,
-            email: e.email,
-            department: e.department || "User",
-            leaveHistory: e.leaveHistory || [],
-          });
-        }
-      }
-    } catch (err) {
-      if (!axios.isCancel(err)) {
-        console.error("Error fetching details:", err);
-      }
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (!selectedEmployeeId && !selectedUserId) {
+      setCurrentPerson(null);
       setSelectedMonth(null);
+      return;
     }
-  };
 
-  fetchDetails();
-  return () => controller.abort();
-}, [selectedEmployeeId, selectedUserId]);
+    const id = selectedUserId || selectedEmployeeId;
+    const isUser = Boolean(selectedUserId);
+
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    const fetchDetails = async () => {
+      setLoading(true);
+      try {
+        if (isUser) {
+          const resp = await axios.get(`${API_BASE_URL}/api/user/${id}`, { signal });
+          const u = resp?.data?.user;
+          if (u) {
+            setCurrentPerson({
+              empId: u._id || u.userId,
+              name: u.userName || u.name,
+              email: u.userEmail || u.email,
+              department: u.role || "User",
+              leaveHistory: u.leaveHistory || [],
+            });
+          }
+        } else {
+          const resp = await axios.get(`${API_BASE_URL}/api/employee/${id}`, { signal });
+          const e = resp?.data?.employee;
+          if (e) {
+            setCurrentPerson({
+              empId: e._id,
+              name: e.name,
+              email: e.email,
+              department: e.department || "User",
+              leaveHistory: e.leaveHistory || [],
+            });
+          }
+        }
+      } catch (err) {
+        if (!axios.isCancel(err)) {
+          console.error("Error fetching details:", err);
+        }
+      } finally {
+        setLoading(false);
+        setSelectedMonth(null);
+      }
+    };
+
+    fetchDetails();
+    return () => controller.abort();
+  }, [selectedEmployeeId, selectedUserId]);
 
   // --- Helper to compute available months and per-month lookup maps ---
   const { availableLeaveMonths, leaveLookupByMonth } = useMemo(() => {
@@ -417,14 +418,14 @@ useEffect(() => {
 
   // --- Auto-select first available month when currentPerson or available months change ---
   useEffect(() => {
-  if (
-    availableLeaveMonths.length > 0 &&
-    !selectedMonth
-  ) {
-    setSelectedMonth(availableLeaveMonths[0]);
-  }
-}, [availableLeaveMonths, selectedMonth]);
-  
+    if (
+      availableLeaveMonths.length > 0 &&
+      !selectedMonth
+    ) {
+      setSelectedMonth(availableLeaveMonths[0]);
+    }
+  }, [availableLeaveMonths, selectedMonth]);
+
   const leaveLookupForSelectedMonth = useMemo(() => {
     if (!selectedMonth) return new Map();
     return leaveLookupByMonth.get(selectedMonth) || new Map();
@@ -467,7 +468,7 @@ useEffect(() => {
   // Clicking the Add Leave button resets both dropdowns to placeholders (per requirement)
   const handleOpenAddLeave = () => {
     // Note: The UI resets the dropdowns, but the saving logic must target the logged-in user.
-    if(authUser.role === 'admin'){
+    if (authUser.role === 'admin') {
       setSelectedEmployeeId("");
       setSelectedUserId("");
     }
@@ -480,93 +481,93 @@ useEffect(() => {
   };
 
   // Save a leave: NOW ALWAYS TARGETS THE LOGGED-IN USER (user._id)
- const handleSaveLeave = async () => {
-  // Validation
-  if (!newLeave.type || !newLeave.startDate || !newLeave.endDate) {
-    toast({ 
-      variant: "destructive",
-      title: "Validation Error",
-      description: "Please fill in all required fields.",
-    });
-    return;
-  }
+  const handleSaveLeave = async () => {
+    // Validation
+    if (!newLeave.type || !newLeave.startDate || !newLeave.endDate) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please fill in all required fields.",
+      });
+      return;
+    }
 
-  if (new Date(newLeave.startDate) > new Date(newLeave.endDate)) {
-    toast({ 
-      variant: "destructive",
-      title: "Validation Error",
-      description: "End date can't be before start date.",
-    });
-    return;
-  }
+    if (new Date(newLeave.startDate) > new Date(newLeave.endDate)) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "End date can't be before start date.",
+      });
+      return;
+    }
 
-  // SAFETY CHECK
-  if (!authUser._id) {
-    toast({ 
-      variant: "destructive",
-      title: "Session Expired",
-      description: "Session expired. Please login again.",
-    });
-    return;
-  }
+    // SAFETY CHECK
+    if (!authUser._id) {
+      toast({
+        variant: "destructive",
+        title: "Session Expired",
+        description: "Session expired. Please login again.",
+      });
+      return;
+    }
 
-  // ALWAYS USE AUTH USER ID
-  const targetId = authUser._id;
+    // ALWAYS USE AUTH USER ID
+    const targetId = authUser._id;
 
-  // API DECISION BASED ON AUTH USER ROLE
-  let resp;
-  try {
-    resp =
-    authUser.role === 'user' || authUser.role === 'admin' || authUser.role === 'superadmin' || authUser.role === 'accountant' ?
-      resp = await axios.post(`${API_BASE_URL}/api/user/addLeave/${targetId}`, newLeave)
-    :
-      resp = await axios.post(`${API_BASE_URL}/api/employee/addLeave/${targetId}`, newLeave);
-
+    // API DECISION BASED ON AUTH USER ROLE
+    let resp;
     try {
-      // const resp = await axios.post(apiEndpoint, newLeave);
-      if (resp.status === 201 || resp.status === 200) {
-        toast({ 
-          variant: "success",
-          title: "Leave Added Successfully",
-          description: "Your leave has been added successfully.",
-        });
+      resp =
+        authUser.role === 'user' || authUser.role === 'admin' || authUser.role === 'superadmin' || authUser.role === 'accountant' ?
+          resp = await axios.post(`${API_BASE_URL}/api/user/addLeave/${targetId}`, newLeave)
+          :
+          resp = await axios.post(`${API_BASE_URL}/api/employee/addLeave/${targetId}`, newLeave);
 
-        // Optimistically merge the new leave into current view so previous leaves stay visible
-        setCurrentPerson((prev) => {
-          if (!prev) return prev;
-          const merged = [...(prev.leaveHistory || []), { ...newLeave }];
-          return { ...prev, leaveHistory: merged };
-        });
+      try {
+        // const resp = await axios.post(apiEndpoint, newLeave);
+        if (resp.status === 201 || resp.status === 200) {
+          toast({
+            variant: "success",
+            title: "Leave Added Successfully",
+            description: "Your leave has been added successfully.",
+          });
 
-        // Refresh lists & current person:
-        // await refreshAfterSave(targetId, useUserApi);
-      } else {
-        throw new Error("Unexpected response while adding leave");
+          // Optimistically merge the new leave into current view so previous leaves stay visible
+          setCurrentPerson((prev) => {
+            if (!prev) return prev;
+            const merged = [...(prev.leaveHistory || []), { ...newLeave }];
+            return { ...prev, leaveHistory: merged };
+          });
+
+          // Refresh lists & current person:
+          // await refreshAfterSave(targetId, useUserApi);
+        } else {
+          throw new Error("Unexpected response while adding leave");
+        }
+      } catch (err) {
+        console.error("Error adding leave", err);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: err.response?.data?.message || "Error adding leave. Please try again.",
+        });
+      } finally {
+        setShowAddLeaveModal(false);
       }
     } catch (err) {
-      console.error("Error adding leave", err);
+      console.error("Error adding leave:", err);
       toast({
         variant: "destructive",
         title: "Error",
         description: err.response?.data?.message || "Error adding leave. Please try again.",
       });
-    } finally {
-      setShowAddLeaveModal(false);
-    }
-  } catch (err) {
-    console.error("Error adding leave:", err);
-      toast({ 
-      variant: "destructive",
-      title: "Error",
-      description: err.response?.data?.message || "Error adding leave. Please try again.",
-      });
       setLoading(false);
-  } finally {
-    setNewLeave(initialForm);
-    setOneDayLeave(false);
-    setLoading(false);
-  }
-};
+    } finally {
+      setNewLeave(initialForm);
+      setOneDayLeave(false);
+      setLoading(false);
+    }
+  };
 
   // Add leave modal open/reset behavior already handled in handleOpenAddLeave
   // small UI helpers:
@@ -581,41 +582,49 @@ useEffect(() => {
   }, [activeFilterOnlyApplied, employees]);
 
   // Loading state
-  {loading && <Loader />}
+  { loading && <Loader /> }
 
   const getStatusBadge = (status = "pending") => {
-  const styles = {
-    approved: "bg-success/10 text-success border-success/20",
-    pending: "bg-warning/10 text-warning border-warning/20",
-    rejected: "bg-destructive/10 text-destructive border-destructive/20",
-  };
+    const styles = {
+      approved: "bg-success/10 text-success border-success/20",
+      pending: "bg-warning/10 text-warning border-warning/20",
+      rejected: "bg-destructive/10 text-destructive border-destructive/20",
+    };
 
-  return (
-    <span
-      className={`px-2.5 py-1 rounded-full text-xs font-medium border capitalize ${
-        styles[status] || styles.pending
-      }`}
-    >
-      {status}
-    </span>
-  );
-}
+    return (
+      <span
+        className={`px-2.5 py-1 rounded-full text-xs font-medium border capitalize ${styles[status] || styles.pending
+          }`}
+      >
+        {status}
+      </span>
+    );
+  }
 
-// Date formatting helper
+  // Date formatting helper
   const formatDate = (date) => {
-  if (!date) return "-";
-  return new Date(date).toLocaleDateString("en-GB"); 
-  // change locale if needed
-};
+    if (!date) return "-";
+    return new Date(date).toLocaleDateString("en-GB");
+    // change locale if needed
+  };
 
   return (
     <>
       <div className="min-h-screen bg-background">
         <div className="flex flex-col lg:flex-row">
+          {/* Mobile Sidebar Toggle */}
+          <div className="lg:hidden p-4 border-b flex justify-between items-center bg-card">
+            <h2 className="font-semibold text-lg">Leave Tracker</h2>
+            <Button variant="outline" size="sm" onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}>
+              <Filter className="w-4 h-4 mr-2" />
+              {mobileSidebarOpen ? "Hide Filters" : "Filters & Employees"}
+            </Button>
+          </div>
+
           {/* Admin Sidebar - Only visible for admin/superAdmin */}
           {authUser && (
-            <div className="w-full lg:w-72 xl:w-80 bg-card border-b lg:border-b-0 lg:border-r border-border p-4 lg:p-6 lg:min-h-screen shadow-md">
-              { authUser.role === "admin" && 
+            <div className={`w-full lg:w-72 xl:w-80 bg-card border-b lg:border-b-0 lg:border-r border-border p-4 lg:p-6 lg:min-h-screen shadow-md ${mobileSidebarOpen ? 'block' : 'hidden lg:block'}`}>
+              {authUser.role === "admin" &&
                 <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 rounded-xl bg-primary/10">
                     <Users className="w-5 h-5 text-primary" />
@@ -644,11 +653,11 @@ useEffect(() => {
               )}
 
               {/* Filter checkbox */}
-              { authUser.role === 'admin' && (
+              {authUser.role === 'admin' && (
                 <>
                   <div className="flex items-center space-x-2 mb-4 p-3 rounded-lg bg-muted/50">
-                    <Checkbox 
-                      id="activeLeave" 
+                    <Checkbox
+                      id="activeLeave"
                       checked={activeFilterOnlyApplied}
                       onCheckedChange={() => setActiveFilterOnlyApplied(!activeFilterOnlyApplied)}
                     />
@@ -681,13 +690,13 @@ useEffect(() => {
                               {employees.map((emp) => (
                                 <SelectItem key={emp.empId} value={emp.empId}>
                                   <div className="flex items-center gap-2">
-                                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                                       <User className="w-4 h-4 text-primary" />
-                                      </div>
-                                      <div>
+                                    </div>
+                                    <div>
                                       <p className="font-medium">{emp.name}</p>
                                       <p className="text-xs text-muted-foreground">{emp.department}</p>
-                                      </div>
+                                    </div>
                                   </div>
                                 </SelectItem>
                               ))}
@@ -722,13 +731,13 @@ useEffect(() => {
                               {users.map((u) => (
                                 <SelectItem key={u.empId} value={u.empId}>
                                   <div className="flex items-center gap-2">
-                                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                                       <User className="w-4 h-4 text-primary" />
-                                      </div>
-                                      <div>
+                                    </div>
+                                    <div>
                                       <p className="font-medium">{u.name}</p>
                                       <p className="text-xs text-muted-foreground">{u.role}</p>
-                                      </div>
+                                    </div>
                                   </div>
                                 </SelectItem>
                               ))}
@@ -739,10 +748,10 @@ useEffect(() => {
                       </div>
                     </div>
                   </div>
-                  </>
-                )}
+                </>
+              )}
               {/* Header for Employees */}
-              {authUser.role !== "admin" && 
+              {authUser.role !== "admin" &&
                 <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 rounded-xl bg-primary/10">
                     <Users className="w-5 h-5 text-primary" />
@@ -765,11 +774,10 @@ useEffect(() => {
                       <button
                         key={month}
                         onClick={() => setSelectedMonth(month)}
-                        className={`w-full text-left px-3 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm ${
-                          selectedMonth === month 
-                            ? "bg-primary text-primary-foreground" 
+                        className={`w-full text-left px-3 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm ${selectedMonth === month
+                            ? "bg-primary text-primary-foreground"
                             : "hover:bg-muted"
-                        }`}
+                          }`}
                       >
                         <Clock className="w-4 h-4" />
                         {new Date(`${month}-01`).toLocaleString("default", { month: "long", year: "numeric" })}
@@ -835,7 +843,7 @@ useEffect(() => {
                           <span>{leave.used} / {leave.total}</span>
                         </div>
                         <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                          <div 
+                          <div
                             className={`h-full ${leave.color} rounded-full transition-all duration-500`}
                             style={{
                               width: leave.total
@@ -933,7 +941,7 @@ useEffect(() => {
                 <Label htmlFor="leaveType">Leave Type *</Label>
                 <div className="relative">
                   <Select
-                    value={newLeave.type} 
+                    value={newLeave.type}
                     onValueChange={(val) =>
                       setNewLeave({ ...newLeave, type: val })
                     }
@@ -958,8 +966,8 @@ useEffect(() => {
 
               {/* One Day Leave Toggle */}
               <div className="flex items-center space-x-2 p-3 rounded-lg bg-muted/50">
-                <Checkbox 
-                  id="oneDayLeave" 
+                <Checkbox
+                  id="oneDayLeave"
                   checked={oneDayLeave}
                   onCheckedChange={handleToggleOneDay}
                 />
@@ -977,7 +985,7 @@ useEffect(() => {
                   value={newLeave.startDate}
                   onChange={(e) =>
                     setNewLeave(prev =>
-                      oneDayLeave 
+                      oneDayLeave
                         ? { ...prev, startDate: e.target.value, endDate: e.target.value }
                         : { ...prev, startDate: e.target.value }
                     )
@@ -1016,14 +1024,14 @@ useEffect(() => {
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setShowAddLeaveModal(false)}
                 disabled={loading}
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleSaveLeave}
                 disabled={loading}
               > {loading ?

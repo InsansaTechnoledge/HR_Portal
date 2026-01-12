@@ -6,7 +6,7 @@ function EmployeeDetailsDisplay({ employee }) {
     const renderDetailSection = (title, data, employee) => (
         <div className="mb-4">
             <h3 className="text-lg font-semibold text-blue-600 mb-2">{title}</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {Object.entries(data).map(([key, value]) => (
                     <div key={key} className="space-y-1">
                         <p className="text-sm font-medium text-gray-600">
@@ -54,7 +54,7 @@ function EmployeeDetailsDisplay({ employee }) {
         else if (doc === 'Experience Certificate') {
             downloadDocument(employee.name, doc, employee.details.documentsExperience);
 
-            
+
         }
     }
 
@@ -101,172 +101,174 @@ function EmployeeDetailsDisplay({ employee }) {
 
     return (
         <div>
-            <table>
-                <thead>
-                    <tr className="bg-gray-50">
+            <div className="overflow-x-auto">
+                <table className="w-full">
+                    <thead>
+                        <tr className="bg-gray-50">
 
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Name
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Employee ID
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Department
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Designation
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Email
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr className="px-6 py-4 bg-gray-50">
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Name
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Employee ID
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Department
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Designation
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Email
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr className="px-6 py-4 bg-gray-50">
 
-                        <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                                {employee.details.name}
-                            </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                                {employee.details.employeeDetailId}
-                            </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                                {employee.details.department}
-                            </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                                {employee.details.designation}
-                            </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{employee.details.email}</div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colSpan="6" className="px-6 py-4 bg-gray-50">
-                            <div className="space-y-6">
-                                {renderDetailSection('Personal Information', {
-                                    Phone: employee.details.phone,
-                                    'Date of Birth': employee.details.dateOfBirth
-                                        ? new Date(employee.details.dateOfBirth).toLocaleDateString('en-GB') // Format to dd-mm-yyyy
-                                        : null,
-                                    Gender: employee.details.gender,
-                                    'Marital Status': employee.details.maritalStatus,
-                                    Nationality: employee.details.nationality
-                                })}
+                            <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900">
+                                    {employee.details.name}
+                                </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                    {employee.details.employeeDetailId}
+                                </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                    {employee.details.department}
+                                </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                    {employee.details.designation}
+                                </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">{employee.details.email}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colSpan="6" className="px-6 py-4 bg-gray-50">
+                                <div className="space-y-6">
+                                    {renderDetailSection('Personal Information', {
+                                        Phone: employee.details.phone,
+                                        'Date of Birth': employee.details.dateOfBirth
+                                            ? new Date(employee.details.dateOfBirth).toLocaleDateString('en-GB') // Format to dd-mm-yyyy
+                                            : null,
+                                        Gender: employee.details.gender,
+                                        'Marital Status': employee.details.maritalStatus,
+                                        Nationality: employee.details.nationality
+                                    })}
 
-                                {renderDetailSection('Address Information', {
-                                    'Current Address': employee.details.currentAddress,
-                                    'Permanent Address': employee.details.permanentAddress,
-                                    City: employee.details.city,
-                                    State: employee.details.state,
-                                    Pincode: employee.details.pincode
-                                })}
+                                    {renderDetailSection('Address Information', {
+                                        'Current Address': employee.details.currentAddress,
+                                        'Permanent Address': employee.details.permanentAddress,
+                                        City: employee.details.city,
+                                        State: employee.details.state,
+                                        Pincode: employee.details.pincode
+                                    })}
 
-                                {renderDetailSection('Employment Details', {
-                                    'Date of Joining': employee.details.dateOfJoining
-                                        ? new Date(employee.details.dateOfJoining).toLocaleDateString('en-GB') // Format to dd-mm-yyyy
-                                        : null,
-                                })}
+                                    {renderDetailSection('Employment Details', {
+                                        'Date of Joining': employee.details.dateOfJoining
+                                            ? new Date(employee.details.dateOfJoining).toLocaleDateString('en-GB') // Format to dd-mm-yyyy
+                                            : null,
+                                    })}
 
-                                {renderDetailSection('Financial Information', {
-                                    'Name as per Bank Account': employee.details.nameAsPerBank,
-                                    'Bank Name': employee.details.bankName,
-                                    'Account Number': employee.details.accountNumber,
-                                    'IFSC Code': employee.details.ifscCode,
-                                    'PAN Number': employee.details.panNumber,
-                                    'Aadhar Number': employee.details.aadharNumber,
-                                    'UAN Number': employee.details.uanNumber
-                                }, employee)}
+                                    {renderDetailSection('Financial Information', {
+                                        'Name as per Bank Account': employee.details.nameAsPerBank,
+                                        'Bank Name': employee.details.bankName,
+                                        'Account Number': employee.details.accountNumber,
+                                        'IFSC Code': employee.details.ifscCode,
+                                        'PAN Number': employee.details.panNumber,
+                                        'Aadhar Number': employee.details.aadharNumber,
+                                        'UAN Number': employee.details.uanNumber
+                                    }, employee)}
 
-                                {renderDetailSection('Emergency Contact', {
-                                    'Contact Name': employee.details.emergencyContactName,
-                                    'Contact Relation': employee.details.emergencyContactRelation,
-                                    'Contact Phone': employee.details.emergencyContactPhone
-                                })}
+                                    {renderDetailSection('Emergency Contact', {
+                                        'Contact Name': employee.details.emergencyContactName,
+                                        'Contact Relation': employee.details.emergencyContactRelation,
+                                        'Contact Phone': employee.details.emergencyContactPhone
+                                    })}
 
-                                <div className="mt-4">
-                                    <h3 className="text-lg font-semibold text-blue-600 mb-2">
-                                        Documents
-                                    </h3>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        {
-                                            employee.details.documentsAadhar || employee.details.documentsPanCard || employee.details.documentsDegree || employee.details.documentsExperience
-                                                ?
-                                                null
-                                                :
-                                                <div className='text-gray-500'>No documents submitted</div>
-                                        }
-                                        {
-                                            employee.details.documentsPanCard
-                                                ?
-                                                <button
-                                                    onClick={() => handleDownload(employee, 'PAN Card')}
-                                                    key='PAN Card'
-                                                    className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                                                >
-                                                    <Download className="w-4 h-4 mr-2" />
-                                                    PAN Card
-                                                </button>
-                                                :
-                                                null
-                                        }
-                                        {
-                                            employee.details.documentsAadhar
-                                                ?
-                                                <button
-                                                    onClick={() => handleDownload(employee, 'Aadhar Card')}
-                                                    key='Aadhar Card'
-                                                    className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                                                >
-                                                    <Download className="w-4 h-4 mr-2" />
-                                                    Aadhar Card
-                                                </button>
-                                                :
-                                                null
-                                        }
-                                        {
-                                            employee.details.documentsDegree
-                                                ?
-                                                <button
-                                                    onClick={() => handleDownload(employee, 'Degree Certificate')}
-                                                    key='Degree Certificate'
-                                                    className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                                                >
-                                                    <Download className="w-4 h-4 mr-2" />
-                                                    Degree Certificate
-                                                </button>
-                                                :
-                                                null
-                                        }
-                                        {
-                                            employee.details.documentsExperience
-                                                ?
-                                                <button
-                                                    onClick={() => handleDownload(employee, 'Experience Certificate')}
-                                                    key='Experience Certificate'
-                                                    className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                                                >
-                                                    <Download className="w-4 h-4 mr-2" />
-                                                    Experience Certificate
-                                                </button>
-                                                :
-                                                null
-                                        }
+                                    <div className="mt-4">
+                                        <h3 className="text-lg font-semibold text-blue-600 mb-2">
+                                            Documents
+                                        </h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                            {
+                                                employee.details.documentsAadhar || employee.details.documentsPanCard || employee.details.documentsDegree || employee.details.documentsExperience
+                                                    ?
+                                                    null
+                                                    :
+                                                    <div className='text-gray-500'>No documents submitted</div>
+                                            }
+                                            {
+                                                employee.details.documentsPanCard
+                                                    ?
+                                                    <button
+                                                        onClick={() => handleDownload(employee, 'PAN Card')}
+                                                        key='PAN Card'
+                                                        className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                                                    >
+                                                        <Download className="w-4 h-4 mr-2" />
+                                                        PAN Card
+                                                    </button>
+                                                    :
+                                                    null
+                                            }
+                                            {
+                                                employee.details.documentsAadhar
+                                                    ?
+                                                    <button
+                                                        onClick={() => handleDownload(employee, 'Aadhar Card')}
+                                                        key='Aadhar Card'
+                                                        className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                                                    >
+                                                        <Download className="w-4 h-4 mr-2" />
+                                                        Aadhar Card
+                                                    </button>
+                                                    :
+                                                    null
+                                            }
+                                            {
+                                                employee.details.documentsDegree
+                                                    ?
+                                                    <button
+                                                        onClick={() => handleDownload(employee, 'Degree Certificate')}
+                                                        key='Degree Certificate'
+                                                        className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                                                    >
+                                                        <Download className="w-4 h-4 mr-2" />
+                                                        Degree Certificate
+                                                    </button>
+                                                    :
+                                                    null
+                                            }
+                                            {
+                                                employee.details.documentsExperience
+                                                    ?
+                                                    <button
+                                                        onClick={() => handleDownload(employee, 'Experience Certificate')}
+                                                        key='Experience Certificate'
+                                                        className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                                                    >
+                                                        <Download className="w-4 h-4 mr-2" />
+                                                        Experience Certificate
+                                                    </button>
+                                                    :
+                                                    null
+                                            }
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     )
 }
