@@ -153,26 +153,26 @@ const PayslipGenerator = () => {
 
     const handleEmployeeSelect = (value) => {
         const selectedEmployee = employees.find(emp => emp.name === value);
+
         if (selectedEmployee && selectedEmployee.details) {
-            setEmployeeData({
-                ...employeeData,
-                name: selectedEmp.name,
-                employeeId: selectedEmp.empId,
-                email: selectedEmp.email,
-                department: selectedEmp.department,
-                designation: selectedEmp.details.designation,
-                bankAccount: selectedEmp.details.accountNumber,
-                panNumber: selectedEmp.details.panNumber,
-                salary: selectedEmp.details.salary || 0,
-                uanNumber: selectedEmp.details.uanNumber || '',
+            setEmployeeData(prev => ({
+                ...prev,
+                name: selectedEmployee.name,
+                employeeId: selectedEmployee.empId,
+                email: selectedEmployee.email,
+                department: selectedEmployee.department,
+                designation: selectedEmployee.details.designation,
+                bankAccount: selectedEmployee.details.accountNumber,
+                panNumber: selectedEmployee.details.panNumber,
+                salary: selectedEmployee.details.salary || 0,
+                uanNumber: selectedEmployee.details.uanNumber || '',
                 hra: 0,
                 conveyanceAllowance: 0,
                 medicalAllowance: 0,
                 specialAllowance: 0,
                 month: '',
-            });
-        }
-        else{
+            }));
+        } else {
             toast ({
                 variant: "destructive",
                 title: "Error",
