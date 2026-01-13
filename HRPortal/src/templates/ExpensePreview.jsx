@@ -2,25 +2,20 @@ import { Card, CardContent, CardHeader } from "../Components/ui/card";
 import { Receipt } from "lucide-react";
 
 const PayslipPreview = ({ employee, expense }) => {
-
-    console.log("Employee Data: ", employee);
-    console.log("Expense Data: ", expense);
+  console.log("Employee Data: ", employee);
+  console.log("Expense Data: ", expense);
 
   return (
     <Card className="border border-dashed rounded-xl bg-white">
-      
       {/* Header */}
       <CardHeader className="text-center border-b pb-4">
         <h2 className="text-lg font-bold tracking-wide">
           Insansa Technologies
         </h2>
-        <p className="text-xs text-muted-foreground">
-          Expense Payment Slip
-        </p>
+        <p className="text-xs text-muted-foreground">Expense Payment Slip</p>
       </CardHeader>
 
       <CardContent className="text-sm space-y-4 pt-4">
-        
         {/* Slip Meta */}
         <div className="flex justify-between text-xs text-muted-foreground">
           <span>Generated On</span>
@@ -37,23 +32,41 @@ const PayslipPreview = ({ employee, expense }) => {
           </div>
 
           <div className="flex justify-between">
-            <span>Expense Type</span>
-            <span className="font-medium">{expense?.expenseType}</span>
-          </div>
-
-          <div className="flex justify-between">
             <span>Expense Date</span>
             <span>
               {new Date(expense?.expenseDate).toLocaleDateString("en-IN")}
             </span>
           </div>
+
+          <div className="flex justify-between">
+            <span>Reimbursement Month</span>
+            <span>{expense?.reimbursementMonth || "-"}</span>
+          </div>
+        </div>
+
+        <div className="border-t pt-3">
+          <p className="font-medium mb-2">Expense Breakdown</p>
+          <div className="space-y-1.5 text-sm">
+            {Array.isArray(expense?.expenses) && expense.expenses.length > 0 ? (
+              expense.expenses.map((exp, idx) => (
+                <div key={idx} className="flex justify-between pl-4">
+                  <span className="text-muted-foreground">{exp.type}</span>
+                  <span className="font-medium">
+                    ₹{Number(exp.amount).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="text-muted-foreground text-center">
+                No expense details
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="border-t pt-3 flex justify-between font-semibold text-base">
           <span>Total Payable</span>
-          <span>
-            ₹{Number(expense?.amount).toLocaleString("en-IN")}
-          </span>
+          <span>₹{Number(expense?.amount).toLocaleString("en-IN")}</span>
         </div>
 
         {/* Footer */}
@@ -64,7 +77,6 @@ const PayslipPreview = ({ employee, expense }) => {
           </div>
           <p>No signature required</p>
         </div>
-
       </CardContent>
     </Card>
   );

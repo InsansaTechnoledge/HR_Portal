@@ -1,10 +1,10 @@
-import { useEffect, useState, useRef} from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import API_BASE_URL from "../config";
 import SuccessToast from "../Components/Toaster/SuccessToaser";
 import ErrorToast from "../Components/Toaster/ErrorToaster";
 import { toast } from "../hooks/useToast";
-import ExpensePreview from '../templates/ExpensePreview'
+import ExpensePreview from "../templates/ExpensePreview";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -21,440 +21,240 @@ import {
   Mail,
   ExternalLink,
   Loader2,
-  Receipt
+  Receipt,
 } from "lucide-react";
 
-import {Card, CardContent, CardHeader, CardTitle} from '../Components/ui/card';
-import {Label} from '../Components/ui/label';
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '../Components/ui/select';
-import {Input} from '../Components/ui/input';
-import {Badge} from '../Components/ui/badge';
-import {Table, TableBody, TableCell, TableHead, TableRow, TableHeader} from '../Components/ui/table';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../Components/ui/card";
+import { Label } from "../Components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../Components/ui/select";
+import { Input } from "../Components/ui/input";
+import { Badge } from "../Components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  TableHeader,
+} from "../Components/ui/table";
 import { Button } from "../Components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter
+  DialogFooter,
 } from "../Components/ui/dialog";
 
-
-
-
 const ExpenseGenerator = () => {
-	const [employees, setEmployees] = useState([]);
-	const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
-	const [selectedEmployee, setSelectedEmployee] = useState(null);
-	const [selectedMonth, setSelectedMonth] = useState("");
-	const [expenses, setExpenses] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [expenses, setExpenses] = useState([]);
 
-	const [loadingEmployees, setLoadingEmployees] = useState(true);
-	const [loadingExpenses, setLoadingExpenses] = useState(false);
-	const [payingId, setPayingId] = useState("");
+  const [loadingEmployees, setLoadingEmployees] = useState(true);
+  const [loadingExpenses, setLoadingExpenses] = useState(false);
+  const [payingId, setPayingId] = useState("");
 
-	const [successMessage, setSuccessMessage] = useState("");
-	const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
-	const [openDialog, setOpenDialog] = useState(false);
-	const [selectedExpense, setSelectedExpense] = useState(null);
-	const [generatingSlip, setGeneratingSlip] = useState(false);
-	const [slipGenerated, setSlipGenerated] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState(null);
+  const [generatingSlip, setGeneratingSlip] = useState(false);
+  const [slipGenerated, setSlipGenerated] = useState(false);
 
-	const slipRef = useRef(null);
+  const slipRef = useRef(null);
 
+  // Fetch employees once
+  useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
 
-	// Fetch employees once
-	useEffect(() => {
-		const controller = new AbortController();
-		const { signal } = controller;
+    const fetchEmployees = async () => {
+      try {
+        setLoadingEmployees(true);
+        const response = await axios.get(`${API_BASE_URL}/api/employee/`, {
+          params: {
+            fields:
+              "name,empId,email,department,details.designation,details.salary",
+            limit: 200,
+          },
+          signal,
+        });
 
-		const fetchEmployees = async () => {
-			try {
-				setLoadingEmployees(true);
-				const response = await axios.get(`${API_BASE_URL}/api/employee/`, {
-					params: {
-						fields:
-							"name,empId,email,department,details.designation,details.salary",
-						limit: 200,
-					},
-					signal,
-				});
+        if (response.status === 200 || response.status === 201) {
+          setEmployees(response.data.employees || []);
+        }
+      } catch (err) {
+        if (axios.isCancel?.(err)) return;
+        console.error("Error fetching employees for expense generator:", err);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Error Fetching Employees",
+        });
+      } finally {
+        setLoadingEmployees(false);
+      }
+    };
 
-				if (response.status === 200 || response.status === 201) {
-					setEmployees(response.data.employees || []);
-				}
-			} catch (err) {
-				if (axios.isCancel?.(err)) return;
-				console.error("Error fetching employees for expense generator:", err);
-				toast ({
-					variant:"destructive",
-					title:"Error",
-					description:"Error Fetching Employees",
-				})
-			} finally {
-				setLoadingEmployees(false);
-			}
-		};
+    fetchEmployees();
+    return () => controller.abort();
+  }, []);
 
-		fetchEmployees();
-		return () => controller.abort();
-	}, []);
+  // Fetch approved expenses when employee or month changes
+  useEffect(() => {
+    const fetchExpenses = async () => {
+      if (!selectedEmployeeId) {
+        setExpenses([]);
+        return;
+      }
 
-	// Fetch approved expenses when employee or month changes
-	useEffect(() => {
-		const fetchExpenses = async () => {
-			if (!selectedEmployeeId) {
-				setExpenses([]);
-				return;
-			}
+      const employee = employees.find((e) => e._id === selectedEmployeeId);
+      setSelectedEmployee(employee || null);
 
-			const employee = employees.find((e) => e._id === selectedEmployeeId);
-			setSelectedEmployee(employee || null);
+      try {
+        setLoadingExpenses(true);
+        setErrorMessage("");
 
-			try {
-				setLoadingExpenses(true);
-				setErrorMessage("");
+        const params = {
+          status: "APPROVED",
+          employeeId: selectedEmployeeId,
+          limit: 200,
+        };
 
-				const params = {
-					status: "APPROVED",
-					employeeId: selectedEmployeeId,
-					limit: 200,
-				};
+        if (selectedMonth) {
+          params.reimbursementMonth = selectedMonth;
+        }
 
-				if (selectedMonth) {
-					params.reimbursementMonth = selectedMonth;
-				}
+        const response = await axios.get(`${API_BASE_URL}/api/expense`, {
+          params,
+          withCredentials: true,
+        });
 
-				const response = await axios.get(`${API_BASE_URL}/api/expense`, {
-					params,
-					withCredentials: true,
-				});
+        if (response.status === 200 || response.status === 201) {
+          setExpenses(response.data.expenses || []);
+        }
+      } catch (err) {
+        console.error("Error fetching approved expenses:", err);
+        toast({
+          variant: "destuctive",
+          title: "Error",
+          description: "Error Fetching Expenses",
+        });
+      } finally {
+        setLoadingExpenses(false);
+      }
+    };
 
-				if (response.status === 200 || response.status === 201) {
-					setExpenses(response.data.expenses || []);
-				}
-			} catch (err) {
-				console.error("Error fetching approved expenses:", err);
-				toast ({
-					variant:"destuctive",
-					title:"Error",
-					description:"Error Fetching Expenses",
-				})
-			} finally {
-				setLoadingExpenses(false);
-			}
-		};
+    fetchExpenses();
+  }, [selectedEmployeeId, selectedMonth, employees]);
 
-		fetchExpenses();
-	}, [selectedEmployeeId, selectedMonth, employees]);
+  const handleEmployeeChange = (value) => {
+    if (value === "none") {
+      setSelectedEmployeeId("");
+      setSelectedEmployee(null);
+      setExpenses([]);
+      return;
+    }
 
-	const handleEmployeeChange = (value) => {
-		 if (value === "none") {
-			setSelectedEmployeeId("");
-			setSelectedEmployee(null);
-			setExpenses([]);
-			return;
-		}
+    setSelectedEmployeeId(value || "");
+    setSelectedMonth("");
+    setExpenses([]);
+    setSuccessMessage("");
+    setErrorMessage("");
+  };
 
-		setSelectedEmployeeId(value || "");
-		setSelectedMonth("");
-		setExpenses([]);
-		setSuccessMessage("");
-		setErrorMessage("");
-	};
+  const handleMonthChange = (e) => {
+    setSelectedMonth(e.target.value || "");
+  };
 
-	const handleMonthChange = (e) => {
-		setSelectedMonth(e.target.value || "");
-	};
+  const handlePaySeparately = async (expense) => {
+    if (!expense?._id) return;
 
-	const handlePaySeparately = async (expense) => {
-		if (!expense?._id) return;
+    try {
+      setPayingId(expense._id);
+      setGeneratingSlip(true);
 
-		try {
-			setPayingId(expense._id);
-			setGeneratingSlip(true);
+      await axios.patch(
+        `${API_BASE_URL}/api/expense/${expense._id}/pay-separate`,
+        {},
+        { withCredentials: true }
+      );
 
-			await axios.patch(
-			`${API_BASE_URL}/api/expense/${expense._id}/pay-separate`,
-			{},
-			{ withCredentials: true }
-			);
+      toast({
+        variant: "success",
+        title: "Payment Successful",
+        description: "Expense marked as paid successfully",
+      });
 
-			toast({
-			variant: "success",
-			title: "Payment Successful",
-			description: "Expense marked as paid and slip generated",
-			});
+      // Remove the paid expense from the list
+      setExpenses((prev) => prev.filter((e) => e._id !== expense._id));
 
-			// allow preview + download
-			setSelectedExpense(expense);
-			setSlipGenerated(true);
+      // Close the dialog
+      setOpenDialog(false);
+      setSelectedExpense(null);
+      setSlipGenerated(false);
+    } catch (err) {
+      console.error(err);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Unable to process payment",
+      });
+    } finally {
+      setPayingId("");
+      setGeneratingSlip(false);
+    }
+  };
 
-		} catch (err) {
-			console.error(err);
-			toast({
-			variant: "destructive",
-			title: "Error",
-			description: "Unable to process payment",
-			});
-		} finally {
-			setPayingId("");
-			setGeneratingSlip(false);
-		}
-	};
+  //Downlaod PDF function
+  const downloadPayslipPDF = async () => {
+    if (!slipRef.current || !selectedExpense) return;
 
+    const canvas = await html2canvas(slipRef.current, {
+      scale: 2,
+      backgroundColor: "#fff",
+    });
 
-	//Downlaod PDF function
-	const downloadPayslipPDF = async () => {
-		if (!slipRef.current || !selectedExpense) return;
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF("p", "px", "a4");
 
-		const canvas = await html2canvas(slipRef.current, {
-			scale: 2,
-			backgroundColor: "#fff",
-		});
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-		const imgData = canvas.toDataURL("image/png");
-		const pdf = new jsPDF("p", "px", "a4");
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`Expense_Slip_${selectedExpense._id}.pdf`);
 
-		const pdfWidth = pdf.internal.pageSize.getWidth();
-		const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    //remove from list
+    setExpenses((prev) => prev.filter((e) => e._id !== selectedExpense._id));
 
-		pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-		pdf.save(`Expense_Slip_${selectedExpense._id}.pdf`);
+    // cleanup
+    setSlipGenerated(false);
+    setOpenDialog(false);
+    setSelectedExpense(null);
+  };
 
-		//remove from list
-		setExpenses(prev =>
-			prev.filter(e => e._id !== selectedExpense._id)
-		);
+  const totalApprovedAmount = expenses.reduce(
+    (sum, exp) => sum + (Number(exp.amount) || 0),
+    0
+  );
 
-		// cleanup
-		setSlipGenerated(false);
-		setOpenDialog(false);
-		setSelectedExpense(null);
-	};
-
-
-
-	const totalApprovedAmount = expenses.reduce(
-		(sum, exp) => sum + (Number(exp.amount) || 0),
-		0
-	);
-
-	return (
-		// <div className="min-h-screen bg-gray-50 p-6">
-		// 	{successMessage && <SuccessToast message={successMessage} />}
-		// 	{errorMessage && <ErrorToast error={errorMessage} />}   
-
-		// 	<div className="max-w-6xl mx-auto">
-		// 		<div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
-		// 			<div>
-		// 				<h1 className="text-2xl font-semibold text-gray-900">
-		// 					Expense Generator
-		// 				</h1>
-		// 				<p className="mt-1 text-sm text-gray-500">
-		// 					Select an employee to view their approved expenses and generate
-		// 					separate payments.
-		// 				</p>
-		// 			</div>
-		// 		</div>
-
-		// 		<div className="mb-6 grid grid-cols-1 gap-4 rounded-lg bg-white p-4 shadow-sm md:grid-cols-3">
-		// 			<div className="flex flex-col gap-2">
-		// 				<label className="text-xs font-medium text-gray-600">
-		// 					Employee
-		// 				</label>
-		// 				<select
-		// 					value={selectedEmployeeId}
-		// 					onChange={handleEmployeeChange}
-		// 					disabled={loadingEmployees}
-		// 					className="w-full rounded border border-gray-300 bg-white p-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
-		// 				>
-		// 					<option value="">
-		// 						{loadingEmployees ? "Loading employees..." : "Select employee"}
-		// 					</option>
-		// 					{employees.map((emp) => (
-		// 						<option key={emp._id} value={emp._id}>
-		// 							{emp.name} ({emp.empId})
-		// 						</option>
-		// 					))}
-		// 				</select>
-		// 			</div>
-
-		// 			<div className="flex flex-col gap-2">
-		// 				<label className="text-xs font-medium text-gray-600">
-		// 					Reimbursement Month (optional)
-		// 				</label>
-		// 				<input
-		// 					type="month"
-		// 					value={selectedMonth}
-		// 					onChange={handleMonthChange}
-		// 					className="w-full rounded border border-gray-300 bg-white p-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-		// 				/>
-		// 			</div>
-
-		// 			<div className="flex flex-col justify-center gap-1 rounded-lg bg-gray-50 p-3">
-		// 				<span className="text-xs uppercase tracking-wide text-gray-400">
-		// 					Total Approved Amount
-		// 				</span>
-		// 				<span className="text-lg font-semibold text-gray-900">
-        //       
-		// 					{totalApprovedAmount.toLocaleString("en-IN")}
-		// 				</span>
-		// 				<span className="text-xs text-gray-500">
-		// 					{expenses.length} approved expense
-		// 					{expenses.length === 1 ? "" : "s"} found
-		// 				</span>
-		// 			</div>
-		// 		</div>
-
-		// 		{selectedEmployee && (
-		// 			<div className="mb-4 rounded-lg bg-white p-4 shadow-sm text-sm text-gray-700">
-		// 				<div className="flex flex-wrap gap-4">
-		// 					<div>
-		// 						<div className="text-xs text-gray-400">Name</div>
-		// 						<div className="font-medium">{selectedEmployee.name}</div>
-		// 					</div>
-		// 					<div>
-		// 						<div className="text-xs text-gray-400">Employee ID</div>
-		// 						<div className="font-medium">{selectedEmployee.empId}</div>
-		// 					</div>
-		// 					<div>
-		// 						<div className="text-xs text-gray-400">Department</div>
-		// 						<div className="font-medium">{selectedEmployee.department}</div>
-		// 					</div>
-		// 					<div>
-		// 						<div className="text-xs text-gray-400">Email</div>
-		// 						<div className="font-medium break-all">
-		// 							{selectedEmployee.email}
-		// 						</div>
-		// 					</div>
-		// 				</div>
-		// 			</div>
-		// 		)}
-
-		// 		<div className="overflow-x-auto rounded-lg bg-white shadow-sm">
-		// 			<table className="w-full text-left text-sm">
-		// 				<thead className="bg-gray-100">
-		// 					<tr>
-		// 						<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-		// 							Expense Type
-		// 						</th>
-		// 						<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-		// 							Amount
-		// 						</th>
-		// 						<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-		// 							Date
-		// 						</th>
-		// 						<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-		// 							Month
-		// 						</th>
-		// 						<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-		// 							Receipts
-		// 						</th>
-		// 						<th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-		// 							Action
-		// 						</th>
-		// 					</tr>
-		// 				</thead>
-
-		// 				<tbody>
-		// 					{loadingExpenses ? (
-		// 						<tr>
-		// 							<td
-		// 								colSpan="6"
-		// 								className="px-4 py-6 text-center text-sm text-gray-500"
-		// 							>
-		// 								Loading approved expenses...
-		// 							</td>
-		// 						</tr>
-		// 					) : !selectedEmployeeId ? (
-		// 						<tr>
-		// 							<td
-		// 								colSpan="6"
-		// 								className="px-4 py-6 text-center text-sm text-gray-500"
-		// 							>
-		// 								Please select an employee to view expenses.
-		// 							</td>
-		// 						</tr>
-		// 					) : expenses.length === 0 ? (
-		// 						<tr>
-		// 							<td
-		// 								colSpan="6"
-		// 								className="px-4 py-6 text-center text-sm text-gray-500"
-		// 							>
-		// 								No approved expenses found for the selected filters.
-		// 							</td>
-		// 						</tr>
-		// 					) : (
-		// 						expenses.map((exp) => (
-		// 							<tr
-		// 								key={exp._id}
-		// 								className="border-t border-gray-100 hover:bg-gray-50"
-		// 							>
-		// 								<td className="px-4 py-3 align-top text-sm text-gray-700">
-		// 									{exp.expenseType}
-		// 								</td>
-		// 								<td className="px-4 py-3 align-top text-sm font-medium text-gray-900">
-        //               
-		// 									{Number(exp.amount || 0).toLocaleString("en-IN")}
-		// 								</td>
-		// 								<td className="px-4 py-3 align-top text-sm text-gray-700">
-		// 									{exp.expenseDate
-		// 										? new Date(exp.expenseDate).toLocaleDateString(
-		// 												"en-IN"
-		// 											)
-		// 										: "-"}
-		// 								</td>
-		// 								<td className="px-4 py-3 align-top text-sm text-gray-700">
-		// 									{exp.reimbursementMonth || "-"}
-		// 								</td>
-		// 								<td className="px-4 py-3 align-top text-sm text-gray-700">
-		// 									{exp.receipts && exp.receipts.length > 0 ? (
-		// 										<div className="space-y-1">
-		// 											{exp.receipts.map((r, idx) => (
-		// 												<a
-		// 													key={idx}
-		// 													href={r.url}
-		// 													target="_blank"
-		// 													rel="noreferrer"
-		// 													className="block text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
-		// 												>
-		// 													View Receipt {idx + 1}
-		// 												</a>
-		// 											))}
-		// 										</div>
-		// 									) : (
-		// 										<span className="text-xs text-gray-400">
-		// 											No receipts
-		// 										</span>
-		// 									)}
-		// 								</td>
-		// 								<td className="px-4 py-3 align-top text-sm text-gray-700">
-		// 									<button
-		// 										type="button"
-		// 										disabled={payingId === exp._id}
-		// 										onClick={() => handlePaySeparately(exp._id)}
-		// 										className={`rounded-md px-3 py-1 text-xs font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 ${
-		// 											payingId === exp._id
-		// 												? "bg-indigo-300 cursor-not-allowed"
-		// 												: "bg-indigo-600 hover:bg-indigo-700"
-		// 										}`}
-		// 									>
-		// 										{payingId === exp._id
-		// 											? "Generating..."
-		// 											: "Generate Expense"}
-		// 									</button>
-		// 								</td>
-		// 							</tr>
-		// 						))
-		// 					)}
-		// 				</tbody>
-		// 			</table>
-		// 		</div>
-		// 	</div>
-		// </div>
-		<div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
+  return (
+    <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
       {successMessage && <SuccessToast message={successMessage} />}
       {errorMessage && <ErrorToast error={errorMessage} />}
 
@@ -469,7 +269,8 @@ const ExpenseGenerator = () => {
               Expense Generator
             </h1>
             <p className="text-muted-foreground">
-              Select an employee to view their approved expenses and generate separate payments
+              Select an employee to view their approved expenses and generate
+              separate payments
             </p>
           </div>
         </div>
@@ -484,32 +285,35 @@ const ExpenseGenerator = () => {
                   <User className="h-4 w-4 text-muted-foreground" />
                   Select Employee
                 </Label>
-				<div className="relative">
-					 <Select
-					value={selectedEmployeeId || "none"}
-					onValueChange={handleEmployeeChange}
-					disabled={loadingEmployees}
-					>
-					<SelectTrigger className="bg-secondary/50 border-border/50">
-						<SelectValue placeholder={loadingEmployees ? "Loading..." : "Select employee"} />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="none">Select employee</SelectItem>
-						{employees.map((emp) => (
-						<SelectItem key={emp._id} value={emp._id}>
-							<div className="flex items-center gap-2">
-							<div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
-								{emp.name.charAt(0)}
-							</div>
-							{emp.name} ({emp.empId})
-							</div>
-						</SelectItem>
-						))}
-					</SelectContent>
-					</Select>
-					<ChevronDown className="absolute right-3 top-4 h-4 w-4 opacity-50 pointer-events-none"/>
-				</div>
-               
+                <div className="relative">
+                  <Select
+                    value={selectedEmployeeId || "none"}
+                    onValueChange={handleEmployeeChange}
+                    disabled={loadingEmployees}
+                  >
+                    <SelectTrigger className="bg-secondary/50 border-border/50">
+                      <SelectValue
+                        placeholder={
+                          loadingEmployees ? "Loading..." : "Select employee"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Select employee</SelectItem>
+                      {employees.map((emp) => (
+                        <SelectItem key={emp._id} value={emp._id}>
+                          <div className="flex items-center gap-2">
+                            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
+                              {emp.name.charAt(0)}
+                            </div>
+                            {emp.name} ({emp.empId})
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <ChevronDown className="absolute right-3 top-4 h-4 w-4 opacity-50 pointer-events-none" />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -542,16 +346,24 @@ const ExpenseGenerator = () => {
                     ₹{totalApprovedAmount.toLocaleString("en-IN")}
                   </p>
                 </div>
-                <Badge variant="secondary" className="bg-primary/10 text-primary border-0">
+                <Badge
+                  variant="secondary"
+                  className="bg-primary/10 text-primary border-0"
+                >
                   <FileText className="h-3 w-3 mr-1" />
-                  {expenses.length} approved expense{expenses.length !== 1 ? "s" : ""} found
+                  {expenses.length} approved expense
+                  {expenses.length !== 1 ? "s" : ""} found
                 </Badge>
               </div>
             </CardContent>
           </Card>
 
           {/* Employee Details Card */}
-          <Card className={`border-border/50 shadow-card transition-all duration-300 ${selectedEmployee ? 'opacity-100' : 'opacity-50'}`}>
+          <Card
+            className={`border-border/50 shadow-card transition-all duration-300 ${
+              selectedEmployee ? "opacity-100" : "opacity-50"
+            }`}
+          >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <User className="h-4 w-4" />
@@ -568,8 +380,12 @@ const ExpenseGenerator = () => {
                       </span>
                     </div>
                     <div>
-                      <p className="font-semibold text-foreground">{selectedEmployee.name}</p>
-                      <p className="text-xs text-muted-foreground">{selectedEmployee.details?.designation}</p>
+                      <p className="font-semibold text-foreground">
+                        {selectedEmployee.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedEmployee.details?.designation}
+                      </p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
@@ -603,7 +419,10 @@ const ExpenseGenerator = () => {
               <CheckCircle2 className="h-5 w-5 text-success" />
               Approved Expenses
               {selectedEmployee && (
-                <Badge variant="outline" className="ml-2 bg-success/10 text-success border-success/20">
+                <Badge
+                  variant="outline"
+                  className="ml-2 bg-success/10 text-success border-success/20"
+                >
                   Ready for payment
                 </Badge>
               )}
@@ -615,12 +434,16 @@ const ExpenseGenerator = () => {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30 hover:bg-muted/30">
-                    <TableHead className="font-semibold">Expense Type</TableHead>
+                    <TableHead className="font-semibold">
+                      Expense Type
+                    </TableHead>
                     <TableHead className="font-semibold">Amount</TableHead>
                     <TableHead className="font-semibold">Date</TableHead>
                     <TableHead className="font-semibold">Month</TableHead>
                     <TableHead className="font-semibold">Receipts</TableHead>
-                    <TableHead className="font-semibold text-right">Action</TableHead>
+                    <TableHead className="font-semibold text-right">
+                      Action
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -629,7 +452,9 @@ const ExpenseGenerator = () => {
                       <TableCell colSpan={6} className="text-center py-12">
                         <div className="flex flex-col items-center gap-2">
                           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                          <span className="text-muted-foreground">Loading approved expenses...</span>
+                          <span className="text-muted-foreground">
+                            Loading approved expenses...
+                          </span>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -638,7 +463,9 @@ const ExpenseGenerator = () => {
                       <TableCell colSpan={6} className="text-center py-12">
                         <div className="flex flex-col items-center gap-2">
                           <User className="h-12 w-12 text-muted-foreground/50" />
-                          <span className="text-muted-foreground">Please select an employee to view expenses</span>
+                          <span className="text-muted-foreground">
+                            Please select an employee to view expenses
+                          </span>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -647,20 +474,34 @@ const ExpenseGenerator = () => {
                       <TableCell colSpan={6} className="text-center py-12">
                         <div className="flex flex-col items-center gap-2">
                           <Receipt className="h-12 w-12 text-muted-foreground/50" />
-                          <span className="text-muted-foreground">No approved expenses found</span>
+                          <span className="text-muted-foreground">
+                            No approved expenses found
+                          </span>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : (
                     expenses.map((exp) => (
-                      <TableRow key={exp._id} className="group hover:bg-muted/30 transition-colors">
+                      <TableRow
+                        key={exp._id}
+                        className="group hover:bg-muted/30 transition-colors"
+                      >
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                              <Receipt className="h-4 w-4 text-primary" />
+                          {Array.isArray(exp.expenses) && exp.expenses.length > 0 ? (
+                            <div className="space-y-1">
+                              {exp.expenses.map((e, idx) => (
+                                <div key={idx} className="flex items-center gap-2">
+                                  <Receipt className="h-3 w-3 text-muted-foreground" />
+                                  <span className="text-muted-foreground">{e.type}:</span>
+                                  <span className="font-medium">
+                                    ₹{Number(e.amount).toLocaleString("en-IN")}
+                                  </span>
+                                </div>
+                              ))}
                             </div>
-                            <span className="font-medium">{exp.expenseType}</span>
-                          </div>
+                          ) : (
+                            "-"
+                          )}
                         </TableCell>
                         <TableCell>
                           <span className="font-semibold text-foreground">
@@ -669,11 +510,14 @@ const ExpenseGenerator = () => {
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {exp.expenseDate
-                            ? new Date(exp.expenseDate).toLocaleDateString("en-IN", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric"
-                              })
+                            ? new Date(exp.expenseDate).toLocaleDateString(
+                                "en-IN",
+                                {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                }
+                              )
                             : "-"}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
@@ -690,29 +534,35 @@ const ExpenseGenerator = () => {
                                   className="h-7 px-2 text-primary hover:text-primary hover:bg-primary/10"
                                   asChild
                                 >
-                                  <a href={r.url} target="_blank" rel="noreferrer">
-                                    <ExternalLink className="h-3 w-3 mr-1" />
-                                    #{idx + 1}
+                                  <a
+                                    href={r.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    <ExternalLink className="h-3 w-3 mr-1" />#
+                                    {idx + 1}
                                   </a>
                                 </Button>
                               ))}
                             </div>
                           ) : (
-                            <span className="text-xs text-muted-foreground">No receipts</span>
+                            <span className="text-xs text-muted-foreground">
+                              No receipts
+                            </span>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
-							size="sm"
-							onClick={() => {
-								setSelectedExpense(exp);
-								setOpenDialog(true);
-							}}
-							className="bg-primary hover:bg-primary/90"
-							>
-							<Wallet className="h-4 w-4 mr-1" />
-							Generate Payment
-							</Button>
+                            size="sm"
+                            onClick={() => {
+                              setSelectedExpense(exp);
+                              setOpenDialog(true);
+                            }}
+                            className="bg-primary hover:bg-primary/90"
+                          >
+                            <Wallet className="h-4 w-4 mr-1" />
+                            Generate Payment
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))
@@ -731,12 +581,16 @@ const ExpenseGenerator = () => {
               ) : !selectedEmployeeId ? (
                 <div className="p-8 text-center">
                   <User className="h-12 w-12 text-muted-foreground/50 mx-auto mb-2" />
-                  <span className="text-muted-foreground">Select an employee</span>
+                  <span className="text-muted-foreground">
+                    Select an employee
+                  </span>
                 </div>
               ) : expenses.length === 0 ? (
                 <div className="p-8 text-center">
                   <Receipt className="h-12 w-12 text-muted-foreground/50 mx-auto mb-2" />
-                  <span className="text-muted-foreground">No approved expenses</span>
+                  <span className="text-muted-foreground">
+                    No approved expenses
+                  </span>
                 </div>
               ) : (
                 expenses.map((exp) => (
@@ -747,20 +601,40 @@ const ExpenseGenerator = () => {
                           <Receipt className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <div className="font-medium">{exp.expenseType}</div>
-                          <div className="text-lg font-bold text-foreground">
-                            ₹{Number(exp.amount).toLocaleString("en-IN")}
+                          {Array.isArray(exp.expenses) && exp.expenses.length > 0 ? (
+                            <div className="space-y-1">
+                              {exp.expenses.map((e, idx) => (
+                                <div key={idx} className="flex items-center gap-2 text-sm">
+                                  <span className="font-medium">{e.type}:</span>
+                                  <span className="font-semibold">₹{Number(e.amount).toLocaleString("en-IN")}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="font-medium">-</div>
+                          )}
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Total: ₹{Number(exp.amount).toLocaleString("en-IN")}
                           </div>
                         </div>
                       </div>
-                      <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                      <Badge
+                        variant="outline"
+                        className="bg-success/10 text-success border-success/20"
+                      >
                         Approved
                       </Badge>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
                         <span className="text-muted-foreground">Date: </span>
-                        <span>{exp.expenseDate ? new Date(exp.expenseDate).toLocaleDateString("en-IN") : "-"}</span>
+                        <span>
+                          {exp.expenseDate
+                            ? new Date(exp.expenseDate).toLocaleDateString(
+                                "en-IN"
+                              )
+                            : "-"}
+                        </span>
                       </div>
                       <div>
                         <span className="text-muted-foreground">Month: </span>
@@ -771,7 +645,13 @@ const ExpenseGenerator = () => {
                       {exp.receipts && exp.receipts.length > 0 && (
                         <div className="flex gap-1">
                           {exp.receipts.map((r, idx) => (
-                            <Button key={idx} variant="outline" size="sm" className="h-8" asChild>
+                            <Button
+                              key={idx}
+                              variant="outline"
+                              size="sm"
+                              className="h-8"
+                              asChild
+                            >
                               <a href={r.url} target="_blank" rel="noreferrer">
                                 <ExternalLink className="h-3 w-3 mr-1" />
                                 Receipt {idx + 1}
@@ -804,104 +684,128 @@ const ExpenseGenerator = () => {
         </Card>
       </div>
 
-	  {/* Payment Dialog */}
-	  <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-			<DialogContent className="max-w-3xl w-full max-h-[85vh] flex flex-col">
+      {/* Payment Dialog */}
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent className="max-w-3xl w-full max-h-[85vh] flex flex-col">
+          {/* Header */}
+          <DialogHeader className="shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-primary" />
+              Confirm Expense Payment
+            </DialogTitle>
+          </DialogHeader>
 
-				{/* Header */}
-				<DialogHeader className="shrink-0">
-				<DialogTitle className="flex items-center gap-2">
-					<Wallet className="h-5 w-5 text-primary" />
-					Confirm Expense Payment
-				</DialogTitle>
-				</DialogHeader>
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto pr-1">
+            {selectedExpense && selectedEmployee && (
+              <div className="space-y-6">
+                {/* Employee Info */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Employee Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <strong>Name:</strong> {selectedEmployee.name}
+                    </div>
+                    <div>
+                      <strong>Employee ID:</strong> {selectedEmployee.empId}
+                    </div>
+                    <div>
+                      <strong>Department:</strong> {selectedEmployee.department}
+                    </div>
+                    <div>
+                      <strong>Email:</strong> {selectedEmployee.email}
+                    </div>
+                  </CardContent>
+                </Card>
 
-				{/* Scrollable Content */}
-				<div className="flex-1 overflow-y-auto pr-1">
-				{selectedExpense && selectedEmployee && (
-					<div className="space-y-6">
+                {/* Expense Info */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Expense Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="col-span-2">
+                      <strong>Expense Breakdown:</strong>
+                      {Array.isArray(selectedExpense.expenses) &&
+                      selectedExpense.expenses.length > 0 ? (
+                        <div className="mt-2 space-y-1">
+                          {selectedExpense.expenses.map((e, idx) => (
+                            <div key={idx} className="flex justify-between pl-4">
+                              <span className="text-muted-foreground">
+                                {e.type}:
+                              </span>
+                              <span className="font-medium">
+                                ₹{Number(e.amount).toLocaleString("en-IN")}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="ml-2">-</span>
+                      )}
+                    </div>
+                    <div>
+                      <strong>Amount:</strong> ₹
+                      {Number(selectedExpense.amount).toLocaleString("en-IN")}
+                    </div>
+                    <div>
+                      <strong>Date:</strong>{" "}
+                      {new Date(selectedExpense.expenseDate).toLocaleDateString(
+                        "en-IN"
+                      )}
+                    </div>
+                    <div>
+                      <strong>Month:</strong>{" "}
+                      {selectedExpense.reimbursementMonth}
+                    </div>
+                  </CardContent>
+                </Card>
 
-					{/* Employee Info */}
-					<Card>
-						<CardHeader>
-						<CardTitle className="text-sm">Employee Details</CardTitle>
-						</CardHeader>
-						<CardContent className="grid grid-cols-2 gap-4 text-sm">
-						<div><strong>Name:</strong> {selectedEmployee.name}</div>
-						<div><strong>Employee ID:</strong> {selectedEmployee.empId}</div>
-						<div><strong>Department:</strong> {selectedEmployee.department}</div>
-						<div><strong>Email:</strong> {selectedEmployee.email}</div>
-						</CardContent>
-					</Card>
+                {/* Payslip Preview */}
+                <ExpensePreview
+                  employee={selectedEmployee}
+                  expense={selectedExpense}
+                />
+              </div>
+            )}
+          </div>
 
-					{/* Expense Info */}
-					<Card>
-						<CardHeader>
-						<CardTitle className="text-sm">Expense Details</CardTitle>
-						</CardHeader>
-						<CardContent className="grid grid-cols-2 gap-4 text-sm">
-						<div><strong>Type:</strong> {selectedExpense.expenseType}</div>
-						<div><strong>Amount:</strong> ₹{Number(selectedExpense.amount).toLocaleString("en-IN")}</div>
-						<div><strong>Date:</strong> {new Date(selectedExpense.expenseDate).toLocaleDateString("en-IN")}</div>
-						<div><strong>Month:</strong> {selectedExpense.reimbursementMonth}</div>
-						</CardContent>
-					</Card>
+          {/* Footer */}
+          <Button
+            onClick={() => handlePaySeparately(selectedExpense)}
+            disabled={generatingSlip}
+            className="bg-success hover:bg-success/90"
+          >
+            {generatingSlip ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="h-4 w-4 mr-1" />
+                Confirm & Generate Payment
+              </>
+            )}
+          </Button>
+        </DialogContent>
+      </Dialog>
 
-					{/* Payslip Preview */}
-					<ExpensePreview
-						employee={selectedEmployee}
-						expense={selectedExpense}
-					/>
-					</div>
-				)}
-				</div>
-
-				{/* Footer */}
-				{!slipGenerated ? (
-				<Button
-					onClick={() => handlePaySeparately(selectedExpense)}
-					disabled={generatingSlip}
-					className="bg-success hover:bg-success/90"
-				>
-					{generatingSlip ? (
-					<>
-						<Loader2 className="h-4 w-4 mr-1 animate-spin" />
-						Processing...
-					</>
-					) : (
-					<>
-						<CheckCircle2 className="h-4 w-4 mr-1" />
-						Confirm & Generate
-					</>
-					)}
-				</Button>
-				) : (
-				<Button
-					onClick={downloadPayslipPDF}
-					className="bg-primary hover:bg-primary/90"
-				>
-					<Receipt className="h-4 w-4 mr-1" />
-					Download PDF
-				</Button>
-				)}
-			</DialogContent>
-		</Dialog>
-
-		
-		{/* This is for download */}
-		<div className="fixed -left-[9999px] top-0">
-			{selectedExpense && selectedEmployee && (
-				<div ref={slipRef} className="w-[794px] bg-white p-6">
-				<ExpensePreview
-					employee={selectedEmployee}
-					expense={selectedExpense}
-				/>
-				</div>
-			)}
-		</div>
+      {/* This is for download */}
+      <div className="fixed -left-[9999px] top-0">
+        {selectedExpense && selectedEmployee && (
+          <div ref={slipRef} className="w-[794px] bg-white p-6">
+            <ExpensePreview
+              employee={selectedEmployee}
+              expense={selectedExpense}
+            />
+          </div>
+        )}
+      </div>
     </div>
-	);
+  );
 };
 
 export default ExpenseGenerator;
-

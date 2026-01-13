@@ -74,8 +74,8 @@ const ExpenseTracker = () => {
     // Only send update when moving away from PENDING to APPROVED/REJECTED
      if (!isFinance || newStatus === "PENDING") return;
 
-    // Only superAdmin and accountant can approve/reject
-    if (!user || !["superAdmin", "accountant"].includes(user.role)) {
+    // Only superAdmin can approve/reject
+    if (!user || !["superAdmin"].includes(user.role)) {
       return;
     }
 
@@ -131,10 +131,13 @@ const ExpenseTracker = () => {
     const matchesMonth =
       !filters.reimbursementMonth ||
       exp.reimbursementMonth === filters.reimbursementMonth;
+    const expenseTypeText = Array.isArray(exp.expenses)
+      ? exp.expenses.map(e => e.type).join(", ")
+      : "";
     const matchesSearch =
       !searchTerm ||
       exp.employeeId.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      exp.expenseType.toLowerCase().includes(searchTerm.toLowerCase());
+      expenseTypeText.toLowerCase().includes(searchTerm.toLowerCase());
 
     return matchesStatus && matchesMonth && matchesSearch;
   });
@@ -373,7 +376,22 @@ const approvedAmount = statsExpenses
                           </TableCell>
                           )}
                           
-                          <TableCell className="font-medium">{exp.expenseType}</TableCell>
+                          <TableCell className="font-medium">
+                            {Array.isArray(exp.expenses) && exp.expenses.length > 0 ? (
+                              <div className="space-y-1">
+                                {exp.expenses.map((e, idx) => (
+                                  <div key={idx} className="flex items-center gap-2">
+                                    <span className="text-muted-foreground">{e.type}:</span>
+                                    <span className="font-semibold text-foreground">
+                                      ₹{Number(e.amount).toLocaleString("en-IN")}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              "-"
+                            )}
+                          </TableCell>
                           <TableCell>
                             <span className="font-semibold text-foreground">
                               ₹{Number(exp.amount || 0).toLocaleString("en-IN")}
@@ -400,7 +418,7 @@ const approvedAmount = statsExpenses
                                 <StatusIcon className="h-3 w-3" />
                                 {statusConfig.label}
                               </Badge>
-                              {isFinance && exp.status === "PENDING" && (
+                              {isAdmin && exp.status === "PENDING" && (
                                 <div className="relative">
                                   <Select
                                     value={exp.status}
@@ -502,7 +520,18 @@ const approvedAmount = statsExpenses
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
                           <span className="text-muted-foreground">Type: </span>
-                          <span className="font-medium">{exp.expenseType}</span>
+                          {Array.isArray(exp.expenses) && exp.expenses.length > 0 ? (
+                            <div className="space-y-1 mt-1">
+                              {exp.expenses.map((e, idx) => (
+                                <div key={idx} className="flex items-center gap-2 text-sm">
+                                  <span className="font-medium">{e.type}:</span>
+                                  <span className="font-semibold">₹{Number(e.amount).toLocaleString("en-IN")}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="font-medium">-</span>
+                          )}
                         </div>
                         <div>
                           <span className="text-muted-foreground">Amount: </span>
