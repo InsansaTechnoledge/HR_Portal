@@ -109,7 +109,7 @@ const Home = () => {
               icon: <ReceiptIndianRupee className="h-6 w-6" />,
               title: 'Add Expense',
               description: 'Add your expenses',
-              path: '/expense-tracker',
+              path: '/add-expense',
               color: 'text-destructive',
               gradient: 'bg-gradient-to-br from-destructive to-hr-amber',
           },

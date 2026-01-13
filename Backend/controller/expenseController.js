@@ -3,24 +3,45 @@ import Employee from "../models/Employee.js";
 
 export const createExpense = async (req, res) => {
   try {
-    const {
-      expenseType,
-      amount,
-      expenseDate,
-      reimbursementMonth,
-      description,
-    } = req.body;
+    const { expenseDate, reimbursementMonth, description } = req.body;
+    const rawExpenses = req.body.expenses;
+
+    let expenses = [];
+
+    if (typeof rawExpenses === "string") {
+      try {
+        const parsed = JSON.parse(rawExpenses);
+        if (Array.isArray(parsed)) {
+          expenses = parsed
+            .filter((e) => e && e.type && e.amount)
+            .map((e) => ({
+              type: String(e.type).trim(),
+              amount: Number(e.amount),
+            }))
+            .filter((e) => e.type && e.amount > 0);
+        }
+      } catch (e) {
+        return res.status(400).json({ message: "Invalid expenses format" });
+      }
+    } else if (Array.isArray(rawExpenses)) {
+      expenses = rawExpenses
+        .filter((e) => e && e.type && e.amount)
+        .map((e) => ({
+          type: String(e.type).trim(),
+          amount: Number(e.amount),
+        }))
+        .filter((e) => e.type && e.amount > 0);
+    }
 
     const uploadedReceipts = req.uploadedReceipts || [];
 
-    console.log("UPLOADED RECIEPTS: ", req.uploadedReceipts);
     if (!uploadedReceipts.length) {
       return res
         .status(400)
         .json({ message: "At least one receipt file is required" });
     }
 
-    if (!expenseType || !amount || !expenseDate || !reimbursementMonth) {
+    if (!expenses.length || !expenseDate || !reimbursementMonth) {
       return res.status(400).json({ message: "Required fields are missing" });
     }
 
@@ -35,10 +56,13 @@ export const createExpense = async (req, res) => {
       });
     }
 
+    // Calculate total amount from individual expenses
+    const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+
     const newExpense = new Expenses({
       employeeId: employee._id,
-      expenseType,
-      amount,
+      expenses,
+      amount: totalAmount,
       expenseDate,
       reimbursementMonth,
       description,
@@ -94,7 +118,7 @@ export const getExpenses = async (req, res) => {
 
     const expenses = await Expenses.find(filter)
       .select(
-        "employeeId expenseType amount expenseDate receipts reimbursementMonth status paymentMode createdAt approvedBy"
+        "employeeId expenses amount expenseDate receipts reimbursementMonth status paymentMode createdAt approvedBy"
       )
       .populate({ path: "employeeId", select: "name email department" })
       .populate("approvedBy", "name")
@@ -136,12 +160,12 @@ export const updateExpenseStatus = async (req, res) => {
       return res.status(400).json({ message: "Status is required" });
     }
 
-    const allowedRoles = ["superadmin", "accountant"];
+    const allowedRoles = ["superadmin"];
     const userRole = String(req.user?.role || "").toLowerCase();
 
     if (!userRole || !allowedRoles.includes(userRole)) {
       return res.status(403).json({
-        message: "Only superAdmin or accountant can update expense status",
+        message: "Only superAdmin  can update expense status",
       });
     }
 

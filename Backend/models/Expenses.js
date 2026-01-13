@@ -12,29 +12,29 @@ const ExpenseSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    expenseType: {
-      type: String,
-      enum: [
-        "Travel",
-        "Food",
-        "Internet",
-        "Medical",
-        "Office Supplies",
-        "Training",
-        "Other",
-      ],
-      required: true,
-      index: true,
-    },
+    // Array of expense items with type and amount
+    expenses: [
+      {
+        type: {
+          type: String,
+          required: true,
+        },
+        amount: {
+          type: Number,
+          required: true,
+          min: 0,
+        },
+      },
+    ],
 
     description: {
       type: String,
       trim: true,
     },
 
+    // Total amount (calculated from expenses array)
     amount: {
       type: Number,
-      required: true,
       min: 0,
     },
     expenseDate: {
@@ -42,14 +42,14 @@ const ExpenseSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Multiple receipt files 
+    // Multiple receipt files
     receipts: [
       {
         url: { type: String },
         publicId: { type: String },
       },
     ],
-    
+
     reimbursementMonth: {
       type: String,
       required: true,
