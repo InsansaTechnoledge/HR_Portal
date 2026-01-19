@@ -336,17 +336,27 @@ const JobApplication = () => {
 
   useEffect(() => {
     if (applications && applications.length > 0) {
-      const filtered = applications.filter(
-        (app) =>
-          (searchTerm === "" ||
-            (app.name &&
-              app.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (app.email &&
-              app.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (app.position &&
-              app.position.toLowerCase().includes(searchTerm.toLowerCase()))) &&
-          (statusFilter === "" || statusFilter === "all" || app.status === statusFilter)
-      );
+      const term = searchTerm.toLowerCase();
+
+      const filtered = applications.filter((app) => {
+        const skillsText = Array.isArray(app.skills)
+          ? app.skills.join(" ").toLowerCase()
+          : (app.skills || "").toLowerCase();
+
+        const matchesSearch =
+          term === "" ||
+          (app.name && app.name.toLowerCase().includes(term)) ||
+          (app.email && app.email.toLowerCase().includes(term)) ||
+          skillsText.includes(term);
+
+        const matchesStatus =
+          statusFilter === "" ||
+          statusFilter === "all" ||
+          app.status === statusFilter;
+
+        return matchesSearch && matchesStatus;
+      });
+
       setFilteredApplications(filtered);
     } else {
       setFilteredApplications([]);
