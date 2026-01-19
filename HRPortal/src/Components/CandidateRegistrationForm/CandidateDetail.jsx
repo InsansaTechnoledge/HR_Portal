@@ -24,17 +24,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
 } from "../ui/dialog";
 
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 
 import Loader from '../Loader/Loader.jsx'
@@ -71,7 +71,7 @@ const CandidatesTable = () => {
                 setCandidates(response.data);
             } catch (err) {
                 console.error('Error fetching candidates:', err.message);
-                toast ({
+                toast({
                     variant: "destructive",
                     title: "Error",
                     description: "Failed to fetch candidates.",
@@ -87,25 +87,12 @@ const CandidatesTable = () => {
 
     const downloadResume = (resume, candidateName) => {
         try {
-            if (!resume) {
-            throw new Error("Resume not found");
+            if (!resume || !resume.data) {
+                throw new Error("Resume data not found");
             }
 
-            // BASE64 STRING
-            const base64String = resume.buffer
-            ? resume.buffer
-            : resume; // depends on how Mongo sends it
-
-            // Decode base64 → binary
-            const byteCharacters = atob(base64String);
-            const byteNumbers = new Array(byteCharacters.length);
-
-            for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-            }
-
-            const byteArray = new Uint8Array(byteNumbers);
-
+            // resume.data is the buffer array from MongoDB
+            const byteArray = new Uint8Array(resume.data);
             const blob = new Blob([byteArray], { type: "application/pdf" });
 
             const url = URL.createObjectURL(blob);
@@ -116,10 +103,10 @@ const CandidatesTable = () => {
 
             URL.revokeObjectURL(url);
         } catch (err) {
-            toast ({
+            toast({
                 variant: "destructive",
                 title: "Download Error",
-                description: "Failed to download resume.",
+                description: err.message || "Failed to download resume.",
             });
             console.error("Error downloading resume:", err.message);
         }
@@ -162,37 +149,22 @@ const CandidatesTable = () => {
 
         // Handle Resume Field
         if (field === 'resume') {
-            if (value?.data) {
-                try {
-                    const blob = new Blob([new Uint8Array(value.data)], {
-                        type: 'application/pdf',
-                    });
-
-                    // Generate a blob URL
-                    const href = URL.createObjectURL(blob);
-
-                    return (
-                        <div className="flex items-center">
-                            <Icon className="w-5 h-5 mr-2 text-blue-400" />
-                            <a
-                                href={href}
-                                download={`${candidate.name}.pdf`} // Use candidate name only
-                                className="text-blue-600 hover:underline"
-                            >
-                                Download Resume
-                            </a>
-                        </div>
-                    );
-                } catch (err) {
-                    toast ({
-                        variant: "destructive",
-                        title: "Error",
-                        description: "Failed to render resume.",
-                    });
-                    console.error('Error rendering resume:', err);
-                    return null;
-                }
-            }
+            const hasResume = value && value.data;
+            return (
+                <div className="flex items-center">
+                    <Icon className="w-5 h-5 mr-2 text-blue-400" />
+                    {hasResume ? (
+                        <button
+                            onClick={() => downloadResume(value, candidate.name)}
+                            className="text-blue-600 hover:underline bg-transparent border-none p-0 cursor-pointer"
+                        >
+                            Download Resume
+                        </button>
+                    ) : (
+                        <span className="text-gray-400">No Resume</span>
+                    )}
+                </div>
+            );
         }
 
         // Default Rendering for Other Fields
@@ -219,13 +191,13 @@ const CandidatesTable = () => {
     // Show loader when data is loading
     if (loading) {
         return (
-            <Loader/>
+            <Loader />
         );
     }
 
     return (
         <>
-        {/* <div className="bg-gray-50 min-h-screen p-8">
+            {/* <div className="bg-gray-50 min-h-screen p-8">
             <div className="container mx-auto">
                 <h1 className="text-4xl font-extrabold text-gray-800 mb-8 text-center">
                     Candidate Roster
@@ -294,258 +266,259 @@ const CandidatesTable = () => {
                 )}
             </div>
         </div> */}
-        <div className="min-h-screen bg-background p-4 lg:p-8">
-            <div className="max-w-7xl mx-auto space-y-6">
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold">Candidate Roster</h1>
-                    <p className="text-muted-foreground">View and manage registered candidates</p>
-                </div>
-                </div>
+            <div className="min-h-screen bg-background p-4 lg:p-8">
+                <div className="max-w-7xl mx-auto space-y-6">
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <h1 className="text-2xl font-bold">Candidate Roster</h1>
+                            <p className="text-muted-foreground">View and manage registered candidates</p>
+                        </div>
+                    </div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* { label: 'Active', value: '256', color: 'text-success' },
+                    {/* Stats */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* { label: 'Active', value: '256', color: 'text-success' },
                     { label: 'In Pipeline', value: '48', color: 'text-hr-amber' },
                     { label: 'Hired', value: '20', color: 'text-hr-purple' }, */}
-                {[
-                    { label: 'Total Candidates', value: candidates.length, color: 'text-primary' },
-                ].map((stat, i) => (
-                    <Card key={i} className="border-0 shadow-card">
-                        <CardContent className="p-5">
-                            <p className="text-sm text-muted-foreground">{stat.label}</p>
-                            <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
-                        </CardContent>
-                    </Card>
-                ))}
-                </div>
+                        {[
+                            { label: 'Total Candidates', value: candidates.length, color: 'text-primary' },
+                        ].map((stat, i) => (
+                            <Card key={i} className="border-0 shadow-card">
+                                <CardContent className="p-5">
+                                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                                    <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
 
-                {/* Search */}
-                <Card className="border-0 shadow-card">
-                    <CardContent className="p-4">
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search candidates..."
-                                    className="pl-10"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                            </div>
-                            {/* <div className="flex gap-2">
+                    {/* Search */}
+                    <Card className="border-0 shadow-card">
+                        <CardContent className="p-4">
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Search candidates..."
+                                        className="pl-10"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                                {/* <div className="flex gap-2">
                                 <Button variant="outline" className="gap-2">
                                 <Filter className="w-4 h-4" />
                                 Filter
                                 </Button>
                             </div> */}
-                        </div>
-                    </CardContent>
-                </Card>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                {/* Candidates Grid */}
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {filteredCandidates.map((candidate) => (
-                    <Card key={candidate.id} className="border-0 shadow-card card-hover">
-                    <CardContent className="p-5">
-                        <div className="flex items-start gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-hr-purple to-hr-indigo flex items-center justify-center text-primary-foreground text-xl font-bold">
-                            {candidate.name.charAt(0)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold truncate">{candidate.name}</h3>
-                            <p className="text-sm text-muted-foreground">{candidate.technology}</p>
-                            {/* <div className="flex items-center gap-1 mt-1">
+                    {/* Candidates Grid */}
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {filteredCandidates.map((candidate) => (
+                            <Card key={candidate.id} className="border-0 shadow-card card-hover">
+                                <CardContent className="p-5">
+                                    <div className="flex items-start gap-4">
+                                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-hr-purple to-hr-indigo flex items-center justify-center text-primary-foreground text-xl font-bold">
+                                            {candidate.name.charAt(0)}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-semibold truncate">{candidate.name}</h3>
+                                            <p className="text-sm text-muted-foreground">{candidate.technology}</p>
+                                            {/* <div className="flex items-center gap-1 mt-1">
                             <Star className="w-3.5 h-3.5 text-hr-amber fill-hr-amber" />
                             <span className="text-sm font-medium">{candidate.rating}</span>
                             </div> */}
-                        </div>
+                                        </div>
 
-                        {/* Dropdown Menu on dots */}
-                        <DropdownMenu
-                        open={openMenuId === candidate._id}   // or candidate.id
-                        onOpenChange={(open) =>
-                            setOpenMenuId(open ? candidate._id : null)
-                        }
-                        >
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon-sm">
-                                <MoreHorizontal className="w-4 h-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
+                                        {/* Dropdown Menu on dots */}
+                                        <DropdownMenu
+                                            open={openMenuId === candidate._id}   // or candidate.id
+                                            onOpenChange={(open) =>
+                                                setOpenMenuId(open ? candidate._id : null)
+                                            }
+                                        >
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon-sm">
+                                                    <MoreHorizontal className="w-4 h-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
 
-                            <DropdownMenuContent
-                                align="end"
-                                className="w-40"
-                                onCloseAutoFocus={(e) => e.preventDefault()}
-                            >
-                                <DropdownMenuItem
-                                className="cursor-pointer gap-2"
-                                onClick={() => {
-                                    setOpenMenuId(null);              // close only this menu
-                                    setSelectedCandidate(candidate);  // set candidate
-                                    setOpenProfile(true);             // open dialog
-                                }}
-                                >
-                                <Eye className="w-4 h-4" />
-                                View Profile
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                                            <DropdownMenuContent
+                                                align="end"
+                                                className="w-40"
+                                                onCloseAutoFocus={(e) => e.preventDefault()}
+                                            >
+                                                <DropdownMenuItem
+                                                    className="cursor-pointer gap-2"
+                                                    onClick={() => {
+                                                        setOpenMenuId(null);              // close only this menu
+                                                        setSelectedCandidate(candidate);  // set candidate
+                                                        setOpenProfile(true);             // open dialog
+                                                    }}
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                    View Profile
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
 
 
-                        </div>
+                                    </div>
 
-                        <div className="mt-4 space-y-2 text-sm">
-                            {/* <div className="flex items-center gap-2 text-muted-foreground">
+                                    <div className="mt-4 space-y-2 text-sm">
+                                        {/* <div className="flex items-center gap-2 text-muted-foreground">
                                 <Briefcase className="w-4 h-4" />
                                 <span>{candidate.experience}</span>
                             </div> */}
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <Mail className="w-4 h-4" />
-                                <span className="truncate">{candidate.email}</span>
-                            </div>
-                            {/* <div className="flex items-center gap-2 text-muted-foreground">
+                                        <div className="flex items-center gap-2 text-muted-foreground">
+                                            <Mail className="w-4 h-4" />
+                                            <span className="truncate">{candidate.email}</span>
+                                        </div>
+                                        {/* <div className="flex items-center gap-2 text-muted-foreground">
                                 <Calendar className="w-4 h-4" />
                                 <span>{candidate.source}</span>
                             </div> */}
-                            <div className="flex items-center gap-2">
-                                <Phone className="w-4 h-4 text-muted-foreground" />
-                                <span>{candidate.contact_no}</span>
-                            </div>
-                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Phone className="w-4 h-4 text-muted-foreground" />
+                                            <span>{candidate.contact_no}</span>
+                                        </div>
+                                    </div>
 
-                        <div className="mt-4 pt-4 border-t border-border flex gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 gap-1"
-                            onClick={() => {
-                                if (candidate.linkedIn != null) {
-                                    window.open(candidate.linkedIn, "_blank", "noopener,noreferrer");
-                                } else {
-                                    toast ({
-                                        variant: "destructive",
-                                        title: "Error",
-                                        description: "LinkedIn profile not available.",
-                                    });
-                                }
-                            }}
-                        >
-                            <Linkedin className="w-4 h-4" />
-                            LinkedIn
-                        </Button>
+                                    <div className="mt-4 pt-4 border-t border-border flex gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="flex-1 gap-1"
+                                            onClick={() => {
+                                                if (candidate.linkedIn != null) {
+                                                    window.open(candidate.linkedIn, "_blank", "noopener,noreferrer");
+                                                } else {
+                                                    toast({
+                                                        variant: "destructive",
+                                                        title: "Error",
+                                                        description: "LinkedIn profile not available.",
+                                                    });
+                                                }
+                                            }}
+                                        >
+                                            <Linkedin className="w-4 h-4" />
+                                            LinkedIn
+                                        </Button>
 
-                        <Button
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => downloadResume(candidate.resume, candidate.name)}
-                            disabled={!candidate.resume?.data}
-                        >
-                            <DownloadIcon className="w-4 h-4" />
-                            Resume
-                        </Button>
+                                        <Button
+                                            size="sm"
+                                            className="flex-1"
+                                            onClick={() => downloadResume(candidate.resume, candidate.name)}
+                                            disabled={!candidate.resume?.data}
+                                        >
+                                            <DownloadIcon className="w-4 h-4" />
+                                            Resume
+                                        </Button>
 
-                        </div>
-                    </CardContent>
-                    </Card>
-                ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
                 </div>
+                {filteredCandidates.length <= 0 &&
+                    <div className="flex items-center justify-center text-gray-500 text-lg">
+                        No candidates found.
+                    </div>
+                }
             </div>
-            {filteredCandidates.length <= 0 && 
-                <div className="flex items-center justify-center text-gray-500 text-lg">
-                    No candidates found.
-                </div>
-            }
-        </div>
 
-        <Dialog open={openProfile} onOpenChange={setOpenProfile}>
-            <DialogContent className="max-w-lg rounded-2xl">
-                {selectedCandidate && (
-                <>
-                    <DialogHeader>
-                    <DialogTitle className="text-xl font-bold">
-                        Candidate Profile
-                    </DialogTitle>
-                    </DialogHeader>
+            <Dialog open={openProfile} onOpenChange={setOpenProfile}>
+                <DialogContent className="max-w-lg rounded-2xl">
+                    {selectedCandidate && (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle className="text-xl font-bold">
+                                    Candidate Profile
+                                </DialogTitle>
+                            </DialogHeader>
 
-                    <div className="space-y-4">
-                    {/* Header */}
-                    <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-hr-purple to-hr-indigo flex items-center justify-center text-primary-foreground text-xl font-bold">
-                        {selectedCandidate.name.charAt(0)}
-                        </div>
-                        <div>
-                        <h3 className="font-semibold">{selectedCandidate.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                            {selectedCandidate.technology}
-                        </p>
-                        </div>
-                    </div>
+                            <div className="space-y-4">
+                                {/* Header */}
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-hr-purple to-hr-indigo flex items-center justify-center text-primary-foreground text-xl font-bold">
+                                        {selectedCandidate.name.charAt(0)}
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold">{selectedCandidate.name}</h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            {selectedCandidate.technology}
+                                        </p>
+                                    </div>
+                                </div>
 
-                    {/* Details */}
-                    <div className="space-y-3 text-sm">
-                        <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-muted-foreground" />
-                        <span>{selectedCandidate.email}</span>
-                        </div>
+                                {/* Details */}
+                                <div className="space-y-3 text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <Mail className="w-4 h-4 text-muted-foreground" />
+                                        <span>{selectedCandidate.email}</span>
+                                    </div>
 
-                        <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-muted-foreground" />
-                        <span>{selectedCandidate.contact_no}</span>
-                        </div>
+                                    <div className="flex items-center gap-2">
+                                        <Phone className="w-4 h-4 text-muted-foreground" />
+                                        <span>{selectedCandidate.contact_no}</span>
+                                    </div>
 
-                        <div className="flex items-center gap-2">
-                        <Building className="w-4 h-4 text-muted-foreground" />
-                        <span>{selectedCandidate.client}</span>
-                        </div>
+                                    <div className="flex items-center gap-2">
+                                        <Building className="w-4 h-4 text-muted-foreground" />
+                                        <span>{selectedCandidate.client}</span>
+                                    </div>
 
-                        <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-muted-foreground" />
-                        <span>{selectedCandidate.source}</span>
-                        </div>
-                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                                        <span>{selectedCandidate.source}</span>
+                                    </div>
+                                </div>
 
-                    {/* Actions */}
-                    <div className="pt-4 border-t flex gap-2">
-                        <Button
-                        variant="outline"
-                        className="flex-1 gap-1"
-                        onClick={() => {
-                            if (selectedCandidate.linkedIn != null) {
-                            window.open(selectedCandidate.linkedIn, "_blank");
-                            }
-                            else {
-                                toast ({
-                                    variant: "destructive",
-                                    title: "Error",
-                                    description: "LinkedIn profile not available.",
-                                });
-                            }}}>
-                        <Linkedin className="w-4 h-4" />
-                        LinkedIn
-                        </Button>
+                                {/* Actions */}
+                                <div className="pt-4 border-t flex gap-2">
+                                    <Button
+                                        variant="outline"
+                                        className="flex-1 gap-1"
+                                        onClick={() => {
+                                            if (selectedCandidate.linkedIn != null) {
+                                                window.open(selectedCandidate.linkedIn, "_blank");
+                                            }
+                                            else {
+                                                toast({
+                                                    variant: "destructive",
+                                                    title: "Error",
+                                                    description: "LinkedIn profile not available.",
+                                                });
+                                            }
+                                        }}>
+                                        <Linkedin className="w-4 h-4" />
+                                        LinkedIn
+                                    </Button>
 
-                        <Button
-                        className="flex-1 gap-1"
-                        onClick={() =>
-                            downloadResume(
-                            selectedCandidate.resume,
-                            selectedCandidate.name
-                            )
-                        }
-                        disabled={!selectedCandidate.resume}
-                        >
-                        <Download className="w-4 h-4" />
-                        Resume
-                        </Button>
-                    </div>
-                    </div>
-                </>
-                )}
-            </DialogContent>
-        </Dialog>
+                                    <Button
+                                        className="flex-1 gap-1"
+                                        onClick={() =>
+                                            downloadResume(
+                                                selectedCandidate.resume,
+                                                selectedCandidate.name
+                                            )
+                                        }
+                                        disabled={!selectedCandidate.resume || !selectedCandidate.resume.data}
+                                    >
+                                        <Download className="w-4 h-4" />
+                                        Resume
+                                    </Button>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </DialogContent>
+            </Dialog>
         </>
     );
 };

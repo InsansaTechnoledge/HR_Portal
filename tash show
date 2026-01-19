@@ -1,0 +1,13 @@
+stash@{0}: WIP on arsh_dev: 96da6712 Merge pull request #21 from InsansaTechnoledge/refact/ronak
+stash@{1}: WIP on arsh_dev: 4fee0a3a Enhancement Of UI
+stash@{2}: WIP on arsh_dev: 4e59c99a Merge pull request #15 from InsansaTechnoledge/refact/ronak
+stash@{3}: WIP on arsh_dev: 4e59c99a Merge pull request #15 from InsansaTechnoledge/refact/ronak
+stash@{4}: WIP on arsh_dev: 5a5a8b11 Merge pull request #12 from InsansaTechnoledge/refact/ronak
+stash@{5}: WIP on arsh_dev: f2ad3828 Merge pull request #10 from InsansaTechnoledge/refact/ronak
+stash@{6}: WIP on arsh_dev: 01b8850d Merge pull request #4 from InsansaTechnoledge/refact/ronak
+stash@{7}: WIP on main: 871cd44c Solved Bugs for leavetracker, payslip management and document management
+stash@{8}: WIP on main: c84d7312 add bulk upload functionality for job applications and integrate XLSX for file handling and Implemented jobApplication route for uploading resumes.
+stash@{9}: WIP on main: 3db8e046 Refactor employee data fetching and document handling in HRPortal
+stash@{10}: WIP on main: d5c7c620 api config
+stash@{11}: WIP on main: 8a9307ba Refactor user and authentication controllers to improve user retrieval and password management; enhance error handling and validation in user creation and editing processes.
+stash@{12}: WIP on main: 1d9b29fd add functionality on user side leave tracker component
