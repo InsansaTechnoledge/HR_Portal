@@ -78,7 +78,7 @@ const CandidateRegistrationForm = () => {
         formData.append("client", client);
         formData.append("email", email);
         formData.append("contact_no", contactno);
-        formData.append("source", source);
+        formData.append("source", status);
         formData.append("linkedIn", linkedin);
         formData.append("resume", resume); // Attach the file
 

@@ -624,7 +624,7 @@ const LeaveTracker = () => {
           {/* Admin Sidebar - Only visible for admin/superAdmin */}
           {authUser && (
             <div className={`w-full lg:w-72 xl:w-80 bg-card border-b lg:border-b-0 lg:border-r border-border p-4 lg:p-6 lg:min-h-screen shadow-md ${mobileSidebarOpen ? 'block' : 'hidden lg:block'}`}>
-              {authUser.role === "admin" &&
+              {(authUser.role === 'admin' || authUser.role === 'superAdmin') &&
                 <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 rounded-xl bg-primary/10">
                     <Users className="w-5 h-5 text-primary" />
@@ -653,7 +653,7 @@ const LeaveTracker = () => {
               )}
 
               {/* Filter checkbox */}
-              {authUser.role === 'admin' && (
+              {(authUser.role === 'admin' || authUser.role === 'superAdmin') && (
                 <>
                   <div className="flex items-center space-x-2 mb-4 p-3 rounded-lg bg-muted/50">
                     <Checkbox
@@ -751,7 +751,7 @@ const LeaveTracker = () => {
                 </>
               )}
               {/* Header for Employees */}
-              {authUser.role !== "admin" &&
+              {(authUser.role !== 'admin' && authUser.role !== 'superAdmin') &&
                 <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 rounded-xl bg-primary/10">
                     <Users className="w-5 h-5 text-primary" />
@@ -775,8 +775,8 @@ const LeaveTracker = () => {
                         key={month}
                         onClick={() => setSelectedMonth(month)}
                         className={`w-full text-left px-3 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm ${selectedMonth === month
-                            ? "bg-primary text-primary-foreground"
-                            : "hover:bg-muted"
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted"
                           }`}
                       >
                         <Clock className="w-4 h-4" />
@@ -816,10 +816,11 @@ const LeaveTracker = () => {
                     {authUser.role === 'admin' ? 'Manage and track all leave requests' : 'Manage your leave requests and balance'}
                   </p>
                 </div>
+                { authUser.role !== 'superAdmin' && 
                 <Button onClick={handleOpenAddLeave} className="gap-2">
                   <Plus className="w-4 h-4" />
                   Request Leave
-                </Button>
+                </Button>}
               </div>
 
               {/* Leave Balance - Always visible */}
@@ -867,10 +868,10 @@ const LeaveTracker = () => {
                       : `${currentPerson?.name}'s Leave Requests`}
                   </CardTitle>
 
-                  <Button variant="outline" size="sm" className="gap-2">
+                  {/* <Button variant="outline" size="sm" className="gap-2">
                     <Filter className="w-4 h-4" />
                     Filter
-                  </Button>
+                  </Button> */}
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
@@ -1034,9 +1035,15 @@ const LeaveTracker = () => {
               <Button
                 onClick={handleSaveLeave}
                 disabled={loading}
-              > {loading ?
-                <Loader size="sm" /> + "Requesting..." : "Request Leave"
-                }
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Requesting...</span>
+                  </div>
+                ) : (
+                  "Request Leave"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

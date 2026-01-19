@@ -152,7 +152,6 @@ export const addLeave = async (req,res) => {
     try{
         const {id} = req.params;
         const leaveHistory = req.body;
-
         const updatedEmp = await Employee.findByIdAndUpdate(
             id, // Find the employee by empId
             { $push: { leaveHistory: leaveHistory } }, // Append the new leaveHistory object to the array

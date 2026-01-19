@@ -9,8 +9,6 @@ const useLogout = () => {
     const navigate = useNavigate();
     const handleLogout = async () => {
         try {
-            console.log("Logging out...");
-        
             const response = await axios.post(`${API_BASE_URL}/api/auth/logout`, null, {
                 withCredentials: true,
             });

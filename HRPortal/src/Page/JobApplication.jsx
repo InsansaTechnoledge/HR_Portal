@@ -679,7 +679,6 @@ const JobApplication = () => {
     rejected: applications.filter(a => a.status === 'Rejected').length,
   };
   return (
-     <div className="min-h-screen bg-background p-4 lg:p-8">
       <div className="min-h-screen bg-background p-4 lg:p-8">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Header */}
@@ -931,7 +930,7 @@ const JobApplication = () => {
                         <TableHead className="hidden lg:table-cell">Skills</TableHead>
                         <TableHead className="hidden lg:table-cell">Experience</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead className="text-left">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
 
@@ -1297,7 +1296,6 @@ const JobApplication = () => {
                 </DialogContent>
               </Dialog>
         </div>
-     </div>
   );
 };
 
