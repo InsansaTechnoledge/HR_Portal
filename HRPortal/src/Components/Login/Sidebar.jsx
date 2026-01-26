@@ -26,7 +26,8 @@ import {
   Sparkles,
   ReceiptIndianRupee,
   FilePlus,
-  FileSearch
+  FileSearch,
+  ListTodo
 } from 'lucide-react';
 // import ErrorToast from '../Toaster/ErrorToaster';
 // import SuccessToast from '../Toaster/SuccessToaser';
@@ -47,6 +48,7 @@ const navItems = [
       { icon: Key, label: 'Change Password', path: '/change-password', roles: ['user'] },
       { icon: ReceiptIndianRupee, label: 'Add Expense', path: '/add-expense', roles: ['user'] },
       { icon: FileText, label: 'Expense Tracker', path: '/expense-tracker', roles: ['user'] },
+      { icon: ListTodo, label: 'My Tasks', path: '/my-tasks', roles: ['user'] },
     ]
   },
   { icon: UserPlus, label: 'Employee Registration', path: '/emp-info-register', roles: ['admin', 'superAdmin'] },
@@ -102,11 +104,13 @@ const navItems = [
       { icon: FilePlus, label: 'Expense Generator', path: '/expense', roles: ['accountant', 'superAdmin'] },
     ]
   },
+  { icon: ListTodo, label: 'Task Management', path: '/task-management', roles: ['admin', 'superAdmin'] },
   { icon: FileSearch, label: 'Resume Analyzer', path: '/resume-analyzer', isAI: true, roles: ['admin'] },
   { icon: Shield, label: 'Authentication', path: '/auth', roles: ['admin', 'superAdmin'] },
   { icon: ClipboardList, label: 'Employee Details', path: '/emp-list', roles: ['accountant'] },
   { icon: Calendar, label: 'Leave Tracker', path: '/leave-tracker', roles: ['accountant'] },
   { icon: Key, label: 'Change Password', path: '/change-password', roles: ['accountant'] },
+  { icon: ListTodo, label: 'My Tasks', path: '/my-tasks', roles: ['accountant'] },
 ];
 
 const SidebarItem = ({

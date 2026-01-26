@@ -33,7 +33,6 @@ export const login = async (req, res, next) => {
       sameSite: process.env.NODE_ENV === "development" ? "Lax" : "None", // Adjust for environment
     });
 
-    console.log("cookie created");
     res.status(200).json({ message: "Login successful", user: user });
   } catch (error) {
     console.error("Error during login process:", error);

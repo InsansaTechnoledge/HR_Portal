@@ -36,6 +36,8 @@ import ExpenseTracker from './Page/ExpenseTracker';
 import AddExpense from './Page/AddExpense';
 import ResumeAnalyzer from "./Page/ResumeAnalyzer";
 import AnalysisResult from "./Page/AnalysisResult";
+import TaskManagement from "./Page/TaskManagement";
+import MyTasks from "./Page/MyTasks";
 
 function PageLinks() {
   const { user, loading } = useContext(userContext);
@@ -61,8 +63,9 @@ function PageLinks() {
           <Route path="/payslip-tracker" element={<PayslipTracker />} />
           <Route path="/user-profile" element={<UserProfile />} />
           <Route path="/change-password" element={<ChangePassword />} />
-          <Route path="/add-expense" element={<AddExpense />}/>
-          <Route path="/expense-tracker" element={<ExpenseTracker />}/>
+          <Route path="/add-expense" element={<AddExpense />} />
+          <Route path="/expense-tracker" element={<ExpenseTracker />} />
+          <Route path="/my-tasks" element={<MyTasks />} />
 
 
 
@@ -75,10 +78,9 @@ function PageLinks() {
             <Route path="/register-candidate" element={<CandidateRegistration />} />
             <Route path="/emp-info-register" element={<EmployeeDetailsForm />} />
             <Route path="/auth" element={<AuthenticationManagement />} />
-            <Route path="/resume-analyzer" element={<ResumeAnalyzer/>}/>
-            <Route path="/analysis-result" element={<AnalysisResult/>}/>
-            {/* <Route path="resume-analyze" element={<ResumeAnalyzer />}/> */}
-            {/* <Route path="/analysis-result" element={<AnalysisResult />}/> */}
+            <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />
+            <Route path="/analysis-result" element={<AnalysisResult />} />
+            <Route path="/task-management" element={<TaskManagement />} />
           </Route>
 
           {/* ROLE BASED */}
@@ -89,7 +91,7 @@ function PageLinks() {
           <Route element={<AccountantSuperAdminRoute />}>
             <Route path="/emp-list" element={<EmployeeList />} />
             <Route path="/payslip" element={<PayslipGenerator />} />
-            <Route path="/expense" element={<ExpenseGenerator />}/>
+            <Route path="/expense" element={<ExpenseGenerator />} />
           </Route>
         </Route>
       </Route>
