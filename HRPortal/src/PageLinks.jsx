@@ -38,6 +38,8 @@ import ResumeAnalyzer from "./Page/ResumeAnalyzer";
 import AnalysisResult from "./Page/AnalysisResult";
 import TaskManagement from "./Page/TaskManagement";
 import MyTasks from "./Page/MyTasks";
+import InvestmentDeclaration from "./Page/InvestmentDeclaration";
+import InvestmentDeclarationTracker from "./Page/InvestmentDeclarationTracker";
 
 function PageLinks() {
   const { user, loading } = useContext(userContext);
@@ -66,6 +68,7 @@ function PageLinks() {
           <Route path="/add-expense" element={<AddExpense />} />
           <Route path="/expense-tracker" element={<ExpenseTracker />} />
           <Route path="/my-tasks" element={<MyTasks />} />
+          <Route path="/investment-declaration" element={<InvestmentDeclaration />} />
 
 
 
@@ -92,6 +95,7 @@ function PageLinks() {
             <Route path="/emp-list" element={<EmployeeList />} />
             <Route path="/payslip" element={<PayslipGenerator />} />
             <Route path="/expense" element={<ExpenseGenerator />} />
+            <Route path="/investment-tracker" element={<InvestmentDeclarationTracker />} />
           </Route>
         </Route>
       </Route>

@@ -1,7 +1,7 @@
 import { google } from "googleapis";
 import oauth2Client from "../config/googleAuth.js";
 
-export const getOrCreateFolder = async (folderName, refreshToken) => {
+export const getOrCreateFolder = async (folderName, refreshToken, parentFolderId = null) => {
   oauth2Client.setCredentials({
     refresh_token: refreshToken,
   });
@@ -12,8 +12,13 @@ export const getOrCreateFolder = async (folderName, refreshToken) => {
   });
 
   //  Check if folder already exists
+  let query = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
+  if (parentFolderId) {
+    query += ` and parents='${parentFolderId}'`;
+  }
+
   const existing = await drive.files.list({
-    q: `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`,
+    q: query,
     fields: "files(id, name)",
   });
 
@@ -22,13 +27,19 @@ export const getOrCreateFolder = async (folderName, refreshToken) => {
   }
 
   // Create folder if not found
-  const folder = await drive.files.create({
+  const folderParams = {
     requestBody: {
       name: folderName,
       mimeType: "application/vnd.google-apps.folder",
     },
     fields: "id",
-  });
+  };
+
+  if (parentFolderId) {
+    folderParams.requestBody.parents = [parentFolderId];
+  }
+
+  const folder = await drive.files.create(folderParams);
 
   return folder.data.id;
 };

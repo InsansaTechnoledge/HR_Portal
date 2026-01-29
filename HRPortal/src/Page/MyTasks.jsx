@@ -33,7 +33,7 @@ const MyTasks = () => {
 
     useEffect(() => {
         fetchMyTasks();
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         applyFilters();
@@ -42,7 +42,8 @@ const MyTasks = () => {
     const fetchMyTasks = async () => {
         setLoading(true);
         try {
-            // Backend will automatically filter tasks for non-admin users
+            // Backend automatically filters tasks for non-admin users based on their employee match
+            
             const response = await getAllTasks({ limit: 100 });
             setTasks(response.tasks || []);
             calculateStats(response.tasks || []);

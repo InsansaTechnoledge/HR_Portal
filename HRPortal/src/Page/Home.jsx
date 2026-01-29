@@ -274,7 +274,7 @@ const Home = () => {
         ],
       },
 
-      
+
       {
         title: 'AI Features',
         items: [
@@ -362,7 +362,7 @@ const Home = () => {
     <div className="min-h-full bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Header */}
-        <div className="mb-8 animate-fade-in">
+        <div className="mb-8">
           <Card className="border-0 bg-gradient-to-r from-hr-navy via-hr-navy-light to-hr-navy overflow-hidden relative">
             <div className="absolute inset-0">
               <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl" />

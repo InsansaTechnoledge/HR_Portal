@@ -110,6 +110,7 @@ export const getAllTasks = async (req, res) => {
             
             // Also try to find employee with matching email
             const matchingEmployee = await Employee.findOne({ email: currentUser.userEmail });
+
             if (matchingEmployee) {
                 // If employee found, modify filter to include both user ID and employee ID
                 filter = {
@@ -118,7 +119,12 @@ export const getAllTasks = async (req, res) => {
                         { 'assignedTo.assigneeId': matchingEmployee._id }
                     ]
                 };
+                // console.log('Filter with $or:', JSON.stringify(filter));
+            } else {
+                // console.log('No matching employee found by email');
             }
+        } else {
+            // console.log('User is admin/accountant, showing all tasks');
         }
 
         // Apply additional filters
@@ -129,7 +135,19 @@ export const getAllTasks = async (req, res) => {
             filter.priority = priority;
         }
         if (assigneeId) {
-            filter['assignedTo.assigneeId'] = assigneeId;
+            // console.log('AssigneeId filter provided:', assigneeId);
+            // If there's already a role-based filter (for non-admin users), merge the assigneeId filter
+            if (filter.$or) {
+                // Add assigneeId to existing $or filter
+                filter = {
+                    $and: [
+                        { $or: filter.$or },
+                        { 'assignedTo.assigneeId': assigneeId }
+                    ]
+                };
+            } else {
+                filter['assignedTo.assigneeId'] = assigneeId;
+            }
         }
         if (search) {
             filter.$or = [
@@ -137,6 +155,8 @@ export const getAllTasks = async (req, res) => {
                 { description: { $regex: search, $options: 'i' } }
             ];
         }
+
+        // console.log('Final filter:', JSON.stringify(filter));
 
         // Pagination
         const pageNum = Math.max(parseInt(page, 10), 1);
@@ -155,6 +175,9 @@ export const getAllTasks = async (req, res) => {
             .lean();
 
         const totalTasks = await Task.countDocuments(filter);
+
+        // console.log('Tasks found:', tasks.length);
+        // console.log('Tasks:', tasks.map(t => ({ id: t._id, title: t.title, assignedTo: t.assignedTo })));
 
         res.status(200).json({
             message: 'Tasks fetched successfully',

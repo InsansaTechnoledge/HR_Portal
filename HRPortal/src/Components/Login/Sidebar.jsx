@@ -27,7 +27,8 @@ import {
   ReceiptIndianRupee,
   FilePlus,
   FileSearch,
-  ListTodo
+  ListTodo,
+  DollarSign
 } from 'lucide-react';
 // import ErrorToast from '../Toaster/ErrorToaster';
 // import SuccessToast from '../Toaster/SuccessToaser';
@@ -102,6 +103,15 @@ const navItems = [
     children: [
       { icon: FileText, label: 'Expense Tracker', path: '/expense-tracker', roles: ['accountant', 'superAdmin'] },
       { icon: FilePlus, label: 'Expense Generator', path: '/expense', roles: ['accountant', 'superAdmin'] },
+    ]
+  },
+
+  {
+    icon: ReceiptIndianRupee,
+    label: 'Investment Management',
+    children: [
+      { icon: FileText, label: 'Investment Tracker', path: '/investment-tracker', roles: ['accountant', 'superAdmin'] },
+      { icon: FilePlus, label: 'Investment Declaration', path: '/investment-declaration', roles: ['accountant', 'superAdmin'] },
     ]
   },
   { icon: ListTodo, label: 'Task Management', path: '/task-management', roles: ['admin', 'superAdmin'] },
