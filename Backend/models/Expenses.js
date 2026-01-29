@@ -18,8 +18,41 @@ const ExpenseSchema = new mongoose.Schema(
         type: {
           type: String,
           required: true,
+          trim: true,
         },
+
         amount: {
+          type: Number,
+          required: true,
+          min: 0,
+        },
+
+        expenseDate: {
+          type: Date,
+          required: true,
+        },
+
+        location: {
+          type: String,
+          enum: ["National", "International"],
+          required: true,
+          default: "National",
+        },
+
+        currency: {
+          type: String,
+          required: true,
+          default: "INR",
+        },
+
+        exchangeRate: {
+          type: Number,
+          required: true,
+          min: 0,
+          default: 1,
+        },
+
+        convertedAmount: {
           type: Number,
           required: true,
           min: 0,

@@ -6,6 +6,7 @@
     "lucide-react": "^0.468.0",
     "react-calendar": "^5.1.0",
     "react-responsive": "^10.0.0",
-    "swiper": "^11.1.15"
+    "swiper": "^11.1.15",
+    "xlsx": "^0.18.5"
   }
 }

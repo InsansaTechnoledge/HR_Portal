@@ -1,6 +1,7 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useContext } from "react";
 import axios from "axios";
 import API_BASE_URL from "../config";
+import { userContext } from "../Context/userContext";
 import SuccessToast from "../Components/Toaster/SuccessToaser";
 import ErrorToast from "../Components/Toaster/ErrorToaster";
 import { toast } from "../hooks/useToast";
@@ -22,7 +23,10 @@ import {
   ExternalLink,
   Loader2,
   Receipt,
+  Download,
 } from "lucide-react";
+
+import { Checkbox } from "../Components/ui/checkbox";
 
 import {
   Card,
@@ -52,12 +56,15 @@ import { Button } from "../Components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from "../Components/ui/dialog";
+import { currencySymbols } from "../Constant/currencies";
 
 const ExpenseGenerator = () => {
+  const { user } = useContext(userContext);
   const [employees, setEmployees] = useState([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -89,7 +96,7 @@ const ExpenseGenerator = () => {
         const response = await axios.get(`${API_BASE_URL}/api/employee/`, {
           params: {
             fields:
-              "name,empId,email,department,details.designation,details.salary",
+              "name,empId,email,department,details.designation,details.salary,details.bankName,details.accountNumber,details.ifscCode,details.nameAsPerBank",
             limit: 200,
           },
           signal,
@@ -151,7 +158,7 @@ const ExpenseGenerator = () => {
       } catch (err) {
         console.error("Error fetching approved expenses:", err);
         toast({
-          variant: "destuctive",
+          variant: "destructive",
           title: "Error",
           description: "Error Fetching Expenses",
         });
@@ -183,26 +190,57 @@ const ExpenseGenerator = () => {
   };
 
   const handlePaySeparately = async (expense) => {
-    if (!expense?._id) return;
+    if (!expense) return;
 
     try {
-      setPayingId(expense._id);
+      setPayingId(expense._id || "bulk");
       setGeneratingSlip(true);
 
-      await axios.patch(
-        `${API_BASE_URL}/api/expense/${expense._id}/pay-separate`,
-        {},
-        { withCredentials: true }
-      );
+      if (expense.status === "COMBINED") {
+        // Bulk Payment
+        const ids = expense.selectedIds || [];
+        await Promise.all(
+          ids.map((id) =>
+            axios.patch(
+              `${API_BASE_URL}/api/expense/${id}/pay-separate`,
+              {},
+              { withCredentials: true }
+            )
+          )
+        );
 
-      toast({
-        variant: "success",
-        title: "Payment Successful",
-        description: "Expense marked as paid successfully",
-      });
+        toast({
+          variant: "success",
+          title: "Bulk Payment Successful",
+          description: "All selected expenses marked as paid",
+        });
 
-      // Remove the paid expense from the list
-      setExpenses((prev) => prev.filter((e) => e._id !== expense._id));
+        // Trigger PDF download for combined
+        await downloadCombinedPDF(expense);
+
+        // Remove from list
+        setExpenses((prev) => prev.filter((e) => !ids.includes(e._id)));
+        setSelectedExpenses(new Set());
+      } else {
+        // Individual Payment
+        await axios.patch(
+          `${API_BASE_URL}/api/expense/${expense._id}/pay-separate`,
+          {},
+          { withCredentials: true }
+        );
+
+        toast({
+          variant: "success",
+          title: "Payment Successful",
+          description: "Expense marked as paid successfully",
+        });
+
+        // Trigger PDF download for individual
+        await downloadSinglePDF(expense);
+
+        // Remove from list
+        setExpenses((prev) => prev.filter((e) => e._id !== expense._id));
+      }
 
       // Close the dialog
       setOpenDialog(false);
@@ -221,9 +259,10 @@ const ExpenseGenerator = () => {
     }
   };
 
-  //Downlaod PDF function
-  const downloadPayslipPDF = async () => {
-    if (!slipRef.current || !selectedExpense) return;
+  const downloadSinglePDF = async (expense) => {
+    // Wait for DOM
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    if (!slipRef.current) return;
 
     const canvas = await html2canvas(slipRef.current, {
       scale: 2,
@@ -232,26 +271,108 @@ const ExpenseGenerator = () => {
 
     const imgData = canvas.toDataURL("image/png");
     const pdf = new jsPDF("p", "px", "a4");
-
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
     pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`Expense_Slip_${selectedExpense._id}.pdf`);
-
-    //remove from list
-    setExpenses((prev) => prev.filter((e) => e._id !== selectedExpense._id));
-
-    // cleanup
-    setSlipGenerated(false);
-    setOpenDialog(false);
-    setSelectedExpense(null);
+    pdf.save(`Expense_Slip_${expense._id}.pdf`);
   };
+
+  const downloadCombinedPDF = async (expense) => {
+    // Wait for DOM
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    if (!slipRef.current) return;
+
+    const canvas = await html2canvas(slipRef.current, {
+      scale: 2,
+      backgroundColor: "#fff",
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF("p", "px", "a4");
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`Combined_Expense_Report.pdf`);
+  };
+
+  // Not used directly anymore, functionality merged into handlePaySeparately
+  const downloadPayslipPDF = async () => { };
 
   const totalApprovedAmount = expenses.reduce(
     (sum, exp) => sum + (Number(exp.amount) || 0),
     0
   );
+
+  // Multi-select Logic
+  const [selectedExpenses, setSelectedExpenses] = useState(new Set());
+
+  const toggleExpenseSelection = (expenseId) => {
+    setSelectedExpenses((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(expenseId)) {
+        newSet.delete(expenseId);
+      } else {
+        newSet.add(expenseId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAllSelection = () => {
+    if (selectedExpenses.size === expenses.length) {
+      setSelectedExpenses(new Set());
+    } else {
+      setSelectedExpenses(new Set(expenses.map((e) => e._id)));
+    }
+  };
+
+  const handlePrepareBulkPayment = () => {
+    if (selectedExpenses.size <= 1) return;
+
+    const expensesToDownload = expenses.filter((e) =>
+      selectedExpenses.has(e._id)
+    );
+
+    // Create synthetic expense object
+    const combinedExpense = {
+      employeeId: selectedEmployee || expensesToDownload[0].employeeId,
+      amount: expensesToDownload.reduce((sum, e) => sum + Number(e.convertedAmount || e.amount), 0),
+      expenseDate: `${new Date(
+        Math.min(
+          ...expensesToDownload.map((e) =>
+            new Date(e.expenseDate || Date.now()).getTime()
+          )
+        )
+      ).toLocaleDateString("en-IN")} - ${new Date(
+        Math.max(
+          ...expensesToDownload.map((e) =>
+            new Date(e.expenseDate || Date.now()).getTime()
+          )
+        )
+      ).toLocaleDateString("en-IN")}`,
+      reimbursementMonth: [
+        ...new Set(expensesToDownload.map((e) => e.reimbursementMonth)),
+      ].join(", "),
+      expenses: expensesToDownload.flatMap((parent) =>
+        (parent.expenses || []).map((child) => ({
+          ...child,
+          parentDate: parent.expenseDate,
+          parentMonth: parent.reimbursementMonth,
+        }))
+      ),
+      status: "COMBINED",
+      selectedIds: Array.from(selectedExpenses),
+      approvedBy: expensesToDownload[0].approvedBy,
+      approvedAt: expensesToDownload[0].approvedAt,
+    };
+
+    setSelectedExpense(combinedExpense);
+    setOpenDialog(true);
+  };
+
+  const downloadBulkExpensePDF = async () => { }; // Merged into handlePaySeparately flow
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
@@ -360,9 +481,8 @@ const ExpenseGenerator = () => {
 
           {/* Employee Details Card */}
           <Card
-            className={`border-border/50 shadow-card transition-all duration-300 ${
-              selectedEmployee ? "opacity-100" : "opacity-50"
-            }`}
+            className={`border-border/50 shadow-card transition-all duration-300 ${selectedEmployee ? "opacity-100" : "opacity-50"
+              }`}
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -426,6 +546,16 @@ const ExpenseGenerator = () => {
                   Ready for payment
                 </Badge>
               )}
+              {selectedExpenses.size > 1 && (
+                <Button
+                  size="sm"
+                  onClick={handlePrepareBulkPayment}
+                  className="ml-auto bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Generate Combined Report ({selectedExpenses.size})
+                </Button>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -434,6 +564,15 @@ const ExpenseGenerator = () => {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableHead className="w-[50px]">
+                      <Checkbox
+                        checked={
+                          expenses.length > 0 &&
+                          selectedExpenses.size === expenses.length
+                        }
+                        onCheckedChange={toggleAllSelection}
+                      />
+                    </TableHead>
                     <TableHead className="font-semibold">
                       Expense Type
                     </TableHead>
@@ -487,15 +626,28 @@ const ExpenseGenerator = () => {
                         className="group hover:bg-muted/30 transition-colors"
                       >
                         <TableCell>
+                          <Checkbox
+                            checked={selectedExpenses.has(exp._id)}
+                            onCheckedChange={() => toggleExpenseSelection(exp._id)}
+                          />
+                        </TableCell>
+                        <TableCell>
                           {Array.isArray(exp.expenses) && exp.expenses.length > 0 ? (
                             <div className="space-y-1">
                               {exp.expenses.map((e, idx) => (
-                                <div key={idx} className="flex items-center gap-2">
-                                  <Receipt className="h-3 w-3 text-muted-foreground" />
-                                  <span className="text-muted-foreground">{e.type}:</span>
-                                  <span className="font-medium">
-                                    ₹{Number(e.amount).toLocaleString("en-IN")}
-                                  </span>
+                                <div key={idx} className="flex flex-col gap-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <Receipt className="h-3 w-3 text-muted-foreground" />
+                                    <span className="text-muted-foreground text-xs">{e.type}:</span>
+                                    <span className="font-medium text-xs">
+                                      {currencySymbols[e.currency] || "₹"} {Number(e.amount).toLocaleString("en-IN")}
+                                    </span>
+                                  </div>
+                                  {e.location === "International" && (
+                                    <div className="text-[10px] text-muted-foreground pl-5">
+                                      (≈ ₹{Number(e.convertedAmount).toLocaleString("en-IN")})
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -511,13 +663,13 @@ const ExpenseGenerator = () => {
                         <TableCell className="text-muted-foreground">
                           {exp.expenseDate
                             ? new Date(exp.expenseDate).toLocaleDateString(
-                                "en-IN",
-                                {
-                                  day: "2-digit",
-                                  month: "short",
-                                  year: "numeric",
-                                }
-                              )
+                              "en-IN",
+                              {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              }
+                            )
                             : "-"}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
@@ -535,9 +687,11 @@ const ExpenseGenerator = () => {
                                   asChild
                                 >
                                   <a
-                                    href={r.url}
-                                    target="_blank"
+                                    href={r.url || "#"}
+                                    target={r.url ? "_blank" : "_self"}
                                     rel="noreferrer"
+                                    title={!r.url ? "Receipt not found" : ""}
+                                    onClick={(e) => !r.url && e.preventDefault()}
                                   >
                                     <ExternalLink className="h-3 w-3 mr-1" />#
                                     {idx + 1}
@@ -597,33 +751,31 @@ const ExpenseGenerator = () => {
                   <div key={exp._id} className="p-4 space-y-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
+                        <Checkbox
+                          checked={selectedExpenses.has(exp._id)}
+                          onCheckedChange={() => toggleExpenseSelection(exp._id)}
+                        />
                         <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                           <Receipt className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          {Array.isArray(exp.expenses) && exp.expenses.length > 0 ? (
-                            <div className="space-y-1">
-                              {exp.expenses.map((e, idx) => (
-                                <div key={idx} className="flex items-center gap-2 text-sm">
-                                  <span className="font-medium">{e.type}:</span>
-                                  <span className="font-semibold">₹{Number(e.amount).toLocaleString("en-IN")}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="font-medium">-</div>
-                          )}
+                          {/* Main header shows total and icon */}
                           <div className="text-xs text-muted-foreground mt-1">
                             Total: ₹{Number(exp.amount).toLocaleString("en-IN")}
                           </div>
                         </div>
                       </div>
-                      <Badge
-                        variant="outline"
-                        className="bg-success/10 text-success border-success/20"
-                      >
-                        Approved
-                      </Badge>
+                    </div>
+                    <div className="space-y-1 pl-12">
+                      {Array.isArray(exp.expenses) && exp.expenses.map((e, idx) => (
+                        <div key={idx} className="text-sm">
+                          <span className="text-muted-foreground">{e.type}: </span>
+                          <span className="font-medium">{currencySymbols[e.currency] || "₹"} {Number(e.amount).toLocaleString("en-IN")}</span>
+                          {e.location === "International" && (
+                            <span className="text-xs text-muted-foreground ml-2">(≈ ₹{Number(e.convertedAmount).toLocaleString("en-IN")})</span>
+                          )}
+                        </div>
+                      ))}
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
@@ -631,8 +783,8 @@ const ExpenseGenerator = () => {
                         <span>
                           {exp.expenseDate
                             ? new Date(exp.expenseDate).toLocaleDateString(
-                                "en-IN"
-                              )
+                              "en-IN"
+                            )
                             : "-"}
                         </span>
                       </div>
@@ -652,7 +804,13 @@ const ExpenseGenerator = () => {
                               className="h-8"
                               asChild
                             >
-                              <a href={r.url} target="_blank" rel="noreferrer">
+                              <a
+                                href={r.url || "#"}
+                                target={r.url ? "_blank" : "_self"}
+                                rel="noreferrer"
+                                title={!r.url ? "Receipt not found" : ""}
+                                onClick={(e) => !r.url && e.preventDefault()}
+                              >
                                 <ExternalLink className="h-3 w-3 mr-1" />
                                 Receipt {idx + 1}
                               </a>
@@ -663,7 +821,7 @@ const ExpenseGenerator = () => {
                       <Button
                         size="sm"
                         disabled={payingId === exp._id}
-                        onClick={() => handlePaySeparately(exp._id)}
+                        onClick={() => handlePaySeparately(exp)}
                         className="bg-primary hover:bg-primary/90 ml-auto"
                       >
                         {payingId === exp._id ? (
@@ -720,53 +878,11 @@ const ExpenseGenerator = () => {
                   </CardContent>
                 </Card>
 
-                {/* Expense Info */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Expense Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="col-span-2">
-                      <strong>Expense Breakdown:</strong>
-                      {Array.isArray(selectedExpense.expenses) &&
-                      selectedExpense.expenses.length > 0 ? (
-                        <div className="mt-2 space-y-1">
-                          {selectedExpense.expenses.map((e, idx) => (
-                            <div key={idx} className="flex justify-between pl-4">
-                              <span className="text-muted-foreground">
-                                {e.type}:
-                              </span>
-                              <span className="font-medium">
-                                ₹{Number(e.amount).toLocaleString("en-IN")}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="ml-2">-</span>
-                      )}
-                    </div>
-                    <div>
-                      <strong>Amount:</strong> ₹
-                      {Number(selectedExpense.amount).toLocaleString("en-IN")}
-                    </div>
-                    <div>
-                      <strong>Date:</strong>{" "}
-                      {new Date(selectedExpense.expenseDate).toLocaleDateString(
-                        "en-IN"
-                      )}
-                    </div>
-                    <div>
-                      <strong>Month:</strong>{" "}
-                      {selectedExpense.reimbursementMonth}
-                    </div>
-                  </CardContent>
-                </Card>
-
                 {/* Payslip Preview */}
                 <ExpensePreview
                   employee={selectedEmployee}
                   expense={selectedExpense}
+                  generatedBy={user?.userName}
                 />
               </div>
             )}
@@ -800,6 +916,7 @@ const ExpenseGenerator = () => {
             <ExpensePreview
               employee={selectedEmployee}
               expense={selectedExpense}
+              generatedBy={user?.userName}
             />
           </div>
         )}

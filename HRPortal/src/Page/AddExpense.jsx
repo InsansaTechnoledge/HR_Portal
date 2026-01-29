@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import {
   ReceiptIndianRupee,
@@ -34,6 +34,16 @@ import { Input } from "../Components/ui/input";
 import { Textarea } from "../Components/ui/textarea";
 import { Badge } from "../Components/ui/badge";
 import { Button } from "../Components/ui/button";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "../Components/ui/select";
+import { currencies as allCurrencies } from "../Constant/currencies";
+
+
 
 const expenseTypes = [
   { value: "Travel", label: "Travel", icon: CarTaxiFront },
@@ -43,6 +53,11 @@ const expenseTypes = [
   { value: "Office Supplies", label: "Office Supplies", icon: HardDrive },
   { value: "Other", label: "Other", icon: ScrollText },
 ];
+
+const currencies = allCurrencies;
+
+const expenseLocationTypes = ["National", "International"];
+
 
 const AddExpense = () => {
   const [form, setForm] = useState({
@@ -55,37 +70,142 @@ const AddExpense = () => {
   const [receipts, setReceipts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [customExpenseType, setCustomExpenseType] = useState("");
-  const [expenseAmount, setExpenseAmount] = useState("");
+  // const [customExpenseType, setCustomExpenseType] = useState("");
+  // const [expenseAmount, setExpenseAmount] = useState("");
+  const [expenseDraft, setExpenseDraft] = useState({
+    type: "",
+    customType: "",
+    amount: "",
+    expenseDate: "",
+    location: "National",
+    currency: "INR",
+    exchangeRate: 1,
+  });
+
+  const [fetchingRate, setFetchingRate] = useState(false);
+
+  useEffect(() => {
+    const fetchRate = async () => {
+      if (
+        expenseDraft.location === "International" &&
+        expenseDraft.currency &&
+        expenseDraft.expenseDate
+      ) {
+        try {
+          setFetchingRate(true);
+          // Check if date is today or in the future (API handles past dates better)
+          const selectedDate = new Date(expenseDraft.expenseDate);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          let url = `https://api.frankfurter.app/${expenseDraft.expenseDate}?from=${expenseDraft.currency}&to=INR`;
+
+          // If date is today, we can use 'latest' or the date itself
+          if (selectedDate.getTime() >= today.getTime()) {
+            url = `https://api.frankfurter.app/latest?from=${expenseDraft.currency}&to=INR`;
+          }
+
+          const response = await axios.get(url);
+          if (response.data && response.data.rates && response.data.rates.INR) {
+            setExpenseDraft((prev) => ({
+              ...prev,
+              exchangeRate: response.data.rates.INR,
+            }));
+          }
+        } catch (error) {
+          console.error("Error fetching exchange rate:", error);
+          toast({
+            variant: "destructive",
+            title: "Exchange Rate Error",
+            description: "Could not fetch exchange rate for the selected date and currency.",
+          });
+        } finally {
+          setFetchingRate(false);
+        }
+      }
+    };
+
+    fetchRate();
+  }, [expenseDraft.currency, expenseDraft.expenseDate, expenseDraft.location]);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const addExpense = (type) => {
-    if (!type || !expenseAmount) return;
+  // const addExpense = (type) => {
+  //   if (!type || !expenseAmount) return;
+
+  //   setForm((prev) => ({
+  //     ...prev,
+  //     expenses: [
+  //       ...(prev.expenses || []),
+  //       {
+  //         type,
+  //         amount: Number(expenseAmount),
+  //       },
+  //     ],
+  //   }));
+
+  //   // reset inputs
+  //   setCustomExpenseType("");
+  //   setExpenseAmount("");
+
+  // };
+  const addExpense = () => {
+    const {
+      type,
+      customType,
+      amount,
+      expenseDate,
+      currency,
+      exchangeRate,
+    } = expenseDraft;
+
+    if (!type || !amount || !expenseDate) return;
+
+    const convertedAmount = Number(amount) * Number(exchangeRate || 1);
+
+    const finalType = type === "Other" ? customType : type;
 
     setForm((prev) => ({
       ...prev,
       expenses: [
-        ...(prev.expenses || []),
+        ...prev.expenses,
         {
-          type,
-          amount: Number(expenseAmount),
+          type: finalType,
+          amount: Number(amount),
+          expenseDate,
+          location: expenseDraft.location,
+          currency,
+          exchangeRate: Number(exchangeRate),
+          convertedAmount,
         },
       ],
     }));
 
-    // reset inputs
-    setCustomExpenseType("");
-    setExpenseAmount("");
-    
+    setExpenseDraft({
+      type: "",
+      customType: "",
+      amount: "",
+      expenseDate: "",
+      location: "National",
+      currency: "INR",
+      exchangeRate: 1,
+    });
   };
 
-  const canAddExpense = Boolean(expenseAmount) && Boolean(customExpenseType.trim());
+  // const canAddExpense = Boolean(expenseAmount) && Boolean(customExpenseType.trim());
+  const canAddExpense =
+    Boolean(expenseDraft.type) &&
+    (expenseDraft.type !== "Other" || Boolean(expenseDraft.customType.trim())) &&
+    Boolean(expenseDraft.amount) &&
+    Boolean(expenseDraft.expenseDate) &&
+    (expenseDraft.location === "National" || (Boolean(expenseDraft.currency) && Number(expenseDraft.exchangeRate) > 0)) &&
+    !fetchingRate;
+
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files || []);
-    console.log("FILES:", files);
     setReceipts((prev) => [...prev, ...files]);
   };
 
@@ -151,7 +271,7 @@ const AddExpense = () => {
     }
 
     const totalAmount = Array.isArray(form.expenses)
-      ? form.expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
+      ? form.expenses.reduce((sum, e) => sum + (Number(e.convertedAmount || e.amount) || 0), 0)
       : 0;
 
     const formData = new FormData();
@@ -181,20 +301,22 @@ const AddExpense = () => {
           description: "Expense Added Successfully",
         });
       }
+
       setForm({
         expenses: [],
         expenseDate: "",
         reimbursementMonth: "",
         description: "",
       });
-      setCustomExpenseType("");
-      setExpenseAmount("");
+
+      // setCustomExpenseType("");
+      // setExpenseAmount("");
       setReceipts([]);
     } catch (err) {
       toast({
-        variant: "destuctive",
+        variant: "destructive",
         title: "Upload Error",
-        description: "Error Adding Expense",
+        description: err.response?.data?.message || "Error Adding Expense",
       });
     } finally {
       setLoading(false);
@@ -202,7 +324,7 @@ const AddExpense = () => {
   };
 
   const totalAmount = Array.isArray(form.expenses)
-    ? form.expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
+    ? form.expenses.reduce((sum, e) => sum + (Number(e.convertedAmount || e.amount) || 0), 0)
     : 0;
 
   const expenseTypeList = Array.isArray(form.expenses)
@@ -263,111 +385,215 @@ const AddExpense = () => {
 
         {/* Main Form Card */}
         <Card className="shadow-lg border-border/50">
-          <CardHeader className="pb-4">
+          <CardHeader>
             <CardTitle className="text-lg">Expense Details</CardTitle>
             <CardDescription>
               Fill in the details of your expense claim
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Two Column Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Expense Type */}
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-muted-foreground" />
-                    Expense Types
-                  </Label>
 
-                  <div className="flex gap-2">
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-8">
+
+              {/* ================= Add Expense Item ================= */}
+              <section className="space-y-4">
+                <h3 className="text-sm font-semibold text-muted-foreground">
+                  Add Expense Item
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Expense Type */}
+                  <div className="space-y-2">
+                    <Label>Expense Type</Label>
+                    <div className="relative">
+                      <Select
+                        value={expenseDraft.type}
+                        onValueChange={(value) =>
+                          setExpenseDraft({ ...expenseDraft, type: value })
+                        }
+                      >
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Select Expense Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {expenseTypes.map((e) => (
+                            <SelectItem key={e.value} value={e.value}>
+                              {e.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <ChevronDown className="absolute right-3 top-3 h-4 w-4 opacity-50 pointer-events-none" />
+                    </div>
+
+                    {/* Custom Expense Type (Manual) */}
+                    {expenseDraft.type === "Other" && (
+                      <div className="space-y-2 mt-4">
+                        <Label>Custom Expense Type</Label>
+                        <Input
+                          type="text"
+                          placeholder="Enter expense type"
+                          value={expenseDraft.customType}
+                          onChange={(e) =>
+                            setExpenseDraft({
+                              ...expenseDraft,
+                              customType: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Expense Date */}
+                  <div className="space-y-2">
+                    <Label>Date</Label>
                     <Input
-                      placeholder="Add expense type"
-                      value={customExpenseType}
-                      onChange={(e) => setCustomExpenseType(e.target.value)}
+                      type="date"
+                      value={expenseDraft.expenseDate}
+                      onChange={(e) =>
+                        setExpenseDraft({
+                          ...expenseDraft,
+                          expenseDate: e.target.value,
+                        })
+                      }
                     />
                   </div>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={!canAddExpense}
-                    onClick={() => {
-                      const typeToAdd = customExpenseType.trim();
-                      addExpense(typeToAdd);
-                    }}
-                  >
-                    Add
-                  </Button>
+                  {/* Location */}
+                  <div className="space-y-2">
+                    <Label>Location</Label>
+                    <div className="relative">
+                      <Select
+                        value={expenseDraft.location}
+                        onValueChange={(value) =>
+                          setExpenseDraft({
+                            ...expenseDraft,
+                            location: value,
+                            currency: value === "National" ? "INR" : "",
+                            exchangeRate: value === "National" ? 1 : "",
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Select Location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {expenseLocationTypes.map((l) => (
+                            <SelectItem key={l} value={l}>
+                              {l}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <ChevronDown className="absolute right-3 top-3 h-4 w-4 opacity-50 pointer-events-none" />
+                    </div>
+
+                  </div>
+
+                  {/* Amount */}
+                  <div className="space-y-2">
+                    <Label>Amount {expenseDraft.location === "International" && expenseDraft.currency ? `(${expenseDraft.currency})` : "(₹)"}</Label>
+                    <Input
+                      type="number"
+                      placeholder="Enter amount"
+                      value={expenseDraft.amount}
+                      onChange={(e) =>
+                        setExpenseDraft({
+                          ...expenseDraft,
+                          amount: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
 
-                {/* Amount */}
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <CreditCard className="w-4 h-4 text-muted-foreground" />
-                    Expense Amount (₹)
-                  </Label>
+                {/* International Fields */}
+                {expenseDraft.location === "International" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Currency</Label>
+                      <div className="relative">
+                        <Select
+                          value={expenseDraft.currency}
+                          onValueChange={(value) =>
+                            setExpenseDraft({
+                              ...expenseDraft,
+                              currency: value,
+                            })
+                          }
+                        >
+                          <SelectTrigger className="h-10 w-full">
+                            <SelectValue placeholder="Select Currency" />
+                          </SelectTrigger>
 
-                  <Input
-                    type="number"
-                    placeholder="Enter amount for selected expense"
-                    value={expenseAmount}
-                    onChange={(e) => setExpenseAmount(e.target.value)}
-                  />
-                </div>
+                          <SelectContent>
+                            <div className="max-h-[300px] overflow-y-auto">
+                              {currencies.map((c) => (
+                                <SelectItem key={c.code} value={c.code}>
+                                  {c.code} - {c.name}
+                                </SelectItem>
+                              ))}
+                            </div>
+                          </SelectContent>
+                        </Select>
+                        <ChevronDown className="absolute right-3 top-3 h-4 w-4 opacity-50 pointer-events-none" />
+                      </div>
 
-                {/* Expense Date */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="expenseDate"
-                    className="flex items-center gap-2"
-                  >
-                    <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                    Expense Date
-                  </Label>
-                  <Input
-                    id="expenseDate"
-                    name="expenseDate"
-                    type="date"
-                    value={form.expenseDate}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
+                    </div>
 
-                {/* Reimbursement Month */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="reimbursementMonth"
-                    className="flex items-center gap-2"
-                  >
-                    <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                    Reimbursement Month
-                  </Label>
-                  <Input
-                    id="reimbursementMonth"
-                    name="reimbursementMonth"
-                    type="month"
-                    value={form.reimbursementMonth}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-              </div>
+                    <div className="space-y-2">
+                      <Label>Exchange Rate to INR</Label>
+                      <Input
+                        type="number"
+                        placeholder="Exchange rate"
+                        value={expenseDraft.exchangeRate}
+                        disabled={fetchingRate}
+                        onChange={(e) =>
+                          setExpenseDraft({
+                            ...expenseDraft,
+                            exchangeRate: e.target.value,
+                          })
+                        }
+                      />
+                      {fetchingRate && (
+                        <div className="absolute right-3 top-3">
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-              {form.expenses && form.expenses.length > 0 && (
-                <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!canAddExpense}
+                  onClick={addExpense}
+                >
+                  Add Expense
+                </Button>
+              </section>
+
+              {/* ================= Added Expenses ================= */}
+              {form.expenses?.length > 0 && (
+                <section className="space-y-2">
+                  <h3 className="text-sm font-semibold text-muted-foreground">
+                    Added Expenses
+                  </h3>
+
                   {form.expenses.map((expense, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border"
+                      className="flex items-center justify-between p-3 rounded-lg border bg-muted/50"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <Badge variant="secondary">{expense.type}</Badge>
-                        <span className="text-sm font-medium">
-                          ₹{expense.amount.toLocaleString("en-IN")}
+                        <span className="font-medium">
+                          ₹{expense.convertedAmount.toLocaleString("en-IN")}
                         </span>
                       </div>
+
                       <Button
                         type="button"
                         variant="ghost"
@@ -383,27 +609,49 @@ const AddExpense = () => {
                       </Button>
                     </div>
                   ))}
-                </div>
+                </section>
               )}
 
-              {/* Description */}
-              <div className="space-y-2">
-                <Label htmlFor="description">
-                  Description{" "}
-                  <span className="text-muted-foreground">(optional)</span>
-                </Label>
+              {/* ================= Claim Info ================= */}
+              <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* <div className="space-y-2">
+                  <Label>Expense Date</Label>
+                  <Input
+                    type="date"
+                    name="expenseDate"
+                    value={form.expenseDate}
+                    onChange={handleChange}
+                    required
+                  />
+                </div> */}
+
+                <div className="space-y-2">
+                  <Label>Reimbursement Month</Label>
+                  <Input
+                    className="max-w-fit"
+                    type="month"
+                    name="reimbursementMonth"
+                    value={form.reimbursementMonth}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              </section>
+
+              {/* ================= Description ================= */}
+              <section className="space-y-2">
+                <Label>Description (optional)</Label>
                 <Textarea
-                  id="description"
+                  rows={3}
                   name="description"
-                  placeholder="Add any additional details about this expense..."
                   value={form.description}
                   onChange={handleChange}
-                  rows={3}
+                  placeholder="Add additional details about this expense..."
                   className="resize-none"
                 />
-              </div>
+              </section>
 
-              {/* Receipt Upload */}
+              {/* ================= Receipts ================= */}
               <div className="space-y-3">
                 <Label className="flex items-center gap-2">
                   <FileImage className="w-4 h-4 text-muted-foreground" />
@@ -421,10 +669,9 @@ const AddExpense = () => {
                   onDrop={handleDrop}
                   className={`
                     relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200
-                    ${
-                      dragActive
-                        ? "border-primary bg-primary/5 scale-[1.02]"
-                        : "border-border hover:border-primary/50 hover:bg-muted/30"
+                    ${dragActive
+                      ? "border-primary bg-primary/5 scale-[1.02]"
+                      : "border-border hover:border-primary/50 hover:bg-muted/30"
                     }
                   `}
                 >
@@ -438,14 +685,12 @@ const AddExpense = () => {
                   />
                   <div className="flex flex-col items-center gap-2">
                     <div
-                      className={`p-3 rounded-full transition-colors ${
-                        dragActive ? "bg-primary/20" : "bg-muted"
-                      }`}
+                      className={`p-3 rounded-full transition-colors ${dragActive ? "bg-primary/20" : "bg-muted"
+                        }`}
                     >
                       <Upload
-                        className={`w-6 h-6 ${
-                          dragActive ? "text-primary" : "text-muted-foreground"
-                        }`}
+                        className={`w-6 h-6 ${dragActive ? "text-primary" : "text-muted-foreground"
+                          }`}
                       />
                     </div>
                     <div>
@@ -520,28 +765,18 @@ const AddExpense = () => {
                 )}
               </div>
 
-              {/* Submit Button */}
+              {/* ================= Submit ================= */}
               <Button
                 type="submit"
                 disabled={loading}
                 className="w-full h-12 text-base font-medium"
-                size="lg"
               >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    Submitting...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <Send className="w-4 h-4" />
-                    Submit Expense
-                  </span>
-                )}
+                {loading ? "Submitting..." : "Submit Expense"}
               </Button>
             </form>
           </CardContent>
         </Card>
+
 
         {/* Info Card */}
         <Card className="bg-muted/30 border-border/50">

@@ -1,4 +1,4 @@
-import React, {useContext} from 'react';
+import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userContext } from '../Context/userContext';
 import { Card, CardContent } from '../Components/ui/card';
@@ -20,14 +20,15 @@ import {
   NotebookPen,
   Receipt,
   FileSearch,
-  FilePlus
+  FilePlus,
+  ListTodo
 } from 'lucide-react';
 
 const FeatureCard = ({ icon, title, description, path, color, gradient }) => {
   const navigate = useNavigate();
 
   return (
-    <Card 
+    <Card
       className="group cursor-pointer card-hover border-0 overflow-hidden"
       onClick={() => navigate(path)}
     >
@@ -90,6 +91,14 @@ const Home = () => {
               gradient: 'bg-gradient-to-br from-info to-primary',
             },
             {
+              icon: <ListTodo className="h-6 w-6" />,
+              title: 'My Task',
+              description: 'View your Daily Task',
+              path: '/my-tasks',
+              color: 'text-success',
+              gradient: 'bg-gradient-to-br from-success to-hr-amber',
+            },
+            {
               icon: <Calendar className="h-6 w-6" />,
               title: 'Leave Tracker',
               description: 'Track and request leaves',
@@ -112,7 +121,7 @@ const Home = () => {
               path: '/add-expense',
               color: 'text-destructive',
               gradient: 'bg-gradient-to-br from-destructive to-hr-amber',
-          },
+            },
           ],
         },
       ];
@@ -224,6 +233,20 @@ const Home = () => {
       },
 
       {
+        title: 'Task Management',
+        items: [
+          {
+            icon: <ListTodo className="h-6 w-6" />,
+            title: 'Task Manager',
+            description: 'Employee Task Assignment',
+            path: '/task-management',
+            color: 'text-destructive',
+            gradient: 'bg-gradient-to-br from-destructive to-hr-amber',
+          },
+        ],
+      },
+
+      {
         title: 'Payslip Management',
         items: [
           {
@@ -237,32 +260,33 @@ const Home = () => {
         ],
       },
       {
-         title: 'Expense Management',
-          items: [
-            {
-              icon: <ReceiptIndianRupee className="h-6 w-6" />,
-              title: 'Expense Tracker',
-              description: 'Track Employee Expense',
-              path: '/expense-tracker',
-              color: 'text-destructive',
-              gradient: 'bg-gradient-to-br from-destructive to-hr-amber',
-            },
-            
-          ],
+        title: 'Expense Management',
+        items: [
+          {
+            icon: <ReceiptIndianRupee className="h-6 w-6" />,
+            title: 'Expense Tracker',
+            description: 'Track Employee Expense',
+            path: '/expense-tracker',
+            color: 'text-destructive',
+            gradient: 'bg-gradient-to-br from-destructive to-hr-amber',
+          },
+
+        ],
       },
 
+
       {
-          title: 'AI Features',
-          items: [
-            {
-              icon: <FileSearch className="h-6 w-6" />,
-              title: 'Resume Analyzer',
-              description: 'Analyze Resumes',
-              path: '/resume-analyzer',
-              color: 'text-destructive',
-              gradient: 'bg-gradient-to-br from-hr-purple to-hr-amber',
-            },
-          ],
+        title: 'AI Features',
+        items: [
+          {
+            icon: <FileSearch className="h-6 w-6" />,
+            title: 'Resume Analyzer',
+            description: 'Analyze Resumes',
+            path: '/resume-analyzer',
+            color: 'text-destructive',
+            gradient: 'bg-gradient-to-br from-hr-purple to-hr-amber',
+          },
+        ],
       },
 
       {
@@ -293,19 +317,19 @@ const Home = () => {
     //   )
     // }
 
-    if(user.role === 'superAdmin'){
-      categories[3].items.push(
+    if (user.role === 'superAdmin') {
+      categories[4].items.push(
         {
-                icon: <FilePlus className="h-6 w-6" />,
-                title: 'Expense Generator',
-                description: 'Generate Employee Expense',
-                path: '/expense-tracker',
-                color: 'text-destructive',
-                gradient: 'bg-gradient-to-br from-destructive to-hr-coral',
+          icon: <FilePlus className="h-6 w-6" />,
+          title: 'Expense Generator',
+          description: 'Generate Employee Expense',
+          path: '/expense-tracker',
+          color: 'text-destructive',
+          gradient: 'bg-gradient-to-br from-destructive to-hr-coral',
         },
       );
 
-      categories[2].items.push(
+      categories[3].items.push(
         {
           icon: <Receipt className="h-6 w-6" />,
           title: 'Payslip Generator',
@@ -331,14 +355,14 @@ const Home = () => {
 
     return categories;
   };
-  
+
   const categories = getCategories();
 
   return (
     <div className="min-h-full bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Header */}
-        <div className="mb-8 animate-fade-in">
+        <div className="mb-8">
           <Card className="border-0 bg-gradient-to-r from-hr-navy via-hr-navy-light to-hr-navy overflow-hidden relative">
             <div className="absolute inset-0">
               <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl" />

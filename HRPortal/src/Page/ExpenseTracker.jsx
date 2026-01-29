@@ -3,7 +3,7 @@ import axios from "axios";
 import API_BASE_URL from "../config";
 import { userContext } from "../Context/userContext";
 import { Receipt, FileText, TrendingUp, Clock, CheckCircle2, Search, Filter, Calendar, User, Building2, ExternalLink, Wallet, Download, ChevronDown, XCircle } from "lucide-react";
-import {Card, CardContent, CardHeader, CardTitle} from '../Components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../Components/ui/card';
 import { Input } from "../Components/ui/input";
 import { Button } from "../Components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../Components/ui/select";
@@ -12,6 +12,18 @@ import { Table, TableBody, TableCell, TableHeader, TableFooter, TableRow, TableH
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import ExpensePreview from '../templates/ExpensePreview'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "../Components/ui/dialog";
+// import { Checkbox } from "../Components/ui/checkbox";
+
+import { currencySymbols } from "../Constant/currencies";
 
 const ExpenseTracker = () => {
   const { user } = useContext(userContext);
@@ -22,7 +34,8 @@ const ExpenseTracker = () => {
 
   const payslipRef = useRef(null);
   const [selectedExpense, setSelectedExpense] = useState(null);
-
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState(null);
 
   const role = user?.role;
 
@@ -69,15 +82,18 @@ const ExpenseTracker = () => {
   const handleFilterChange = (name, value) => {
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
-  
-  const handleStatusChange = async (expenseId, newStatus) => {
-    // Only send update when moving away from PENDING to APPROVED/REJECTED
-     if (!isFinance || newStatus === "PENDING") return;
 
-    // Only superAdmin can approve/reject
-    if (!user || !["superAdmin"].includes(user.role)) {
-      return;
-    }
+  const handleStatusChange = (expenseId, newStatus) => {
+    if (!isFinance || newStatus === "PENDING") return;
+    if (!user || !["superAdmin"].includes(user.role)) return;
+
+    setPendingStatusChange({ id: expenseId, status: newStatus });
+    setConfirmOpen(true);
+  };
+
+  const confirmChange = async () => {
+    if (!pendingStatusChange) return;
+    const { id: expenseId, status: newStatus } = pendingStatusChange;
 
     try {
       setError("");
@@ -87,16 +103,14 @@ const ExpenseTracker = () => {
         { withCredentials: true }
       );
 
-      setExpenses((prev) =>
-        prev.map((exp) =>
-          exp._id === expenseId ? { ...exp, status: newStatus } : exp
-        )
-      );
+      await fetchExpenses();
+      setConfirmOpen(false);
+      setPendingStatusChange(null);
     } catch (err) {
       console.error("Error updating expense status", err);
       setError(
         err.response?.data?.message ||
-          "Unable to update expense status. Please try again."
+        "Unable to update expense status. Please try again."
       );
     }
   };
@@ -126,6 +140,10 @@ const ExpenseTracker = () => {
   };
 
 
+
+
+
+
   const filteredExpenses = expenses.filter((exp) => {
     const matchesStatus = !filters.status || exp.status === filters.status;
     const matchesMonth =
@@ -142,10 +160,10 @@ const ExpenseTracker = () => {
     return matchesStatus && matchesMonth && matchesSearch;
   });
   const statsExpenses = isEmployee
-  ? filteredExpenses.filter(
+    ? filteredExpenses.filter(
       (exp) => exp.employeeId?.email === user?.userEmail
     )
-  : filteredExpenses;
+    : filteredExpenses;
 
   const totalRequests = statsExpenses.length;
 
@@ -158,9 +176,9 @@ const ExpenseTracker = () => {
     (e) => e.status === "PENDING"
   ).length;
 
-const approvedAmount = statsExpenses
-  .filter((e) => e.status === "APPROVED" || e.status === "PAID")
-  .reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+  const approvedAmount = statsExpenses
+    .filter((e) => e.status === "APPROVED" || e.status === "PAID")
+    .reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
 
 
   const getStatusConfig = (status) => {
@@ -286,9 +304,9 @@ const approvedAmount = statsExpenses
                     <SelectItem value="REJECTED">Rejected</SelectItem>
                   </SelectContent>
                 </Select>
-                <ChevronDown className="absolute right-3 top-3 h-4 w-4 opacity-50 pointer-events-none"/>
+                <ChevronDown className="absolute right-3 top-3 h-4 w-4 opacity-50 pointer-events-none" />
               </div>
-              
+
               <div className="relative">
                 {/* <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" /> */}
                 {/* <Input
@@ -317,6 +335,7 @@ const approvedAmount = statsExpenses
               <Badge variant="secondary" className="ml-2">
                 {filteredExpenses.length} records
               </Badge>
+
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -325,6 +344,7 @@ const approvedAmount = statsExpenses
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30 hover:bg-muted/30">
+
                     {!isEmployee && <TableHead className="font-semibold">Employee</TableHead>}
                     <TableHead className="font-semibold">Expense Type</TableHead>
                     <TableHead className="font-semibold">Amount</TableHead>
@@ -359,32 +379,48 @@ const approvedAmount = statsExpenses
                       const StatusIcon = statusConfig.icon;
                       return (
                         <TableRow key={exp._id} className="group hover:bg-muted/30 transition-colors">
+
                           {!isEmployee && (
                             <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                <User className="h-5 w-5 text-primary" />
-                              </div>
-                              <div>
-                                <div className="font-medium text-foreground">{exp.employeeId.name}</div>
-                                <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Building2 className="h-3 w-3" />
-                                  {exp.employeeId.department}
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <User className="h-5 w-5 text-primary" />
+                                </div>
+                                <div>
+                                  <div className="font-medium text-foreground">{exp.employeeId.name}</div>
+                                  <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Building2 className="h-3 w-3" />
+                                    {exp.employeeId.department}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </TableCell>
+                            </TableCell>
                           )}
-                          
+
                           <TableCell className="font-medium">
                             {Array.isArray(exp.expenses) && exp.expenses.length > 0 ? (
-                              <div className="space-y-1">
+                              <div className="space-y-2">
                                 {exp.expenses.map((e, idx) => (
-                                  <div key={idx} className="flex items-center gap-2">
-                                    <span className="text-muted-foreground">{e.type}:</span>
-                                    <span className="font-semibold text-foreground">
-                                      ₹{Number(e.amount).toLocaleString("en-IN")}
-                                    </span>
+                                  <div key={idx} className="flex flex-col gap-1 bg-muted/20 p-2 rounded-md">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant={e.location === "International" ? "default" : "secondary"} className="text-[10px] h-5 px-1.5">
+                                          {e.location === "International" ? "Intl" : "Natl"}
+                                        </Badge>
+                                        <span className="text-muted-foreground text-sm">{e.type}</span>
+                                      </div>
+                                      <span className="font-semibold text-foreground text-sm">
+                                        {currencySymbols[e.currency] || "₹"} {Number(e.amount).toLocaleString("en-IN")}
+                                      </span>
+                                    </div>
+                                    {e.location === "International" && (
+                                      <div className="flex justify-end items-center gap-2 text-xs text-muted-foreground border-t border-border/50 pt-1 mt-1">
+                                        <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded">
+                                          Rate: 1 {e.currency} = {e.exchangeRate}
+                                        </span>
+                                        <span>≈ ₹{Number(e.convertedAmount).toLocaleString("en-IN")}</span>
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                               </div>
@@ -400,10 +436,10 @@ const approvedAmount = statsExpenses
                           <TableCell className="text-muted-foreground">
                             {exp.expenseDate
                               ? new Date(exp.expenseDate).toLocaleDateString("en-IN", {
-                                  day: "2-digit",
-                                  month: "short",
-                                  year: "numeric"
-                                })
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric"
+                              })
                               : "-"}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
@@ -411,8 +447,8 @@ const approvedAmount = statsExpenses
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <Badge 
-                                variant="outline" 
+                              <Badge
+                                variant="outline"
                                 className={`${statusConfig.className} flex items-center gap-1`}
                               >
                                 <StatusIcon className="h-3 w-3" />
@@ -433,9 +469,9 @@ const approvedAmount = statsExpenses
                                       <SelectItem value="REJECTED">Reject</SelectItem>
                                     </SelectContent>
                                   </Select>
-                                  <ChevronDown className="absolute right-2 top-2.5 h-3 w-3 opacity-50 pointer-events-none"/>
+                                  <ChevronDown className="absolute right-2 top-2.5 h-3 w-3 opacity-50 pointer-events-none" />
                                 </div>
-                                
+
                               )}
                             </div>
                           </TableCell>
@@ -450,13 +486,19 @@ const approvedAmount = statsExpenses
                                     className="h-7 px-2 text-primary hover:text-primary hover:bg-primary/10 justify-start"
                                     asChild
                                   >
-                                    <a href={r.url} target="_blank" rel="noreferrer">
+                                    <a
+                                      href={r.url || "#"}
+                                      target={r.url ? "_blank" : "_self"}
+                                      rel="noreferrer"
+                                      title={!r.url ? "Receipt not found" : ""}
+                                      onClick={(e) => !r.url && e.preventDefault()}
+                                    >
                                       <ExternalLink className="h-3 w-3 mr-1" />
                                       Receipt {idx + 1}
                                     </a>
                                   </Button>
                                 ))}
-                               {exp.status === "PAID" && (isFinance || isEmployee) && (
+                                {exp.status === "PAID" && (isFinance || isEmployee) && (
                                   <Button
                                     size="sm"
                                     className="h-7 bg-success hover:bg-success/90 text-success-foreground"
@@ -498,59 +540,83 @@ const approvedAmount = statsExpenses
                   return (
                     <div key={exp._id} className="p-4 space-y-3">
                       <div className="flex items-start justify-between">
-                      {!isEmployee && (
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <User className="h-5 w-5 text-primary" />
+                        {!isEmployee && (
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <User className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <div className="font-medium">{exp.employeeId.name}</div>
+                              <div className="text-xs text-muted-foreground">{exp.employeeId.department}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-medium">{exp.employeeId.name}</div>
-                            <div className="text-xs text-muted-foreground">{exp.employeeId.department}</div>
-                          </div>
-                        </div>
-                      )}
-                        <Badge 
-                          variant="outline" 
+                        )}
+                        <Badge
+                          variant="outline"
                           className={`${statusConfig.className} flex items-center gap-1`}
                         >
                           <StatusIcon className="h-3 w-3" />
                           {statusConfig.label}
                         </Badge>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="grid grid-cols-2 gap-3 text-sm bg-muted/10 p-3 rounded-lg border border-border/50">
                         <div>
-                          <span className="text-muted-foreground">Type: </span>
-                          {Array.isArray(exp.expenses) && exp.expenses.length > 0 ? (
-                            <div className="space-y-1 mt-1">
-                              {exp.expenses.map((e, idx) => (
-                                <div key={idx} className="flex items-center gap-2 text-sm">
-                                  <span className="font-medium">{e.type}:</span>
-                                  <span className="font-semibold">₹{Number(e.amount).toLocaleString("en-IN")}</span>
+                          <span className="text-xs text-muted-foreground block mb-1">Total Amount</span>
+                          <span className="font-bold text-base">₹{Number(exp.amount).toLocaleString("en-IN")}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground block mb-1">Date</span>
+                          <span className="font-medium">{exp.expenseDate ? new Date(exp.expenseDate).toLocaleDateString("en-IN") : "-"}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-xs text-muted-foreground block mb-1">Reimbursement Month</span>
+                          <span className="font-medium">{exp.reimbursementMonth || "-"}</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Breakdown</span>
+                        {Array.isArray(exp.expenses) && exp.expenses.length > 0 ? (
+                          <div className="space-y-2">
+                            {exp.expenses.map((e, idx) => (
+                              <div key={idx} className="flex flex-col gap-1 bg-card border border-border/50 p-3 rounded-md shadow-sm">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant={e.location === "International" ? "default" : "secondary"} className="text-[10px] h-5 px-1.5 shrink-0">
+                                      {e.location === "International" ? "Intl" : "Natl"}
+                                    </Badge>
+                                    <span className="font-medium text-sm">{e.type}</span>
+                                  </div>
+                                  <span className="font-semibold text-sm whitespace-nowrap">
+                                    {currencySymbols[e.currency] || "₹"} {Number(e.amount).toLocaleString("en-IN")}
+                                  </span>
                                 </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="font-medium">-</span>
-                          )}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Amount: </span>
-                          <span className="font-semibold">₹{Number(exp.amount).toLocaleString("en-IN")}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Date: </span>
-                          <span>{exp.expenseDate ? new Date(exp.expenseDate).toLocaleDateString("en-IN") : "-"}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Month: </span>
-                          <span>{exp.reimbursementMonth || "-"}</span>
-                        </div>
+                                {e.location === "International" && (
+                                  <div className="flex flex-wrap justify-end items-center gap-x-3 gap-y-1 text-xs text-muted-foreground border-t border-border/50 pt-2 mt-2">
+                                    <span className="text-[10px] bg-muted px-2 py-0.5 rounded">
+                                      Rate: 1 {e.currency} = {e.exchangeRate}
+                                    </span>
+                                    <span className="font-medium text-foreground/80">≈ ₹{Number(e.convertedAmount).toLocaleString("en-IN")}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-muted-foreground italic">No details available</div>
+                        )}
                       </div>
                       {exp.receipts && exp.receipts.length > 0 && (
                         <div className="flex gap-2 flex-wrap">
                           {exp.receipts.map((r, idx) => (
                             <Button key={idx} variant="outline" size="sm" className="h-8" asChild>
-                              <a href={r.url} target="_blank" rel="noreferrer">
+                              <a
+                                href={r.url || "#"}
+                                target={r.url ? "_blank" : "_self"}
+                                rel="noreferrer"
+                                title={!r.url ? "Receipt not found" : ""}
+                                onClick={(e) => !r.url && e.preventDefault()}
+                              >
                                 <ExternalLink className="h-3 w-3 mr-1" />
                                 Receipt {idx + 1}
                               </a>
@@ -567,14 +633,38 @@ const approvedAmount = statsExpenses
         </Card>
       </div>
 
-      {/* Hidden Expense Preview for PDF generation */}
       <div className="fixed -left-[9999px] top-0">
         {selectedExpense && (
           <div ref={payslipRef} className="w-[800px] bg-white p-6">
-            <ExpensePreview expense={selectedExpense} />
+            <ExpensePreview
+              expense={selectedExpense}
+              employee={selectedExpense.employeeId}
+              generatedBy={user?.userName}
+            />
           </div>
         )}
       </div>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Status Change</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to change the status of this expense to{" "}
+              <span className="font-bold text-foreground">
+                {pendingStatusChange?.status}
+              </span>
+              ? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button onClick={confirmChange}>Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

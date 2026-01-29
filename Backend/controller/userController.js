@@ -55,6 +55,12 @@ export const getUser = async (req,res) => {
 export const deleteUser = async (req,res) => {
     try{
         const {id} = req.params;
+        
+        // Validate if id is a valid ObjectId
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+          return res.status(400).json({ message: "Invalid user ID format" });
+        }
+        
         const deletedUser = await User.findByIdAndDelete(id);
 
         res.status(200).json({message: "User deleted successfully!"});
@@ -72,6 +78,12 @@ export const changePassword = async (req,res) => {
     }
 
     const {id} = req.params;
+    
+    // Validate if id is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user ID format" });
+    }
+    
     const currentPassword = req.body.currentPassword;
     const newPassword = req.body.newPassword;
 
@@ -103,6 +115,11 @@ export const editLoginInfo = async (req, res) => {
   try {
     const { id } = req.params; 
     const { userName, userEmail, newPassword, currentPassword, role } = req.body;
+
+    // Validate if id is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user ID format" });
+    }
 
     const requester = req.user;
     if (!requester) {
@@ -188,6 +205,11 @@ export const getUserById = async (req, res) => {
     const { id } = req.params;
     const { from, to } = req.query; // optional ISO date strings for leaveHistory range filtering
 
+    // Validate if id is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user ID format" });
+    }
+
     const matchId = new mongoose.Types.ObjectId(id);
 
     // When date filters are provided, use aggregation to trim leaveHistory server-side
@@ -240,8 +262,13 @@ export const getUserById = async (req, res) => {
 // Add leave for user
 export const addLeaveToUser = async (req, res) => {
   try {
-    const { id }  = req.params
+    const { id }  = req.params;
     const leaveHistory = req.body;
+    
+    // Validate if id is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user ID format" });
+    }
     
     const updatedUser = await User.findByIdAndUpdate(
       id,
@@ -267,6 +294,11 @@ export const updateUserProfile = async (req, res) => {
   try {
     const { id } = req.params;
     const { userName, userEmail } = req.body;
+
+    // Validate if id is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user ID format" });
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
       id,

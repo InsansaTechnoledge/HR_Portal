@@ -3,7 +3,7 @@ import Employee from "../models/Employee.js";
 
 export const createExpense = async (req, res) => {
   try {
-    const { expenseDate, reimbursementMonth, description } = req.body;
+    const { reimbursementMonth, description } = req.body;
     const rawExpenses = req.body.expenses;
 
     let expenses = [];
@@ -17,11 +17,26 @@ export const createExpense = async (req, res) => {
             .map((e) => ({
               type: String(e.type).trim(),
               amount: Number(e.amount),
+              expenseDate: e.expenseDate ? new Date(e.expenseDate) : null,
+              location: e.location || "National",
+              currency: e.currency || "INR",
+              exchangeRate: Number(e.exchangeRate || 1),
+              convertedAmount: Number(e.convertedAmount || e.amount),
             }))
             .filter((e) => e.type && e.amount > 0);
+
+          const invalidExpense = expenses.find(
+            (e) => !e.expenseDate || isNaN(new Date(e.expenseDate))
+          );
+
+          if (invalidExpense) {
+            return res.status(400).json({
+              message: `Each expense must have a valid expense date. Invalid item: ${JSON.stringify(invalidExpense)}`,
+            });
+          }
         }
       } catch (e) {
-        return res.status(400).json({ message: "Invalid expenses format" });
+        return res.status(400).json({ message: "Invalid expenses format: " + e.message });
       }
     } else if (Array.isArray(rawExpenses)) {
       expenses = rawExpenses
@@ -29,8 +44,23 @@ export const createExpense = async (req, res) => {
         .map((e) => ({
           type: String(e.type).trim(),
           amount: Number(e.amount),
+          expenseDate: e.expenseDate ? new Date(e.expenseDate) : null,
+          location: e.location || "National",
+          currency: e.currency || "INR",
+          exchangeRate: Number(e.exchangeRate || 1),
+          convertedAmount: Number(e.convertedAmount || e.amount),
         }))
         .filter((e) => e.type && e.amount > 0);
+
+      const invalidExpense = expenses.find(
+        (e) => !e.expenseDate || isNaN(new Date(e.expenseDate))
+      );
+
+      if (invalidExpense) {
+        return res.status(400).json({
+          message: "Each expense must have a valid expense date",
+        });
+      }
     }
 
     const uploadedReceipts = req.uploadedReceipts || [];
@@ -38,11 +68,11 @@ export const createExpense = async (req, res) => {
     if (!uploadedReceipts.length) {
       return res
         .status(400)
-        .json({ message: "At least one receipt file is required" });
+        .json({ message: "At least one receipt file is required. Upload failed or no receipts provided." });
     }
 
-    if (!expenses.length || !expenseDate || !reimbursementMonth) {
-      return res.status(400).json({ message: "Required fields are missing" });
+    if (!expenses.length || !reimbursementMonth) {
+      return res.status(400).json({ message: `Required fields are missing. Expenses count: ${expenses.length}, Month: ${reimbursementMonth}` });
     }
 
     const employee = await Employee.findOne({
@@ -52,12 +82,14 @@ export const createExpense = async (req, res) => {
     if (!employee) {
       return res.status(400).json({
         message:
-          "No employee record linked to this user. Please ensure employee is created with matching email.",
+          `No employee record linked to user ${req.user.userEmail}. Please ensure employee is created with matching email.`,
       });
     }
 
     // Calculate total amount from individual expenses
-    const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalAmount = expenses.reduce((sum, e) => sum + (e.convertedAmount || e.amount), 0);
+
+    const expenseDate = expenses.length > 0 ? expenses[0].expenseDate : new Date();
 
     const newExpense = new Expenses({
       employeeId: employee._id,
@@ -118,10 +150,10 @@ export const getExpenses = async (req, res) => {
 
     const expenses = await Expenses.find(filter)
       .select(
-        "employeeId expenses amount expenseDate receipts reimbursementMonth status paymentMode createdAt approvedBy"
+        "employeeId expenses amount expenseDate receipts reimbursementMonth status paymentMode createdAt approvedBy approvedAt"
       )
       .populate({ path: "employeeId", select: "name email department" })
-      .populate("approvedBy", "name")
+      .populate("approvedBy", "userName")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit))
