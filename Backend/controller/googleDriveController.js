@@ -5,24 +5,16 @@ import User from "../models/User.js";
 
 export const googleAuthUrl = async (req, res) => {
   try {
-    // Allow all authenticated users to connect Google Drive
-    // Admins can connect for themselves, employees can connect for themselves
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({ message: "User not authenticated" });
+    if (req.user.role !== "admin" && req.user.role !== "superAdmin") {
+      return res.status(403).json({ message: "Access denied" });
     }
 
-    const { returnUrl } = req.query;
-    // Create state with userId and returnUrl (returnUrl is optional)
-    const state = JSON.stringify({
-      userId: req.user.id,
-      returnUrl: returnUrl || "/investment-declaration"
-    });
-
+    
     const url = oauth2Client.generateAuthUrl({
       access_type: "offline",
       prompt: "consent",
       scope: ["https://www.googleapis.com/auth/drive.file"],
-      state: state,
+      state: req.user.id, // save user id
     });
 
     res.json({ url });
@@ -38,22 +30,11 @@ export const googleCallback = async (req, res) => {
 
     const { tokens } = await oauth2Client.getToken(code);
 
-    // Parse state to get userId and returnUrl
-    let stateData = { userId: state, returnUrl: "/application" };
-    try {
-      stateData = JSON.parse(state);
-    } catch (e) {
-      // Fallback for legacy state format (just userId as string)
-      stateData = { userId: state, returnUrl: "/application" };
-    }
-
-    const { userId, returnUrl } = stateData;
-
     // Get existing user
-    const user = await User.findById(userId);
+    const user = await User.findById(state);
     if (!user) {
       return res.redirect(
-        `${process.env.CLIENT_ORIGIN}${returnUrl}?error=user_not_found`
+        `${process.env.CLIENT_ORIGIN}/application?error=user_not_found`
       );
     }
 
@@ -62,7 +43,7 @@ export const googleCallback = async (req, res) => {
 
     if (!refreshToken) {
       return res.redirect(
-        `${process.env.CLIENT_ORIGIN}${returnUrl}?error=no_refresh_token`
+        `${process.env.CLIENT_ORIGIN}/application?error=no_refresh_token`
       );
     }
 
@@ -71,7 +52,7 @@ export const googleCallback = async (req, res) => {
       access_token: tokens.access_token,
     });
 
-    await User.findByIdAndUpdate(userId, {
+    await User.findByIdAndUpdate(state, {
       googleDrive: {
         refreshToken,
         email: "Connected",
@@ -79,8 +60,8 @@ export const googleCallback = async (req, res) => {
       },
     });
 
-    // SUCCESS REDIRECT - use returnUrl from state
-    res.redirect(`${process.env.CLIENT_ORIGIN}${returnUrl}?connected=google`);
+    // SUCCESS REDIRECT
+    res.redirect(`${process.env.CLIENT_ORIGIN}/application?connected=google`);
   } catch (err) {
     console.error("Google callback error:", err);
     res.redirect(
