@@ -11,7 +11,7 @@ import googleDriveRoute from "./googleDriveRoute.js";
 import candidateApplicationRoute from "./candidateApplication.js";
 import expense from "./expense.js";
 import task from "./task.js";
-import investmentDeclaration from "./investmentDeclaration.js";
+// import investmentDeclaration from "./investmentDeclaration.js";
 
 const routes = (app) => {
     app.use("/api/auth", auth);
@@ -27,7 +27,7 @@ const routes = (app) => {
     app.use("/api/google-drive", googleDriveRoute)
     app.use("/api/expense", expense)
     app.use("/api/task", task);
-    app.use("/api/investmentDeclaration", investmentDeclaration);
+    // app.use("/api/investmentDeclaration", investmentDeclaration);
 };
 
 export default routes;

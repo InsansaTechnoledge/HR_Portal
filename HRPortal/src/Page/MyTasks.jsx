@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../Components/ui/badge';
 import { Search, ListTodo, CheckCircle2, Clock, AlertCircle, Calendar, ChevronDown } from 'lucide-react';
 import { userContext } from '../Context/userContext';
-import { getAllTasks, updateTask } from '../api/taskApi';
+import axios from 'axios';
+import API_BASE_URL from '../config';
 import TaskCard from '../Components/Task/TaskCard';
 import TaskDetail from '../Components/Task/TaskDetail';
 import { useToast } from '../Components/ui/use-toast';
@@ -39,14 +40,20 @@ const MyTasks = () => {
         applyFilters();
     }, [tasks, searchQuery, statusFilter]);
 
+    // Create axios instance for this component
+    const axiosInstance = axios.create({
+        baseURL: API_BASE_URL,
+        withCredentials: true
+    });
+
     const fetchMyTasks = async () => {
         setLoading(true);
         try {
             // Backend automatically filters tasks for non-admin users based on their employee match
-            
-            const response = await getAllTasks({ limit: 100 });
-            setTasks(response.tasks || []);
-            calculateStats(response.tasks || []);
+
+            const response = await axiosInstance.get('/api/task', { params: { limit: 100 } });
+            setTasks(response.data.tasks || []);
+            calculateStats(response.data.tasks || []);
         } catch (error) {
             console.error('Error fetching tasks:', error);
             toast({
@@ -96,7 +103,7 @@ const MyTasks = () => {
 
     const handleUpdateTask = async (taskData) => {
         try {
-            await updateTask(selectedTask._id, taskData);
+            await axiosInstance.put(`/api/task/${selectedTask._id}`, taskData);
             toast({
                 title: 'Success',
                 description: 'Task updated successfully'
@@ -104,14 +111,14 @@ const MyTasks = () => {
             fetchMyTasks();
 
             // Refresh the selected task
-            const updatedTask = await getAllTasks({ limit: 1 });
-            if (updatedTask.tasks && updatedTask.tasks.length > 0) {
-                setSelectedTask(updatedTask.tasks[0]);
+            const response = await axiosInstance.get('/api/task', { params: { limit: 1 } });
+            if (response.data.tasks && response.data.tasks.length > 0) {
+                setSelectedTask(response.data.tasks[0]);
             }
         } catch (error) {
             toast({
                 title: 'Error',
-                description: error.message || 'Failed to update task',
+                description: error.response?.data?.message || error.message || 'Failed to update task',
                 variant: 'destructive'
             });
             throw error;
@@ -138,51 +145,51 @@ const MyTasks = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
                         {
-                        label: "Total Tasks",
-                        value: stats.total,
-                        icon: ListTodo,
-                        color: "text-primary",
-                        bg: "bg-primary/10",
+                            label: "Total Tasks",
+                            value: stats.total,
+                            icon: ListTodo,
+                            color: "text-primary",
+                            bg: "bg-primary/10",
                         },
                         {
-                        label: "Pending",
-                        value: stats.pending,
-                        icon: Clock,
-                        color: "text-muted-foreground",
-                        bg: "bg-gray-500/10",
+                            label: "Pending",
+                            value: stats.pending,
+                            icon: Clock,
+                            color: "text-muted-foreground",
+                            bg: "bg-gray-500/10",
                         },
                         {
-                        label: "In Progress",
-                        value: stats.inProgress,
-                        icon: AlertCircle,
-                        color: "text-orange-500",
-                        bg: "bg-orange-500/10",
+                            label: "In Progress",
+                            value: stats.inProgress,
+                            icon: AlertCircle,
+                            color: "text-orange-500",
+                            bg: "bg-orange-500/10",
                         },
                         {
-                        label: "Completed",
-                        value: stats.completed,
-                        icon: CheckCircle2,
-                        color: "text-green-500",
-                        bg: "bg-green-500/10",
+                            label: "Completed",
+                            value: stats.completed,
+                            icon: CheckCircle2,
+                            color: "text-green-500",
+                            bg: "bg-green-500/10",
                         },
                     ].map((stat, i) => (
                         <Card key={i} className="border-border/50 shadow-card card-hover">
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                                {stat.label}
-                                </p>
-                                <p className="text-xl md:text-2xl font-bold text-foreground">
-                                {stat.value}
-                                </p>
-                            </div>
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                            {stat.label}
+                                        </p>
+                                        <p className="text-xl md:text-2xl font-bold text-foreground">
+                                            {stat.value}
+                                        </p>
+                                    </div>
 
-                            <div className={`p-3 rounded-xl ${stat.bg}`}>
-                                <stat.icon className={`h-5 w-5 ${stat.color}`} />
-                            </div>
-                            </div>
-                        </CardContent>
+                                    <div className={`p-3 rounded-xl ${stat.bg}`}>
+                                        <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                                    </div>
+                                </div>
+                            </CardContent>
                         </Card>
                     ))}
                 </div>

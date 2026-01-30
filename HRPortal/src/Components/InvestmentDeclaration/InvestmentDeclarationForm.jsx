@@ -8,11 +8,7 @@ import { Textarea } from '../ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useToast } from '../ui/use-toast';
 import { userContext } from '../../Context/userContext';
-import {
-    createOrUpdateDeclaration,
-    submitDeclaration,
-    getDeclarationByEmployee
-} from '../../api/investmentDeclarationApi';
+// No longer importing from investmentDeclarationApi
 import { ChevronDown, Paperclip, Save, Send, AlertCircle, CheckCircle, XCircle, Clock, Upload, X, User, FileText, FileImage, Loader2, Cloud, CloudOff } from 'lucide-react';
 import axios from 'axios';
 import API_BASE_URL from '../../config';
@@ -239,39 +235,39 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
         setLoading(true);
         try {
             console.log("Fetching Declaration for:", employeeId, "Year:", propFinancialYear);
-            const response = await getDeclarationByEmployee(employeeId, propFinancialYear || '2025-26');
-            console.log("Retrieved Data for Form:", response.declaration);
+            const response = await axiosInstance.get('/api/investmentDeclaration/declaration/employee', {
+                params: {
+                    employeeId,
+                    financialYear: propFinancialYear || '2025-26'
+                }
+            });
+            console.log("Retrieved Data for Form:", response.data.declaration);
 
-            if (response.declaration) {
-                setDeclaration(response.declaration);
+            if (response.data.declaration) {
+                setDeclaration(response.data.declaration);
                 setFormData(prev => {
                     const updated = {
                         ...prev,
-                        ...response.declaration,
+                        ...response.data.declaration,
                         // Ensure nested objects exist even if missing in old records
                         otherDeductions: {
                             ...prev.otherDeductions,
-                            ...(response.declaration.otherDeductions || {})
+                            ...(response.data.declaration.otherDeductions || {})
                         },
                         declaration: {
                             ...prev.declaration,
-                            ...(response.declaration.declaration || {})
+                            ...(response.data.declaration.declaration || {})
                         },
                         // Format DOB for date input
-                        dob: formatDateForInput(response.declaration.dob),
+                        dob: formatDateForInput(response.data.declaration.dob),
                         // Ensure department is mapped if available
-                        department: response.declaration.department || prev.department,
+                        department: response.data.declaration.department || prev.department,
                         // Ensure employeeId object doesn't overwrite the simple ID needed for state if it's populated
-                        empId: response.declaration.employeeId?._id || response.declaration.employeeId || prev.empId
+                        empId: response.data.declaration.employeeId?._id || response.data.declaration.employeeId || prev.empId
                     };
                     console.log("Final Form State after Population:", updated);
                     return updated;
                 });
-
-                // toast({
-                //     title: 'Data Loaded',
-                //     description: `Existing declaration for FY ${response.declaration.financialYear} loaded.`
-                // });
             }
         } catch (error) {
             console.error('Error in fetchExistingDeclaration:', error);
@@ -599,7 +595,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
 
             const { empId, employeeCode, ...restFormData } = formData;
 
-            await createOrUpdateDeclaration({
+            await axiosInstance.post('/api/investmentDeclaration/declaration', {
                 employeeId: selectedEmployeeId,
                 ...restFormData,
                 status: 'Draft'
@@ -612,7 +608,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
         } catch (error) {
             toast({
                 title: 'Error',
-                description: error.message || 'Failed to save declaration',
+                description: error.response?.data?.message || error.message || 'Failed to save declaration',
                 variant: 'destructive'
             });
         } finally {
@@ -643,17 +639,22 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
         try {
             const selectedEmployeeId = formData.employeeCode;
             // First save the data
-            const saveResponse = await createOrUpdateDeclaration({
+            const saveResponse = await axiosInstance.post('/api/investmentDeclaration/declaration', {
                 employeeId: selectedEmployeeId,
                 ...formData,
                 status: 'Submitted'
             });
 
+            const declarationId = saveResponse.data.declaration._id;
+
             // Then submit
-            const submitResponse = await submitDeclaration(saveResponse.declaration._id, selectedEmployeeId);
+            const submitResponse = await axiosInstance.post('/api/investmentDeclaration/declaration/submit', {
+                declarationId,
+                employeeId: selectedEmployeeId
+            });
 
             // Update declaration state with new data
-            setDeclaration(submitResponse.declaration || saveResponse.declaration);
+            setDeclaration(submitResponse.data.declaration || saveResponse.data.declaration);
 
             toast({
                 title: 'Success',
@@ -664,7 +665,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
         } catch (error) {
             toast({
                 title: 'Error',
-                description: error.message || 'Failed to submit declaration',
+                description: error.response?.data?.message || error.message || 'Failed to submit declaration',
                 variant: 'destructive'
             });
         } finally {
@@ -1603,7 +1604,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         <li>Sukanya Samriddhi Account</li>
                                     </ul>
                                 </div>
-                                
+
                                 {/*
                                     <div className="flex items-center justify-between mb-3">
                                         <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -1797,7 +1798,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         />
                                     )}
                                 </div>
-                                
+
                                 {/* Pension/NPS Documents */}
                                 <div className="border-t pt-4 mt-4">
                                     <div className="flex items-center justify-between mb-3">
