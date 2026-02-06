@@ -1,0 +1,395 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* .existing-job-grid{
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 2vh;
+}
+
+/* Modal Animation 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Smooth transitions for cards 
+.transition {
+  transition: all 0.3s ease;
+}
+
+/* Custom scrollbar for modal 
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.existing-job-card{
+  border: 2px solid #4F46E5;
+  border-radius: 5px;
+  padding: 5%;
+}
+
+.existing-job-description{
+  margin-top: 2vh;
+}
+
+.register-candidate-form{
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 1vh 4vh;
+}
+
+@keyframes slide-in {
+ 0% {
+   transform: translateY(100%);
+   opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+     opacity: 1;
+   }
+ }
+ .animate-slide-in {
+   animation: slide-in 0.3s ease-out;
+ }
+
+ @keyframes slide-in {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+} */
+
+
+
+/* New CSS*/
+
+@layer base {
+  :root {
+    /* Primary brand - Deep slate navy */
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
+
+    /* Cards with subtle warmth */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Primary - Deep teal */
+    --primary: 173 58% 39%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Soft slate */
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    /* Muted - Gentle gray */
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+
+    /* Accent - Vibrant teal */
+    --accent: 173 58% 39%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive - Warm coral */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Warning - Amber */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Success - Emerald */
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+
+    /* Info - Sky blue */
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 173 58% 39%;
+
+    --radius: 0.75rem;
+
+    /* Sidebar - Deep navy */
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 220 14% 96%;
+    --sidebar-primary: 173 58% 39%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 47% 16%;
+    --sidebar-accent-foreground: 220 14% 96%;
+    --sidebar-border: 222 30% 18%;
+    --sidebar-ring: 173 58% 39%;
+
+    /* Custom HR Portal colors */
+    --hr-navy: 222 47% 11%;
+    --hr-navy-light: 222 30% 18%;
+    --hr-teal: 173 58% 39%;
+    --hr-teal-light: 173 58% 92%;
+    --hr-amber: 38 92% 50%;
+    --hr-coral: 0 72% 51%;
+    --hr-emerald: 160 84% 39%;
+    --hr-purple: 262 83% 58%;
+    --hr-indigo: 234 89% 74%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(173 58% 39%) 0%, hsl(199 89% 48%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(222 30% 18%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 20% 97%) 100%);
+    --gradient-sidebar: linear-gradient(180deg, hsl(222 47% 11%) 0%, hsl(222 47% 8%) 100%);
+  }
+
+  .dark {
+    --background: 222 47% 8%;
+    --foreground: 220 14% 96%;
+
+    --card: 222 47% 11%;
+    --card-foreground: 220 14% 96%;
+
+    --popover: 222 47% 11%;
+    --popover-foreground: 220 14% 96%;
+
+    --primary: 173 58% 50%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 222 30% 18%;
+    --secondary-foreground: 220 14% 96%;
+
+    --muted: 222 30% 18%;
+    --muted-foreground: 220 9% 60%;
+
+    --accent: 173 58% 50%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 222 30% 18%;
+    --input: 222 30% 18%;
+    --ring: 173 58% 50%;
+
+    --sidebar-background: 222 47% 6%;
+    --sidebar-foreground: 220 14% 96%;
+    --sidebar-primary: 173 58% 50%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 222 30% 14%;
+    --sidebar-accent-foreground: 220 14% 96%;
+    --sidebar-border: 222 30% 12%;
+    --sidebar-ring: 173 58% 50%;
+  }
+}
+
+
+@layer base {
+  * {
+    /* @apply border-border; */
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+@layer utilities {
+  /* Glass effect */
+  .glass {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50;
+  }
+
+  .glass-strong {
+    @apply bg-card/95 backdrop-blur-2xl border border-border/60;
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+  }
+
+  /* Card hover effect */
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+  }
+
+  /* Sidebar glow effect */
+  .sidebar-glow {
+    box-shadow: 0 0 40px -10px hsl(var(--hr-teal) / 0.3);
+  }
+
+  /* Button glow */
+  .btn-glow {
+    box-shadow: 0 4px 15px -3px hsl(var(--primary) / 0.4);
+  }
+
+  /* Input focus glow */
+  .input-glow:focus {
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.15);
+  }
+
+  /* Smooth transitions */
+  .transition-smooth {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  /* Hover scale */
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105;
+  }
+
+  /* Fade animations */
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out forwards;
+  }
+
+  .animate-slide-in-left {
+    animation: slideInLeft 0.3s ease-out forwards;
+  }
+
+  /* Stagger children */
+  .stagger-children > * {
+    @apply animate-fade-in opacity-0;
+  }
+
+  .stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
+  .stagger-children > *:nth-child(2) { animation-delay: 0.15s; }
+  .stagger-children > *:nth-child(3) { animation-delay: 0.2s; }
+  .stagger-children > *:nth-child(4) { animation-delay: 0.25s; }
+  .stagger-children > *:nth-child(5) { animation-delay: 0.3s; }
+  .stagger-children > *:nth-child(6) { animation-delay: 0.35s; }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/*Loader*/
+@keyframes loaderDot {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.3;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-loaderDot {
+  animation: loaderDot 1.4s infinite ease-in-out both;
+}
+
+
+.animate-spin-slow {
+  animation: spin-slow 2.5s linear infinite;
+}
+
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+select.decorated option:hover {
+    box-shadow: 0 0 10px 100px #1BA1E2 inset;
+}
+
