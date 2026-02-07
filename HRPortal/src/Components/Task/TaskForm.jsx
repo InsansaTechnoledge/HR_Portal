@@ -11,7 +11,7 @@ import { userContext } from '../../Context/userContext';
 import axios from 'axios';
 import { useToast } from '../ui/use-toast';
 import API_BASE_URL from '../../config';
-import { updateComment, deleteComment } from '../../api/taskApi';
+// No longer importing from taskApi
 
 const TaskForm = ({ open, onClose, onSubmit, initialTask = null, mode = 'create' }) => {
     const { user } = useContext(userContext);
@@ -76,12 +76,12 @@ const TaskForm = ({ open, onClose, onSubmit, initialTask = null, mode = 'create'
         try {
             // Fetch employees
             const employeesRes = await axios.get(`${API_BASE_URL}/api/employee/`, {
-                    params: {
-                        fields: "name,empId,email,department,details.designation,details.accountNumber,details.panNumber,details.salary,details.uanNumber",
-                        limit: 200
-                    },
-                });
-            
+                params: {
+                    fields: "name,empId,email,department,details.designation,details.accountNumber,details.panNumber,details.salary,details.uanNumber",
+                    limit: 200
+                },
+            });
+
             // Fetch users (admins and superAdmins)
             let usersData = [];
             try {
@@ -140,7 +140,6 @@ const TaskForm = ({ open, onClose, onSubmit, initialTask = null, mode = 'create'
         // Try to find in employees first
         let assigneeData = employees.find(e => e._id === selectedAssignee);
         let assigneeType = 'Employee';
-        
         // If not found in employees, try to find in users
         if (!assigneeData) {
             assigneeData = users.find(u => u._id === selectedAssignee);
@@ -230,7 +229,6 @@ const TaskForm = ({ open, onClose, onSubmit, initialTask = null, mode = 'create'
             };
             return updated;
         });
-        
         setEditingCommentIndex(null);
         setEditingCommentText('');
         toast({
@@ -278,29 +276,33 @@ const TaskForm = ({ open, onClose, onSubmit, initialTask = null, mode = 'create'
             };
             console.log("FORM DATA: ", updatedFormData);
 
+            // Create axios instance for this component
+            const axiosInstance = axios.create({
+                baseURL: API_BASE_URL,
+                withCredentials: true
+            });
+
             // Save edited/deleted comments if in edit mode
             if (mode === 'edit' && initialTask) {
                 const originalCommentCount = initialTask.comments?.length || 0;
                 const updatedCommentCount = comments.length;
-                
                 // Check if any comments were modified or deleted
                 if (originalCommentCount !== updatedCommentCount) {
                     // Comments were deleted - delete them from backend
                     for (let i = originalCommentCount - 1; i >= updatedCommentCount; i--) {
                         try {
-                            await deleteComment(initialTask._id, i);
+                            await axiosInstance.delete(`/api/task/${initialTask._id}/comment/${i}`);
                         } catch (err) {
                             console.error('Error deleting comment:', err);
                         }
                     }
                 }
-                
                 // Check if any comments were edited
                 if (comments.length > 0) {
                     for (let i = 0; i < comments.length; i++) {
                         if (initialTask.comments?.[i] && initialTask.comments[i].text !== comments[i].text) {
                             try {
-                                await updateComment(initialTask._id, i, comments[i].text);
+                                await axiosInstance.put(`/api/task/${initialTask._id}/comment/${i}`, { text: comments[i].text });
                             } catch (err) {
                                 console.error('Error updating comment:', err);
                             }
@@ -362,7 +364,7 @@ const TaskForm = ({ open, onClose, onSubmit, initialTask = null, mode = 'create'
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <Label htmlFor="priority">Priority</Label>
-                            <div className='relative'>   
+                            <div className='relative'>
                                 <Select
                                     value={formData.priority}
                                     onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value }))}
@@ -380,7 +382,6 @@ const TaskForm = ({ open, onClose, onSubmit, initialTask = null, mode = 'create'
                                 </Select>
                                 <ChevronDown className="absolute right-3 top-3 h-4 w-4 opacity-50 pointer-events-none" />
                             </div>
-                            
                         </div>
 
                         <div>
@@ -402,7 +403,6 @@ const TaskForm = ({ open, onClose, onSubmit, initialTask = null, mode = 'create'
                                 </Select>
                                 <ChevronDown className="absolute right-3 top-3 h-4 w-4 opacity-50 pointer-events-none" />
                             </div>
-                            
                         </div>
                     </div>
 
@@ -459,7 +459,7 @@ const TaskForm = ({ open, onClose, onSubmit, initialTask = null, mode = 'create'
                                                             <SelectItem key={`emp-${e._id}`} value={e._id}>
                                                                 <div className='flex items-center gap-2'>
                                                                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                                                        <User className="w-4 h-4 text-primary" /> 
+                                                                        <User className="w-4 h-4 text-primary" />
                                                                     </div>
                                                                     <span>{e.name} ({e.email})</span>
                                                                 </div>
@@ -496,9 +496,9 @@ const TaskForm = ({ open, onClose, onSubmit, initialTask = null, mode = 'create'
                                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
                                     </div>
 
-                                    <Button 
-                                        type="button" 
-                                        onClick={handleAddAssignee} 
+                                    <Button
+                                        type="button"
+                                        onClick={handleAddAssignee}
                                         size="sm"
                                         className="gap-1"
                                     >

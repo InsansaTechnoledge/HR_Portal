@@ -7,10 +7,11 @@ import {
     getDeclarationById,
     getDeclarationByEmployee,
     getAllDeclarations,
-    approveDeclaration,
-    rejectDeclaration,
+    updateInvestmentDeclarationStatus,
     deleteDeclaration,
-    uploadDocumentsToGoogleDrive
+    uploadDocumentGridFS,
+    downloadDocument,
+    previewDocument
 } from '../controller/investmentDeclarationController.js';
 
 const router = express.Router();
@@ -30,16 +31,19 @@ router.get('/declaration/:id', checkCookies, getDeclarationById);
 // Get All Declarations (Admin only)
 router.get('/declarations/all', checkCookies, getAllDeclarations);
 
-// Approve Declaration (Admin only)
-router.put('/declaration/approve', checkCookies, approveDeclaration);
-
-// Reject Declaration (Admin only)
-router.put('/declaration/reject', checkCookies, rejectDeclaration);
+// Update Declaration Status (Admin/Accountant only)
+router.put('/declaration/status', checkCookies, updateInvestmentDeclarationStatus);
 
 // Delete Declaration (Admin only)
 router.delete('/declaration/:declarationId', checkCookies, deleteDeclaration);
 
-// Upload Documents to Google Drive
-router.post('/declaration/:declarationId/upload-document', checkCookies, uploadInvestmentDocuments.single('document'), uploadDocumentsToGoogleDrive);
+// Upload Documents to GridFS
+router.post('/declaration/:declarationId/upload-document', checkCookies, uploadInvestmentDocuments.single('document'), uploadDocumentGridFS);
+
+// Download Document
+router.get('/document/download/:uploadId', checkCookies, downloadDocument);
+
+// Preview Document
+router.get('/document/preview/:uploadId', checkCookies, previewDocument);
 
 export default router;

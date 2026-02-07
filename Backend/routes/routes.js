@@ -12,6 +12,8 @@ import candidateApplicationRoute from "./candidateApplication.js";
 import expense from "./expense.js";
 import task from "./task.js";
 import investmentDeclaration from "./investmentDeclaration.js";
+import leave from "./leave.js";
+import notification from "./notification.js";
 
 const routes = (app) => {
     app.use("/api/auth", auth);
@@ -28,6 +30,8 @@ const routes = (app) => {
     app.use("/api/expense", expense)
     app.use("/api/task", task);
     app.use("/api/investmentDeclaration", investmentDeclaration);
+    app.use("/api/leave", leave);
+    app.use("/api/notification", notification);
 };
 
 export default routes;

@@ -115,6 +115,14 @@ const Home = () => {
               gradient: 'bg-gradient-to-br from-hr-amber to-warning',
             },
             {
+              icon: <FilePlus className="h-6 w-6" />,
+              title: 'Investment Declaration',
+              description: 'Declare your investments',
+              path: '/investment-declaration',
+              color: 'text-hr-indigo',
+              gradient: 'bg-gradient-to-br from-hr-indigo to-hr-purple',
+            },
+            {
               icon: <ReceiptIndianRupee className="h-6 w-6" />,
               title: 'Add Expense',
               description: 'Add your expenses',

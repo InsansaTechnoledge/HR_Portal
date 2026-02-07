@@ -21,7 +21,7 @@ export const createExpense = async (req, res) => {
               location: e.location || "National",
               currency: e.currency || "INR",
               exchangeRate: Number(e.exchangeRate || 1),
-              convertedAmount: Number(e.convertedAmount || e.amount),
+              convertedAmount: Number(e.convertedAmount !== undefined ? e.convertedAmount : e.amount),
             }))
             .filter((e) => e.type && e.amount > 0);
 
@@ -48,7 +48,7 @@ export const createExpense = async (req, res) => {
           location: e.location || "National",
           currency: e.currency || "INR",
           exchangeRate: Number(e.exchangeRate || 1),
-          convertedAmount: Number(e.convertedAmount || e.amount),
+          convertedAmount: Number(e.convertedAmount !== undefined ? e.convertedAmount : e.amount),
         }))
         .filter((e) => e.type && e.amount > 0);
 
@@ -86,8 +86,8 @@ export const createExpense = async (req, res) => {
       });
     }
 
-    // Calculate total amount from individual expenses
-    const totalAmount = expenses.reduce((sum, e) => sum + (e.convertedAmount || e.amount), 0);
+    // Calculate total amount strictly from convertedAmounts
+    const totalAmount = expenses.reduce((sum, e) => sum + (Number(e.convertedAmount) || 0), 0);
 
     const expenseDate = expenses.length > 0 ? expenses[0].expenseDate : new Date();
 
@@ -275,6 +275,32 @@ export const payExpenseSeparately = async (req, res) => {
     await expense.save();
 
     res.status(200).json({ message: "Expense paid separately", expense });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+export const updateExpense = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { expenses, amount } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ message: "Expense ID is required" });
+    }
+
+    const expense = await Expenses.findById(id);
+
+    if (!expense) {
+      return res.status(404).json({ message: "Expense not found" });
+    }
+
+    if (expenses) expense.expenses = expenses;
+    if (amount !== undefined) expense.amount = amount;
+
+    await expense.save();
+
+    res.status(200).json({ message: "Expense updated successfully", expense });
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
   }

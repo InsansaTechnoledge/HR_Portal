@@ -50,6 +50,8 @@ const navItems = [
       { icon: ReceiptIndianRupee, label: 'Add Expense', path: '/add-expense', roles: ['user'] },
       { icon: FileText, label: 'Expense Tracker', path: '/expense-tracker', roles: ['user'] },
       { icon: ListTodo, label: 'My Tasks', path: '/my-tasks', roles: ['user'] },
+      { icon: FilePlus, label: 'Investment Declaration', path: '/investment-declaration', roles: ['user'] },
+      { icon: FileText, label: 'Investment Tracker', path: '/investment-tracker', roles: ['user'] },
     ]
   },
   { icon: UserPlus, label: 'Employee Registration', path: '/emp-info-register', roles: ['admin', 'superAdmin'] },
@@ -282,6 +284,8 @@ const SidebarItem = ({
 };
 
 // Extracted SidebarContent component
+import NotificationBell from '../Notifications/NotificationBell';
+
 const SidebarContent = ({
   isMobile = false,
   isCollapsed,
@@ -322,23 +326,29 @@ const SidebarContent = ({
             </div>
           )}
 
-          {!isMobile && (
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsCollapsed(!isCollapsed)}
-                  className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60 h-8 w-8"
-                >
-                  <Menu className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                {isCollapsed ? "Expand" : "Collapse"}
-              </TooltipContent>
-            </Tooltip>
-          )}
+          <div className={cn(
+            "flex items-center gap-1",
+            isCollapsed && !isMobile && "flex-col-reverse gap-2"
+          )}>
+            <NotificationBell isCollapsed={isCollapsed && !isMobile} />
+            {!isMobile && (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60 h-8 w-8"
+                  >
+                    <Menu className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  {isCollapsed ? "Expand" : "Collapse"}
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         </div>
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-scroll">

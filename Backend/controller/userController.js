@@ -1,39 +1,40 @@
 import mongoose from "mongoose";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import Notification from "../models/Notification.js";
 
 //create user
-export const createUser=async(req,res) => {
-    try {
-      const { userName, userEmail, password, role } = req.body;
-      // Validate required fields
-      if (!userName || !userEmail || !password) {
-        return res.status(400).json({ error: 'Username, email, and password are required' });
-      }
-
-      const existingUser = await User.findOne({ userEmail });
-      if (existingUser) {
-        return res.status(200).json({ message: 'User already exists' });
-      }
-      
-      const newUser = new User({
-        userName: userName,
-        userEmail,
-        password,
-        role: role || "user"
-      });
-      
-      const new_user = await newUser.save();
-      res.status(201).json({ message: 'User created successfully', new_user: new_user});
-    } catch (error) {
-      console.error('Error during signup process:', error);
-      res.status(500).json({ error: error.message || 'Failed to create user' });
+export const createUser = async (req, res) => {
+  try {
+    const { userName, userEmail, password, role } = req.body;
+    // Validate required fields
+    if (!userName || !userEmail || !password) {
+      return res.status(400).json({ error: 'Username, email, and password are required' });
     }
+
+    const existingUser = await User.findOne({ userEmail });
+    if (existingUser) {
+      return res.status(200).json({ message: 'User already exists' });
+    }
+
+    const newUser = new User({
+      userName: userName,
+      userEmail,
+      password,
+      role: role || "user"
+    });
+
+    const new_user = await newUser.save();
+    res.status(201).json({ message: 'User created successfully', new_user: new_user });
+  } catch (error) {
+    console.error('Error during signup process:', error);
+    res.status(500).json({ error: error.message || 'Failed to create user' });
+  }
 }
 
 //get user
-export const getUser = async (req,res) => {
-  try{
+export const getUser = async (req, res) => {
+  try {
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 200, 1), 500);
     const fields = req.query.fields || "userName userEmail role"; // keep response light by default
@@ -45,45 +46,44 @@ export const getUser = async (req,res) => {
 
     res.status(200).send(users);
   }
-  catch(err){
+  catch (err) {
     console.log(err)
-    res.status(500).json({message: err})
+    res.status(500).json({ message: err })
   }
 }
 
 //delete user
-export const deleteUser = async (req,res) => {
-    try{
-        const {id} = req.params;
-        
-        // Validate if id is a valid ObjectId
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-          return res.status(400).json({ message: "Invalid user ID format" });
-        }
-        
-        const deletedUser = await User.findByIdAndDelete(id);
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
 
-        res.status(200).json({message: "User deleted successfully!"});
+    // Validate if id is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user ID format" });
     }
-    catch(err){
-        
-    }
+
+    const deletedUser = await User.findByIdAndDelete(id);
+
+    res.status(200).json({ message: "User deleted successfully!" });
+  }
+  catch (err) {
+
+  }
 }
 
-export const changePassword = async (req,res) => {
-  try{
+export const changePassword = async (req, res) => {
+  try {
     const requester = req.user;
     if (!requester) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const {id} = req.params;
-    
+    const { id } = req.params;
+
     // Validate if id is a valid ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "Invalid user ID format" });
     }
-    
     const currentPassword = req.body.currentPassword;
     const newPassword = req.body.newPassword;
 
@@ -94,17 +94,16 @@ export const changePassword = async (req,res) => {
       return res.status(402).json({ message: 'Current password is incorrect' });
     }
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    
     const updatedUser = await User.findByIdAndUpdate(
       id,
       { password: hashedPassword },
       { new: true }
     );
-    
-    res.status(200).json({message: "Password updated successfully!"});
+
+    res.status(200).json({ message: "Password updated successfully!" });
 
   }
-  catch(err){
+  catch (err) {
     console.error("Error changing password:", err);
     res.status(500).json({ message: "Failed to change password. Please try again." });
   }
@@ -113,7 +112,7 @@ export const changePassword = async (req,res) => {
 
 export const editLoginInfo = async (req, res) => {
   try {
-    const { id } = req.params; 
+    const { id } = req.params;
     const { userName, userEmail, newPassword, currentPassword, role } = req.body;
 
     // Validate if id is a valid ObjectId
@@ -125,7 +124,7 @@ export const editLoginInfo = async (req, res) => {
     if (!requester) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    console.log("Requester:",requester)
+    console.log("Requester:", requester)
     // Only superAdmin may change roles
     if (role && requester.role !== "superAdmin") {
       return res.status(403).json({ message: "Only superAdmin can change roles." });
@@ -246,11 +245,11 @@ export const getUserById = async (req, res) => {
     }
 
     const user = await User.findById(id).select("-password").lean({ defaults: true, getters: false });
-    
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    
+
     res.status(200).json({ message: "User fetched", user });
   } catch (err) {
     console.error(err);
@@ -262,24 +261,44 @@ export const getUserById = async (req, res) => {
 // Add leave for user
 export const addLeaveToUser = async (req, res) => {
   try {
-    const { id }  = req.params;
+    const { id } = req.params;
     const leaveHistory = req.body;
-    
+
     // Validate if id is a valid ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "Invalid user ID format" });
     }
-    
     const updatedUser = await User.findByIdAndUpdate(
       id,
       { $push: { leaveHistory: leaveHistory } },
       { new: true }
     );
 
-    
 
     if (!updatedUser) {
       return res.status(404).json({ message: "User not found" });
+    }
+
+    // Create notifications for Admins/SuperAdmins
+    try {
+      const admins = await User.find({ role: { $in: ['admin', 'superAdmin'] } });
+      const department = updatedUser.role || "User";
+      const notificationPromises = admins.map(admin => {
+        const notification = new Notification({
+          recipient: admin._id,
+          recipientType: 'User',
+          sender: updatedUser._id,
+          senderType: 'User',
+          type: 'LEAVE_APPLIED',
+          message: `${updatedUser.userName} from ${department} has applied for ${leaveHistory.type} leave from ${new Date(leaveHistory.startDate).toLocaleDateString()} to ${new Date(leaveHistory.endDate).toLocaleDateString()}.`,
+          relatedId: updatedUser._id // Using user ID as relatedId for now as leaves are sub-docs
+        });
+        return notification.save();
+      });
+      await Promise.all(notificationPromises);
+    } catch (notifErr) {
+      console.error("Failed to create notifications:", notifErr);
+      // Don't fail the leave application if notifications fail
     }
 
     res.status(201).json({ message: "Leave added", updatedUser });

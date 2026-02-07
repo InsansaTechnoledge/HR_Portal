@@ -113,13 +113,19 @@ const ExpensePreview = ({ employee, expense, generatedBy }) => {
                         </span>
                       </div>
                       {exp.location === "International" && (
-                        <div className="text-xs text-muted-foreground flex justify-between">
-                          <span>
-                            {currencySymbols[exp.currency] || exp.currency} {Number(exp.amount).toLocaleString()} @ {exp.exchangeRate}
-                          </span>
-                          <span className="text-[10px] italic">
-                            (≈ ₹{Number(exp.convertedAmount).toLocaleString("en-IN")})
-                          </span>
+                        <div className="text-[10px] text-muted-foreground mt-1 space-y-0.5 border-t border-dashed pt-1">
+                          <div className="flex justify-between italic">
+                            <span>Added by Employee:</span>
+                            <span>{currencySymbols[exp.currency] || exp.currency} {Number(exp.amount).toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between italic">
+                            <span>Conversion Rate:</span>
+                            <span>₹{exp.conversionRate || exp.exchangeRate}</span>
+                          </div>
+                          <div className="flex justify-between font-semibold text-[#000]">
+                            <span>Converted Amount:</span>
+                            <span>₹{Number(exp.convertedAmount).toLocaleString("en-IN")}</span>
+                          </div>
                         </div>
                       )}
                     </div>

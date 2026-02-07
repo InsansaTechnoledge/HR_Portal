@@ -9,15 +9,17 @@ const isAdmin = (user) => {
 };
 
 // Helper function to check if user can view task
-const canViewTask = (task, userId) => {
+const canViewTask = (task, user) => {
     // Admins and accountants can view all tasks
-    if (isAdmin({ role: 'admin' }) || isAdmin({ role: 'superAdmin' })) {
+    if (isAdmin(user) || (user && user.role === 'accountant')) {
         return true;
     }
 
+    if (!task || !task.assignedTo) return false;
+
     // Check if user is assigned to the task
     return task.assignedTo.some(assignee =>
-        assignee.assigneeId.toString() === userId.toString()
+        assignee.assigneeId && assignee.assigneeId.toString() === String(user._id)
     );
 };
 
@@ -26,8 +28,6 @@ export const createTask = async (req, res) => {
     try {
         const { title, description, priority, assignedTo, dueDate, tags, status} = req.body;
         const currentUser = req.user;  // User is attached by auth middleware checkCookies
-        console.log(currentUser);
-
         // Verify user is admin or superAdmin
         // if (!isAdmin(currentUser)) {
         //     return res.status(403).json({ message: 'Only admins and super admins can create tasks' });
@@ -53,6 +53,17 @@ export const createTask = async (req, res) => {
 
             let assigneeData;
             if (assigneeType === 'User') {
+                assigneeData = await User.findById(assigneeId);
+                if (!assigneeData) {
+                    return res.status(404).json({ message: `User not found: ${assigneeId}` });
+                }
+                validatedAssignees.push({
+                    assigneeType: 'User',
+                    assigneeId: assigneeData._id,
+                    assigneeName: assigneeData.userName,
+                    assigneeEmail: assigneeData.userEmail
+                });
+            } else if (assigneeType === 'Employee') {
                 assigneeData = await Employee.findById(assigneeId);
                 if (!assigneeData) {
                     return res.status(404).json({ message: `Employee not found: ${assigneeId}` });

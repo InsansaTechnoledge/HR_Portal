@@ -41,7 +41,7 @@ import {
   SelectContent,
   SelectItem,
 } from "../Components/ui/select";
-import { currencies as allCurrencies } from "../Constant/currencies";
+import { currencies as allCurrencies, currencySymbols } from "../Constant/currencies";
 
 
 
@@ -78,55 +78,10 @@ const AddExpense = () => {
     amount: "",
     expenseDate: "",
     location: "National",
-    currency: "INR",
-    exchangeRate: 1,
+    currency: "INR"
   });
 
-  const [fetchingRate, setFetchingRate] = useState(false);
 
-  useEffect(() => {
-    const fetchRate = async () => {
-      if (
-        expenseDraft.location === "International" &&
-        expenseDraft.currency &&
-        expenseDraft.expenseDate
-      ) {
-        try {
-          setFetchingRate(true);
-          // Check if date is today or in the future (API handles past dates better)
-          const selectedDate = new Date(expenseDraft.expenseDate);
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-
-          let url = `https://api.frankfurter.app/${expenseDraft.expenseDate}?from=${expenseDraft.currency}&to=INR`;
-
-          // If date is today, we can use 'latest' or the date itself
-          if (selectedDate.getTime() >= today.getTime()) {
-            url = `https://api.frankfurter.app/latest?from=${expenseDraft.currency}&to=INR`;
-          }
-
-          const response = await axios.get(url);
-          if (response.data && response.data.rates && response.data.rates.INR) {
-            setExpenseDraft((prev) => ({
-              ...prev,
-              exchangeRate: response.data.rates.INR,
-            }));
-          }
-        } catch (error) {
-          console.error("Error fetching exchange rate:", error);
-          toast({
-            variant: "destructive",
-            title: "Exchange Rate Error",
-            description: "Could not fetch exchange rate for the selected date and currency.",
-          });
-        } finally {
-          setFetchingRate(false);
-        }
-      }
-    };
-
-    fetchRate();
-  }, [expenseDraft.currency, expenseDraft.expenseDate, expenseDraft.location]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -163,8 +118,6 @@ const AddExpense = () => {
 
     if (!type || !amount || !expenseDate) return;
 
-    const convertedAmount = Number(amount) * Number(exchangeRate || 1);
-
     const finalType = type === "Other" ? customType : type;
 
     setForm((prev) => ({
@@ -177,8 +130,8 @@ const AddExpense = () => {
           expenseDate,
           location: expenseDraft.location,
           currency,
-          exchangeRate: Number(exchangeRate),
-          convertedAmount,
+          exchangeRate: expenseDraft.location === 'National' ? 1 : 0,
+          convertedAmount: expenseDraft.location === 'National' ? Number(amount) : 0
         },
       ],
     }));
@@ -189,8 +142,7 @@ const AddExpense = () => {
       amount: "",
       expenseDate: "",
       location: "National",
-      currency: "INR",
-      exchangeRate: 1,
+      currency: "INR"
     });
   };
 
@@ -200,8 +152,7 @@ const AddExpense = () => {
     (expenseDraft.type !== "Other" || Boolean(expenseDraft.customType.trim())) &&
     Boolean(expenseDraft.amount) &&
     Boolean(expenseDraft.expenseDate) &&
-    (expenseDraft.location === "National" || (Boolean(expenseDraft.currency) && Number(expenseDraft.exchangeRate) > 0)) &&
-    !fetchingRate;
+    (expenseDraft.location === "National" || Boolean(expenseDraft.currency));
 
 
   const handleFileChange = (e) => {
@@ -270,8 +221,8 @@ const AddExpense = () => {
       return;
     }
 
-    const totalAmount = Array.isArray(form.expenses)
-      ? form.expenses.reduce((sum, e) => sum + (Number(e.convertedAmount || e.amount) || 0), 0)
+    const totalInrAmount = Array.isArray(form.expenses)
+      ? form.expenses.reduce((sum, e) => sum + (Number(e.convertedAmount) || 0), 0)
       : 0;
 
     const formData = new FormData();
@@ -324,8 +275,11 @@ const AddExpense = () => {
   };
 
   const totalAmount = Array.isArray(form.expenses)
-    ? form.expenses.reduce((sum, e) => sum + (Number(e.convertedAmount || e.amount) || 0), 0)
+    ? form.expenses.reduce((sum, e) => sum + (Number(e.convertedAmount) || 0), 0)
     : 0;
+
+  const hasUnconvertedIntl = Array.isArray(form.expenses) &&
+    form.expenses.some(e => e.location === 'International' && !e.convertedAmount);
 
   const expenseTypeList = Array.isArray(form.expenses)
     ? form.expenses.map((e) => e.type)
@@ -357,11 +311,16 @@ const AddExpense = () => {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      Claim Amount
+                      Claim Total {hasUnconvertedIntl && "(National Only)"}
                     </p>
                     <p className="text-2xl font-bold text-primary">
                       ₹{totalAmount.toLocaleString("en-IN")}
                     </p>
+                    {hasUnconvertedIntl && (
+                      <p className="text-[10px] text-warning mt-1 italic font-medium">
+                        International items pending conversion at slip generation
+                      </p>
+                    )}
                   </div>
                 </div>
                 {form.expenses && form.expenses.length > 0 && (
@@ -471,7 +430,8 @@ const AddExpense = () => {
                             ...expenseDraft,
                             location: value,
                             currency: value === "National" ? "INR" : "",
-                            exchangeRate: value === "National" ? 1 : "",
+                            exchangeRate: 1, // Default to 1, conversion happens at slip generation
+                            convertedAmount: 0 // Placeholder, handled at slip generation
                           })
                         }
                       >
@@ -543,24 +503,8 @@ const AddExpense = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Exchange Rate to INR</Label>
-                      <Input
-                        type="number"
-                        placeholder="Exchange rate"
-                        value={expenseDraft.exchangeRate}
-                        disabled={fetchingRate}
-                        onChange={(e) =>
-                          setExpenseDraft({
-                            ...expenseDraft,
-                            exchangeRate: e.target.value,
-                          })
-                        }
-                      />
-                      {fetchingRate && (
-                        <div className="absolute right-3 top-3">
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                        </div>
-                      )}
+                      <Label className="text-sm text-muted-foreground">Note</Label>
+                      <div className="text-xs text-muted-foreground">No conversion will be performed now. Exchange rate will be requested when generating Expense Slip.</div>
                     </div>
                   </div>
                 )}
@@ -590,7 +534,7 @@ const AddExpense = () => {
                       <div className="flex items-center gap-3">
                         <Badge variant="secondary">{expense.type}</Badge>
                         <span className="font-medium">
-                          ₹{expense.convertedAmount.toLocaleString("en-IN")}
+                          {expense.location === "International" ? (currencySymbols[expense.currency] || expense.currency) + " " + Number(expense.amount).toLocaleString() : "₹" + Number(expense.amount).toLocaleString("en-IN")}
                         </span>
                       </div>
 

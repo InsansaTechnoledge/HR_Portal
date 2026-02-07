@@ -37,6 +37,12 @@ const ExpenseTracker = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState(null);
 
+  // Exchange rate dialog state for slip generation
+  const [exchangeDialogOpen, setExchangeDialogOpen] = useState(false);
+  const [exchangeRates, setExchangeRates] = useState({});
+  const [exchangeCurrencies, setExchangeCurrencies] = useState([]);
+  const [pendingExpenseForConversion, setPendingExpenseForConversion] = useState(null);
+
   const role = user?.role;
 
   const isEmployee = role === "user" || role === "employee";
@@ -116,8 +122,8 @@ const ExpenseTracker = () => {
   };
 
   //downlaod func for slip
-  const downloadExpensePDF = async (expense) => {
-    setSelectedExpense(expense);
+  const generatePdfWithExpense = async (expenseToUse) => {
+    setSelectedExpense(expenseToUse);
 
     // wait for preview to render
     setTimeout(async () => {
@@ -135,8 +141,26 @@ const ExpenseTracker = () => {
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Expense_${expense.employeeId.name}.pdf`);
+      pdf.save(`Expense_${expenseToUse.employeeId.name}.pdf`);
     }, 300);
+  };
+
+  const downloadExpensePDF = async (expense) => {
+    // Identify international currencies used in this expense
+    const intlItems = Array.isArray(expense.expenses) ? expense.expenses.filter(e => e.location === 'International') : [];
+    const currencies = [...new Set(intlItems.map(i => i.currency))];
+
+    if (currencies.length === 0) {
+      // no international items, generate directly
+      await generatePdfWithExpense(expense);
+      return;
+    }
+
+    // Ask user for exchange rates (one per currency)
+    setExchangeCurrencies(currencies);
+    setExchangeRates(currencies.reduce((acc, c) => ({ ...acc, [c]: '' }), {}));
+    setPendingExpenseForConversion(expense);
+    setExchangeDialogOpen(true);
   };
 
 
@@ -404,8 +428,8 @@ const ExpenseTracker = () => {
                                   <div key={idx} className="flex flex-col gap-1 bg-muted/20 p-2 rounded-md">
                                     <div className="flex items-center justify-between gap-2">
                                       <div className="flex items-center gap-2">
-                                        <Badge variant={e.location === "International" ? "default" : "secondary"} className="text-[10px] h-5 px-1.5">
-                                          {e.location === "International" ? "Intl" : "Natl"}
+                                        <Badge variant={e.location?.toLowerCase() === "international" ? "default" : "secondary"} className="text-[10px] h-5 px-1.5">
+                                          {e.location?.toLowerCase() === "international" ? "Intl" : "Natl"}
                                         </Badge>
                                         <span className="text-muted-foreground text-sm">{e.type}</span>
                                       </div>
@@ -413,12 +437,20 @@ const ExpenseTracker = () => {
                                         {currencySymbols[e.currency] || "₹"} {Number(e.amount).toLocaleString("en-IN")}
                                       </span>
                                     </div>
-                                    {e.location === "International" && (
-                                      <div className="flex justify-end items-center gap-2 text-xs text-muted-foreground border-t border-border/50 pt-1 mt-1">
-                                        <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded">
-                                          Rate: 1 {e.currency} = {e.exchangeRate}
-                                        </span>
-                                        <span>≈ ₹{Number(e.convertedAmount).toLocaleString("en-IN")}</span>
+                                    {e.location?.toLowerCase() === 'international' && (e.convertedAmount || e.conversionRate) && (
+                                      <div className="mt-1 pt-1 border-t border-muted/30 text-[10px] space-y-0.5">
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">Original:</span>
+                                          <span>{currencySymbols[e.currency] || e.currency} {Number(e.amount).toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">Rate:</span>
+                                          <span>₹{e.conversionRate || e.exchangeRate}</span>
+                                        </div>
+                                        <div className="flex justify-between font-semibold text-success">
+                                          <span>Total:</span>
+                                          <span>₹{Number(e.convertedAmount).toLocaleString("en-IN")}</span>
+                                        </div>
                                       </div>
                                     )}
                                   </div>
@@ -591,12 +623,20 @@ const ExpenseTracker = () => {
                                     {currencySymbols[e.currency] || "₹"} {Number(e.amount).toLocaleString("en-IN")}
                                   </span>
                                 </div>
-                                {e.location === "International" && (
-                                  <div className="flex flex-wrap justify-end items-center gap-x-3 gap-y-1 text-xs text-muted-foreground border-t border-border/50 pt-2 mt-2">
-                                    <span className="text-[10px] bg-muted px-2 py-0.5 rounded">
-                                      Rate: 1 {e.currency} = {e.exchangeRate}
-                                    </span>
-                                    <span className="font-medium text-foreground/80">≈ ₹{Number(e.convertedAmount).toLocaleString("en-IN")}</span>
+                                {e.location === 'International' && (e.convertedAmount || e.conversionRate) && (
+                                  <div className="mt-2 pt-2 border-t border-border/50 text-[11px] space-y-1">
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Original:</span>
+                                      <span>{currencySymbols[e.currency] || e.currency} {Number(e.amount).toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Rate:</span>
+                                      <span>₹{e.conversionRate || e.exchangeRate}</span>
+                                    </div>
+                                    <div className="flex justify-between font-bold text-success text-xs">
+                                      <span>Converted Total:</span>
+                                      <span>₹{Number(e.convertedAmount).toLocaleString("en-IN")}</span>
+                                    </div>
                                   </div>
                                 )}
                               </div>
@@ -643,6 +683,66 @@ const ExpenseTracker = () => {
             />
           </div>
         )}
+
+        {/* Exchange Rate Dialog for Slip Generation */}
+        <Dialog open={exchangeDialogOpen} onOpenChange={setExchangeDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Enter Exchange Rate(s)</DialogTitle>
+              <DialogDescription>
+                Please enter exchange rate(s) to convert international expenses to INR before generating the slip.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3">
+              {exchangeCurrencies.map((cur) => (
+                <div key={cur} className="grid grid-cols-2 gap-3 items-center">
+                  <div className="font-medium">1 {cur} =</div>
+                  <Input
+                    type="number"
+                    value={exchangeRates[cur] || ''}
+                    onChange={(e) => setExchangeRates(prev => ({ ...prev, [cur]: e.target.value }))}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline">Cancel</Button>
+              </DialogClose>
+              <Button onClick={async () => {
+                // Validate rates
+                const invalid = exchangeCurrencies.some(c => !exchangeRates[c] || Number(exchangeRates[c]) <= 0);
+                if (invalid) {
+                  setError('Please enter valid positive exchange rate(s)');
+                  return;
+                }
+
+                // Build converted expense copy
+                const convertedExp = JSON.parse(JSON.stringify(pendingExpenseForConversion));
+                let totalINR = 0;
+                convertedExp.expenses = convertedExp.expenses.map(it => {
+                  if (it.location === 'International') {
+                    const rate = Number(exchangeRates[it.currency]);
+                    it.exchangeRate = rate;
+                    it.convertedAmount = Number(it.amount) * rate;
+                    totalINR += Number(it.convertedAmount) || 0;
+                  } else {
+                    totalINR += Number(it.amount) || 0;
+                  }
+                  return it;
+                });
+                convertedExp.amount = totalINR;
+
+                setExchangeDialogOpen(false);
+                setPendingExpenseForConversion(null);
+                // Generate PDF with converted values
+                await generatePdfWithExpense(convertedExp);
+              }}>Generate Slip</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>

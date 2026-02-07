@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../Components/ui/badge';
 import { Plus, Search, Filter, ListTodo, CheckCircle2, Clock, AlertCircle, ChevronDown } from 'lucide-react';
 import { userContext } from '../Context/userContext';
-import { getAllTasks, createTask, updateTask, deleteTask } from '../api/taskApi';
+import axios from 'axios';
+import API_BASE_URL from '../config';
 import TaskCard from '../Components/Task/TaskCard';
 import TaskForm from '../Components/Task/TaskForm';
 import TaskDetail from '../Components/Task/TaskDetail';
@@ -48,12 +49,18 @@ const TaskManagement = () => {
         applyFilters();
     }, [tasks, searchQuery, statusFilter, priorityFilter, dueDateFilter]);
 
+    // Create axios instance for this component
+    const axiosInstance = axios.create({
+        baseURL: API_BASE_URL,
+        withCredentials: true
+    });
+
     const fetchTasks = async () => {
         setLoading(true);
         try {
-            const response = await getAllTasks({ limit: 100 });
-            setTasks(response.tasks || []);
-            calculateStats(response.tasks || []);
+            const response = await axiosInstance.get('/api/task', { params: { limit: 100 } });
+            setTasks(response.data.tasks || []);
+            calculateStats(response.data.tasks || []);
         } catch (error) {
             console.error('Error fetching tasks:', error);
             setErrorMessage('Failed to load tasks');
@@ -108,35 +115,41 @@ const TaskManagement = () => {
 
     const handleCreateTask = async (taskData) => {
         try {
-            await createTask(taskData);
+            await axiosInstance.post('/api/task', taskData);
             setSuccessMessage('Task created successfully');
             fetchTasks();
         } catch (error) {
-            setErrorMessage(error.message || 'Failed to create task');
+            setErrorMessage(error.response?.data?.message || error.message || 'Failed to create task');
             throw error;
         }
     };
 
-    const handleUpdateTask = async (taskData) => {
+    const handleUpdateTask = async (taskData, options = {}) => {
+        const suppressToast = options.suppressToast || false;
+        const keepOpen = options.keepOpen || false;
         try {
-            await updateTask(selectedTask._id, taskData);
-            setSuccessMessage('Task updated successfully');
+            await axiosInstance.put(`/api/task/${selectedTask._id}`, taskData);
+            if (!suppressToast) {
+                setSuccessMessage('Task updated successfully');
+            }
             fetchTasks();
-            setShowTaskDetail(false);
+            if (!keepOpen) {
+                setShowTaskDetail(false);
+            }
         } catch (error) {
-            setErrorMessage(error.message || 'Failed to update task');
+            setErrorMessage(error.response?.data?.message || error.message || 'Failed to update task');
             throw error;
         }
     };
 
     const handleDeleteTask = async (taskId) => {
         try {
-            await deleteTask(taskId);
+            await axiosInstance.delete(`/api/task/${taskId}`);
             setSuccessMessage('Task deleted successfully');
             fetchTasks();
             return true;
         } catch (error) {
-            setErrorMessage(error.message || 'Failed to delete task');
+            setErrorMessage(error.response?.data?.message || error.message || 'Failed to delete task');
             throw error;
         }
     };
@@ -184,51 +197,51 @@ const TaskManagement = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
                         {
-                        label: "Total Tasks",
-                        value: stats.total,
-                        icon: ListTodo,
-                        color: "text-primary",
-                        bg: "bg-primary/10",
+                            label: "Total Tasks",
+                            value: stats.total,
+                            icon: ListTodo,
+                            color: "text-primary",
+                            bg: "bg-primary/10",
                         },
                         {
-                        label: "Pending",
-                        value: stats.pending,
-                        icon: Clock,
-                        color: "text-muted-foreground",
-                        bg: "bg-gray-500/10",
+                            label: "Pending",
+                            value: stats.pending,
+                            icon: Clock,
+                            color: "text-muted-foreground",
+                            bg: "bg-gray-500/10",
                         },
                         {
-                        label: "In Progress",
-                        value: stats.inProgress,
-                        icon: AlertCircle,
-                        color: "text-orange-500",
-                        bg: "bg-orange-500/10",
+                            label: "In Progress",
+                            value: stats.inProgress,
+                            icon: AlertCircle,
+                            color: "text-orange-500",
+                            bg: "bg-orange-500/10",
                         },
                         {
-                        label: "Completed",
-                        value: stats.completed,
-                        icon: CheckCircle2,
-                        color: "text-green-500",
-                        bg: "bg-green-500/10",
+                            label: "Completed",
+                            value: stats.completed,
+                            icon: CheckCircle2,
+                            color: "text-green-500",
+                            bg: "bg-green-500/10",
                         },
                     ].map((stat, i) => (
                         <Card key={i} className="border-border/50 shadow-card card-hover">
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                                {stat.label}
-                                </p>
-                                <p className="text-xl md:text-2xl font-bold text-foreground">
-                                {stat.value}
-                                </p>
-                            </div>
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                            {stat.label}
+                                        </p>
+                                        <p className="text-xl md:text-2xl font-bold text-foreground">
+                                            {stat.value}
+                                        </p>
+                                    </div>
 
-                            <div className={`p-3 rounded-xl ${stat.bg}`}>
-                                <stat.icon className={`h-5 w-5 ${stat.color}`} />
-                            </div>
-                            </div>
-                        </CardContent>
+                                    <div className={`p-3 rounded-xl ${stat.bg}`}>
+                                        <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                                    </div>
+                                </div>
+                            </CardContent>
                         </Card>
                     ))}
                 </div>
@@ -324,9 +337,9 @@ const TaskManagement = () => {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {filteredTasks.map((task) => (
-                            <TaskCard 
-                                key={task._id} 
-                                task={task} 
+                            <TaskCard
+                                key={task._id}
+                                task={task}
                                 onClick={handleTaskClick}
                                 onDelete={handleDeleteTask}
                                 isCurrentUser={user?._id === task.assignedTo?.[0]?.assigneeId}
@@ -359,14 +372,14 @@ const TaskManagement = () => {
 
             {/* Toast Messages */}
             {successMessage && (
-                <SuccessToast 
-                    message={successMessage} 
+                <SuccessToast
+                    message={successMessage}
                     onClose={() => setSuccessMessage('')}
                 />
             )}
             {errorMessage && (
-                <ErrorToast 
-                    message={errorMessage} 
+                <ErrorToast
+                    message={errorMessage}
                     onClose={() => setErrorMessage('')}
                 />
             )}

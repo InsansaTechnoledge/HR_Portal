@@ -24,6 +24,7 @@ import {
   Loader2,
   Receipt,
   Download,
+  ArrowDownUp,
 } from "lucide-react";
 
 import { Checkbox } from "../Components/ui/checkbox";
@@ -33,6 +34,8 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardFooter,
+  CardDescription
 } from "../Components/ui/card";
 import { Label } from "../Components/ui/label";
 import {
@@ -82,6 +85,21 @@ const ExpenseGenerator = () => {
   const [selectedExpense, setSelectedExpense] = useState(null);
   const [generatingSlip, setGeneratingSlip] = useState(false);
   const [slipGenerated, setSlipGenerated] = useState(false);
+
+  // View controls: LIST | REVIEW
+  const [viewMode, setViewMode] = useState("LIST");
+
+  // Exchange rate dialog state
+  const [exchangeDialogOpen, setExchangeDialogOpen] = useState(false);
+  const [exchangeRates, setExchangeRates] = useState({});
+  const [exchangeCurrencies, setExchangeCurrencies] = useState([]);
+  const [pendingExpenseForPayment, setPendingExpenseForPayment] = useState(null);
+  // Conversion tracking: map expenseId -> { rates: {currency: rate}, converted: true }
+  const [conversionData, setConversionData] = useState({});
+  // Track which international sub-item is being converted
+  const [pendingIntlItem, setPendingIntlItem] = useState(null);
+  // Mode for dialog: 'PAY' or 'CONVERT'
+  const [dialogMode, setDialogMode] = useState('PAY');
 
   const slipRef = useRef(null);
 
@@ -191,12 +209,34 @@ const ExpenseGenerator = () => {
 
   const handlePaySeparately = async (expense) => {
     if (!expense) return;
+    await processPayment(expense);
+  };
 
+  const processPayment = async (expense) => {
     try {
+      console.log("[DEBUG] Entering processPayment for expense:", expense._id || "bulk");
+      if (needsConversion(expense)) {
+        console.log("[DEBUG] processPayment blocked: conversion required", expense._id);
+        toast({
+          variant: "destructive",
+          title: "Conversion Required",
+          description: "International expenses must be converted before payment"
+        });
+        setGeneratingSlip(false);
+        setPayingId("");
+        return;
+      }
+
       setPayingId(expense._id || "bulk");
       setGeneratingSlip(true);
 
+      // Conversion is now persistent, so we just ensure the expense is selected for the PDF ref
+      setSelectedExpense(expense);
+      // Give React a moment to render
+      await new Promise(r => setTimeout(r, 100));
+
       if (expense.status === "COMBINED") {
+
         // Bulk Payment
         const ids = expense.selectedIds || [];
         await Promise.all(
@@ -256,6 +296,7 @@ const ExpenseGenerator = () => {
     } finally {
       setPayingId("");
       setGeneratingSlip(false);
+      setPendingExpenseForPayment(null);
     }
   };
 
@@ -304,6 +345,73 @@ const ExpenseGenerator = () => {
     (sum, exp) => sum + (Number(exp.amount) || 0),
     0
   );
+
+  // Helper to check if an expense contains ANY international items
+  const isInternationalExpense = (expense) => {
+    const items = expense.expenses || [];
+    return items.some(e => e.location?.toLowerCase() === 'international');
+  };
+
+  // Helper to check if an international expense actually needs conversion values
+  const needsConversion = (expense) => {
+    const items = expense.expenses || [];
+    console.log(items);
+    const isIntl = items.some(e => e.location?.toLowerCase() === 'international');
+    const missingConversion = items.some(e => e.location === 'International' && (!e.convertedAmount || Number(e.convertedAmount) <= 0 || e.amount === e.convertedAmount));
+
+    // console.log(`[DEBUG] needsConversion check for ${expense._id}: isIntl=${isIntl}, missingConversion=${missingConversion}`);
+    return missingConversion;
+  };
+
+  const handleSaveConversion = async (expense, rates) => {
+    try {
+      console.log("[DEBUG] handleSaveConversion started", { expenseId: expense._id, rates });
+      setLoadingExpenses(true);
+      const newItems = expense.expenses.map(item => {
+        if (item.location?.toLowerCase() === 'international' && rates[item.currency]) {
+          const rate = Number(rates[item.currency]);
+          const converted = Number(item.amount) * rate;
+          console.log(`[DEBUG] Converting item: ${item.type}, Rate: ${rate}, Converted: ${converted}`);
+          return {
+            ...item,
+            conversionRate: rate,
+            exchangeRate: rate, // Store both for compatibility
+            convertedAmount: converted
+          };
+        }
+        return item;
+      });
+
+      const newTotal = newItems.reduce((sum, item) => sum + (Number(item.convertedAmount) || 0), 0);
+      console.log("[DEBUG] Calculated new total:", newTotal);
+
+      const response = await axios.put(`${API_BASE_URL}/api/expense/${expense._id}`, {
+        expenses: newItems,
+        amount: newTotal
+      }, { withCredentials: true });
+
+      console.log("[DEBUG] Save conversion response:", response.status, response.data);
+
+      if (response.status === 200) {
+        console.log("[DEBUG] State updated successfully with new expense data", response.data.expense);
+        setExpenses(prev => prev.map(exp => exp._id === expense._id ? response.data.expense : exp));
+        toast({
+          variant: "success",
+          title: "Converted to INR",
+          description: "Expense amounts persisted. You can now generate the payment slip."
+        });
+      }
+    } catch (err) {
+      console.error("Error saving conversion:", err);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to persist conversion."
+      });
+    } finally {
+      setLoadingExpenses(false);
+    }
+  };
 
   // Multi-select Logic
   const [selectedExpenses, setSelectedExpenses] = useState(new Set());
@@ -373,6 +481,8 @@ const ExpenseGenerator = () => {
   };
 
   const downloadBulkExpensePDF = async () => { }; // Merged into handlePaySeparately flow
+
+
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
@@ -635,17 +745,33 @@ const ExpenseGenerator = () => {
                           {Array.isArray(exp.expenses) && exp.expenses.length > 0 ? (
                             <div className="space-y-1">
                               {exp.expenses.map((e, idx) => (
-                                <div key={idx} className="flex flex-col gap-0.5">
+                                <div className="flex flex-col gap-1">
                                   <div className="flex items-center gap-2">
                                     <Receipt className="h-3 w-3 text-muted-foreground" />
                                     <span className="text-muted-foreground text-xs">{e.type}:</span>
                                     <span className="font-medium text-xs">
                                       {currencySymbols[e.currency] || "₹"} {Number(e.amount).toLocaleString("en-IN")}
                                     </span>
+                                    {e.location?.toLowerCase() === 'international' && (
+                                      <Badge variant="outline" className={`ml-1 text-[10px] leading-none h-4 ${e.convertedAmount ? 'bg-success/10 text-success border-success/20' : 'bg-warning/10 text-warning border-warning/20'}`}>
+                                        {e.convertedAmount ? 'Converted' : 'Needs Conversion'}
+                                      </Badge>
+                                    )}
                                   </div>
-                                  {e.location === "International" && (
-                                    <div className="text-[10px] text-muted-foreground pl-5">
-                                      (≈ ₹{Number(e.convertedAmount).toLocaleString("en-IN")})
+                                  {e.location?.toLowerCase() === 'international' && e.convertedAmount && (
+                                    <div className="text-[10px] text-muted-foreground pl-5 grid grid-cols-1 gap-0.5">
+                                      <div className="flex justify-between max-w-[200px]">
+                                        <span>Original:</span>
+                                        <span>{currencySymbols[e.currency] || e.currency} {Number(e.amount).toLocaleString()}</span>
+                                      </div>
+                                      <div className="flex justify-between max-w-[200px]">
+                                        <span>Rate:</span>
+                                        <span>₹{e.conversionRate || e.exchangeRate}</span>
+                                      </div>
+                                      <div className="flex justify-between max-w-[200px] font-semibold text-success">
+                                        <span>Converted:</span>
+                                        <span>₹{Number(e.convertedAmount).toLocaleString("en-IN")}</span>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
@@ -656,9 +782,14 @@ const ExpenseGenerator = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          <span className="font-semibold text-foreground">
-                            ₹{Number(exp.amount || 0).toLocaleString("en-IN")}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-foreground underline decoration-primary/30 decoration-offset-2">
+                              ₹{Number(exp.amount || 0).toLocaleString("en-IN")}
+                            </span>
+                            {needsConversion(exp) && (
+                              <span className="text-[10px] text-warning font-medium italic">Pending Conversion</span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {exp.expenseDate
@@ -706,17 +837,50 @@ const ExpenseGenerator = () => {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setSelectedExpense(exp);
-                              setOpenDialog(true);
-                            }}
-                            className="bg-primary hover:bg-primary/90"
-                          >
-                            <Wallet className="h-4 w-4 mr-1" />
-                            Generate Payment
-                          </Button>
+                          <div className="flex items-center justify-end gap-2">
+                            {(() => {
+                              const needsConv = needsConversion(exp);
+                              console.log(`[DEBUG] Row ${exp._id} render: needsConversion=${needsConv}`);
+                              return needsConv ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    console.log("[DEBUG] Opening Conversion Dialog for", exp._id);
+                                    const intlItems = exp.expenses.filter(e => e.location?.toLowerCase() === 'international');
+                                    const currencies = [...new Set(intlItems.map(i => i.currency))];
+                                    setExchangeCurrencies(currencies);
+                                    // Pre-fill existing rates if available
+                                    const initialRates = currencies.reduce((acc, c) => {
+                                      const itemWithCur = intlItems.find(i => i.currency === c);
+                                      return { ...acc, [c]: itemWithCur?.conversionRate || itemWithCur?.exchangeRate || '' };
+                                    }, {});
+                                    console.log("[DEBUG] Initial Exchange Rates:", initialRates);
+                                    setExchangeRates(initialRates);
+                                    setPendingExpenseForPayment(exp);
+                                    setExchangeDialogOpen(true);
+                                  }}
+                                // className="border-primary text-primary hover:bg-primary/5 h-8 font-medium"
+                                >
+                                  <ArrowDownUp className="h-4 w-4 mr-1" />
+                                  Convert Amount
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    console.log("[DEBUG] Opening Payment Dialog for converted expense", exp._id);
+                                    setSelectedExpense(exp);
+                                    setOpenDialog(true);
+                                  }}
+                                  className="bg-primary hover:bg-primary/90 h-8 font-medium shadow-sm transition-all"
+                                >
+                                  <Wallet className="h-4 w-4 mr-1" />
+                                  Generate Payment
+                                </Button>
+                              );
+                            })()}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -766,17 +930,30 @@ const ExpenseGenerator = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="space-y-1 pl-12">
-                      {Array.isArray(exp.expenses) && exp.expenses.map((e, idx) => (
-                        <div key={idx} className="text-sm">
+                    {Array.isArray(exp.expenses) && exp.expenses.map((e, idx) => (
+                      <div key={idx} className="text-sm space-y-1 bg-muted/10 p-2 rounded border border-border/50">
+                        <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">{e.type}: </span>
-                          <span className="font-medium">{currencySymbols[e.currency] || "₹"} {Number(e.amount).toLocaleString("en-IN")}</span>
-                          {e.location === "International" && (
-                            <span className="text-xs text-muted-foreground ml-2">(≈ ₹{Number(e.convertedAmount).toLocaleString("en-IN")})</span>
-                          )}
+                          <span className="font-bold">{currencySymbols[e.currency] || "₹"} {Number(e.amount).toLocaleString("en-IN")}</span>
                         </div>
-                      ))}
-                    </div>
+                        {e.location?.toLowerCase() === 'international' && (e.convertedAmount || e.conversionRate) && (
+                          <div className="pt-1 mt-1 border-t border-muted/30 text-[11px] space-y-0.5">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Original:</span>
+                              <span>{currencySymbols[e.currency] || e.currency} {Number(e.amount).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Rate:</span>
+                              <span>₹{e.conversionRate || e.exchangeRate}</span>
+                            </div>
+                            <div className="flex justify-between font-bold text-success">
+                              <span>Total:</span>
+                              <span>₹{Number(e.convertedAmount).toLocaleString("en-IN")}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
                         <span className="text-muted-foreground">Date: </span>
@@ -818,21 +995,48 @@ const ExpenseGenerator = () => {
                           ))}
                         </div>
                       )}
-                      <Button
-                        size="sm"
-                        disabled={payingId === exp._id}
-                        onClick={() => handlePaySeparately(exp)}
-                        className="bg-primary hover:bg-primary/90 ml-auto"
-                      >
-                        {payingId === exp._id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                      {(() => {
+                        const needsConv = needsConversion(exp);
+                        // console.log(`[DEBUG] Mobile Card ${exp._id} render: needsConversion=${needsConv}`);
+                        return needsConv ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              console.log("[DEBUG] Opening Conversion Dialog (Mobile) for", exp._id);
+                              const intlItems = exp.expenses.filter(e => e.location?.toLowerCase() === 'international');
+                              const currencies = [...new Set(intlItems.map(i => i.currency))];
+                              setExchangeCurrencies(currencies);
+                              // Pre-fill existing rates if available
+                              const initialRates = currencies.reduce((acc, c) => {
+                                const itemWithCur = intlItems.find(i => i.currency === c);
+                                return { ...acc, [c]: itemWithCur?.conversionRate || itemWithCur?.exchangeRate || '' };
+                              }, {});
+                              console.log("[DEBUG] Initial Exchange Rates (Mobile):", initialRates);
+                              setExchangeRates(initialRates);
+                              setPendingExpenseForPayment(exp);
+                              setExchangeDialogOpen(true);
+                            }}
+                            className="border-primary text-primary hover:bg-primary/5 h-9 font-medium ml-auto"
+                          >
+                            <ArrowDownUp className="h-4 w-4 mr-1" />
+                            Convert Amount
+                          </Button>
                         ) : (
-                          <>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              console.log("[DEBUG] Opening Payment Dialog (Mobile) for converted expense", exp._id);
+                              setSelectedExpense(exp);
+                              setOpenDialog(true);
+                            }}
+                            className="bg-primary hover:bg-primary/90 h-9 font-medium shadow-sm transition-all ml-auto"
+                          >
                             <Wallet className="h-4 w-4 mr-1" />
-                            Pay
-                          </>
-                        )}
-                      </Button>
+                            Generate Payment
+                          </Button>
+                        );
+                      })()}
                     </div>
                   </div>
                 ))
@@ -921,6 +1125,71 @@ const ExpenseGenerator = () => {
           </div>
         )}
       </div>
+      <Dialog open={exchangeDialogOpen} onOpenChange={setExchangeDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <IndianRupee className="h-5 w-5 text-primary" />
+              International Amount Conversion
+            </DialogTitle>
+            <DialogDescription>
+              Please enter the current exchange rate for each currency to convert international expenses to INR.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {exchangeCurrencies.map((cur) => (
+              <div key={cur} className="p-4 bg-muted/30 rounded-lg border border-border/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="font-semibold">Exchange Rate for {cur}</Label>
+                </div>
+                <div className="grid grid-cols-[1fr,auto,1fr] gap-3 items-center">
+                  <div className="bg-background border rounded px-3 py-2 text-center font-medium text-sm">
+                    1 {cur}
+                  </div>
+                  <span className="text-muted-foreground font-medium">=</span>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-muted-foreground font-medium text-xs">₹</span>
+                    <Input
+                      type="number"
+                      className="pl-6 h-9"
+                      placeholder="0.00"
+                      value={exchangeRates[cur] || ''}
+                      onChange={(e) => setExchangeRates(prev => ({ ...prev, [cur]: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" className="hover:text-primary" onClick={() => {
+              setExchangeDialogOpen(false);
+              setPendingExpenseForPayment(null);
+            }}>Cancel</Button>
+            <Button
+              className="bg-primary hover:bg-primary/90"
+              onClick={() => {
+                // Validate rates
+                const invalid = exchangeCurrencies.some(c => !exchangeRates[c] || Number(exchangeRates[c]) <= 0);
+                if (invalid) {
+                  toast({
+                    variant: "destructive",
+                    title: "Invalid Rate",
+                    description: "Please enter valid positive exchange rate(s)"
+                  });
+                  return;
+                }
+
+                setExchangeDialogOpen(false);
+                handleSaveConversion(pendingExpenseForPayment, exchangeRates);
+              }}>
+              Convert
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

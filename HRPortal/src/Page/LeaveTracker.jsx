@@ -2,7 +2,7 @@
 import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
-import { Calendar as CalendarIcon, Clock, Users, Plus, X, User2, User as UserIcon, Filter, User, Loader2 } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Users, Plus, X, User2, User as UserIcon, Filter, User, Loader2, Check } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
 import { userContext } from "../Context/userContext";
@@ -16,7 +16,9 @@ import { Input } from "../Components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../Components/ui/dialog";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../Components/ui/select";
+import { Badge } from "../Components/ui/badge";
 import { toast } from "../hooks/useToast";
+import { CheckCircle2, XCircle } from "lucide-react";
 const leaveTypes = [
   "Vacation",
   "Sick Leave",
@@ -34,7 +36,7 @@ const LeaveTypeColors = {
   "Unpaid Leave": "bg-gray-100 text-gray-800",
 };
 
-const initialForm = { type: "", startDate: "", endDate: "" };
+const initialForm = { type: "", startDate: "", endDate: "", reason: "" };
 
 const LeaveTracker = () => {
   const { user } = useContext(userContext);
@@ -63,8 +65,15 @@ const LeaveTracker = () => {
   const [loading, setLoading] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  // Which view is active: my | employee | user
   const [leaveViewMode, setLeaveViewMode] = useState("my");
+
+  // Status change confirmation dialog state
+  const [statusConfirm, setStatusConfirm] = useState({
+    isOpen: false,
+    leaveId: null,
+    newStatus: '',
+    targetType: ''
+  });
 
   // My leaves (logged-in user)
   const myLeaves = useMemo(() => {
@@ -584,22 +593,76 @@ const LeaveTracker = () => {
   // Loading state
   { loading && <Loader /> }
 
+  const getStatusConfig = (status) => {
+    switch (status?.toLowerCase()) {
+      case "pending":
+        return { icon: Clock, className: "bg-warning/10 text-warning", label: "Pending" };
+      case "approved":
+        return { icon: CheckCircle2, className: "bg-success/10 text-success", label: "Approved" };
+      case "rejected":
+        return { icon: XCircle, className: "bg-destructive/10 text-destructive", label: "Rejected" };
+      default:
+        return { icon: Clock, className: "bg-muted", label: status };
+    }
+  };
+
   const getStatusBadge = (status = "pending") => {
-    const styles = {
-      approved: "bg-success/10 text-success border-success/20",
-      pending: "bg-warning/10 text-warning border-warning/20",
-      rejected: "bg-destructive/10 text-destructive border-destructive/20",
-    };
+    const config = getStatusConfig(status);
+    const StatusIcon = config.icon;
 
     return (
-      <span
-        className={`px-2.5 py-1 rounded-full text-xs font-medium border capitalize ${styles[status] || styles.pending
-          }`}
+      <Badge
+        variant="outline"
+        className={`${config.className} flex items-center gap-1`}
       >
-        {status}
-      </span>
+        <StatusIcon className="h-3 w-3" />
+        {config.label}
+      </Badge>
     );
-  }
+  };
+
+  const handleStatusUpdate = async (leaveId, newStatus) => {
+    if (!currentPerson) return;
+
+    setLoading(true);
+    try {
+      const payload = {
+        id: currentPerson.empId,
+        leaveId: leaveId,
+        status: newStatus,
+        targetType: leaveViewMode === 'employee' ? 'employee' : 'user'
+      };
+
+      const resp = await axios.put(`${API_BASE_URL}/api/leave/status`, payload, { withCredentials: true });
+
+      if (resp.status === 200) {
+        toast({
+          variant: "success",
+          title: "Status Updated",
+          description: `Leave ${newStatus.toLowerCase()} successfully`,
+        });
+
+        // Update local state
+        setCurrentPerson(prev => {
+          if (!prev) return prev;
+          const updatedHistory = prev.leaveHistory.map(l =>
+            l._id === leaveId ? { ...l, status: newStatus } : l
+          );
+          return { ...prev, leaveHistory: updatedHistory };
+        });
+      }
+    } catch (err) {
+      console.error("Error updating leave status:", err);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.response?.data?.message || "Failed to update status",
+      });
+    } finally {
+      setLoading(false);
+      setStatusConfirm({ isOpen: false, leaveId: null, newStatus: '', targetType: '' });
+    }
+  };
 
   // Date formatting helper
   const formatDate = (date) => {
@@ -816,11 +879,11 @@ const LeaveTracker = () => {
                     {authUser.role === 'admin' ? 'Manage and track all leave requests' : 'Manage your leave requests and balance'}
                   </p>
                 </div>
-                { authUser.role !== 'superAdmin' && 
-                <Button onClick={handleOpenAddLeave} className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Request Leave
-                </Button>}
+                {authUser.role !== 'superAdmin' &&
+                  <Button onClick={handleOpenAddLeave} className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Request Leave
+                  </Button>}
               </div>
 
               {/* Leave Balance - Always visible */}
@@ -902,13 +965,47 @@ const LeaveTracker = () => {
                             <td className="p-4">
                               <span className="font-semibold">{request.days}</span>
                             </td>
-                            <td className="p-4">{getStatusBadge(request.status || 'pending')}</td>
+                            <td className="p-4">
+                              <div className="flex items-center gap-2">
+                                {getStatusBadge(request.status || 'Pending')}
+                                {(authUser.role === 'admin' || authUser.role === 'superAdmin') &&
+                                  (request.status === 'Pending' || !request.status) &&
+                                  (currentPerson?.email !== authUser.userEmail) && (
+                                    <div className="relative">
+                                      <Select
+                                        onValueChange={(val) => setStatusConfirm({
+                                          isOpen: true,
+                                          leaveId: request._id,
+                                          newStatus: val,
+                                          targetType: leaveViewMode === 'employee' ? 'employee' : 'user'
+                                        })}
+                                      >
+                                        <SelectTrigger className="h-7 w-24 text-xs">
+                                          <SelectValue placeholder="Pending" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="Pending">Pending</SelectItem>
+                                          <SelectItem value="Approved">Approve</SelectItem>
+                                          <SelectItem value="Rejected">Reject</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      <ChevronDown className="absolute right-2 top-2.5 h-3 w-3 opacity-50 pointer-events-none" />
+                                    </div>
+                                  )}
+                                {(authUser.role === 'admin' || authUser.role === 'superAdmin') &&
+                                  currentPerson?.email === authUser.userEmail && (
+                                    <span className="text-[10px] text-muted-foreground italic">
+                                      Self Record
+                                    </span>
+                                  )}
+                              </div>
+                            </td>
                             <td className="p-4 text-muted-foreground hidden lg:table-cell">{request.reason || '-'}</td>
                           </tr>
                         ))}
                         {displayedLeaves.length === 0 && (
                           <tr>
-                            <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                            <td colSpan={5} className="p-8 text-center text-muted-foreground">
                               No leave requests found
                             </td>
                           </tr>
@@ -1011,17 +1108,18 @@ const LeaveTracker = () => {
               )}
 
               {/* Reason */}
-              {/* <div className="space-y-2">
-                <Label htmlFor="reason">Reason (Optional)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="reason">Reason *</Label>
                 <Input
                   id="reason"
                   type="text"
                   value={newLeave.reason}
                   onChange={(e) => setNewLeave(prev => ({ ...prev, reason: e.target.value }))}
-                  placeholder="Brief description..."
+                  placeholder="Reason for leave..."
                   className="w-full"
+                  required
                 />
-              </div> */}
+              </div>
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0">
@@ -1044,6 +1142,37 @@ const LeaveTracker = () => {
                 ) : (
                   "Request Leave"
                 )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Confirmation Dialog for Status Change */}
+        <Dialog open={statusConfirm.isOpen} onOpenChange={(open) => setStatusConfirm(prev => ({ ...prev, isOpen: open }))}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Confirm Status Change</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to change the status of this leave request to <span className="font-bold text-foreground">{statusConfirm.newStatus}</span>?
+              </p>
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => setStatusConfirm(prev => ({ ...prev, isOpen: false, leaveId: null, newStatus: '' }))}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => handleStatusUpdate(statusConfirm.leaveId, statusConfirm.newStatus)}
+                disabled={loading}
+                variant={statusConfirm.newStatus === 'Rejected' ? 'destructive' : 'default'}
+                className={statusConfirm.newStatus === 'Approved' ? 'bg-green-600 hover:bg-green-700 text-white' : ''}
+              >
+                {loading ? "Updating..." : `Yes, ${statusConfirm.newStatus}`}
               </Button>
             </DialogFooter>
           </DialogContent>

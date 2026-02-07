@@ -8,27 +8,20 @@ import { Textarea } from '../ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useToast } from '../ui/use-toast';
 import { userContext } from '../../Context/userContext';
-import {
-    createOrUpdateDeclaration,
-    submitDeclaration,
-    getDeclarationByEmployee
-} from '../../api/investmentDeclarationApi';
-import { ChevronDown, Paperclip, Save, Send, AlertCircle, CheckCircle, XCircle, Clock, Upload, X, User, FileText, FileImage, Loader2, Cloud, CloudOff } from 'lucide-react';
+// No longer importing from investmentDeclarationApi
+import { ChevronDown, Paperclip, Save, Send, AlertCircle, CheckCircle, XCircle, Clock, Upload, X, User, FileText, FileImage, Loader2, Cloud, CloudOff, Eye, Download } from 'lucide-react';
 import axios from 'axios';
 import API_BASE_URL from '../../config';
 import Loader from '../Loader/Loader';
 import { DEPARTMENT_HIERARCHY } from '../../Constant/constant';
+import { Dialog, DialogContent, DialogTrigger, DialogFooter, DialogTitle, DialogDescription } from '../ui/dialog';
 
-const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYear, onSuccess }) => {
+const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYear, onSuccess, isReadOnly = false }) => {
     const { user } = useContext(userContext);
-    const { toast } = useToast();
-
-    const [loading, setLoading] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
     const [declaration, setDeclaration] = useState(null);
     const [currentTab, setCurrentTab] = useState('employee-info');
     const [employees, setEmployees] = useState([]);
-    const [employeesLoading, setEmployeesLoading] = useState(false);
+    const [selfEmployee, setSelfEmployee] = useState(null);
 
     // Google Drive upload states
     const [uploadingDocs, setUploadingDocs] = useState({
@@ -39,7 +32,6 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
         section80DDocuments: false,
         housingLoanDocuments: false
     });
-    const [driveConnected, setDriveConnected] = useState(false);
 
     // Form state
     const [formData, setFormData] = useState({
@@ -126,42 +118,62 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
         section80CDocuments: [],
         section80CCDDocuments: [],
         section80DDocuments: [],
-        housingLoanDocuments: []
+        housingLoanDocuments: [],
+        declarationDocuments: []
     });
 
-    useEffect(() => {
-        if (propFinancialYear) {
-            setFormData(prev => ({
-                ...prev,
-                financialYear: propFinancialYear
-            }));
-        }
-    }, [propFinancialYear]);
+    // Create axios instance for this component
+    const axiosInstance = axios.create({
+        baseURL: API_BASE_URL,
+        withCredentials: true
+    });
 
     useEffect(() => {
         if (employeeId) {
             fetchExistingDeclaration();
         }
         fetchEmployees();
-        checkGoogleDriveStatus();
     }, [employeeId, propFinancialYear]);
 
+    // Auto-populate form with logged-in user's details for non-accountant/superAdmin roles
     useEffect(() => {
-        // Check for Google Drive connection success from URL params
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('success') === 'true' && urlParams.get('type') === 'google-drive') {
-            toast({
-                title: 'Drive Connected',
-                description: 'Google Drive connected successfully!',
-                variant: 'success'
-            });
-            // Clean up the URL
-            const url = new URL(window.location.href);
-            url.searchParams.delete('success');
-            url.searchParams.delete('type');
-            window.history.replaceState({}, document.title, url.pathname + url.search);
+        if (user && user.role && user.role !== 'accountant' && user.role !== 'superAdmin') {
+            // Try to find the logged-in user in the fetched employees by matching email
+            const emp = employees.find(e => e.email && user.userEmail && e.email.toLowerCase() === user.userEmail.toLowerCase());
+            if (emp) {
+                setSelfEmployee(emp);
+                setFormData(prev => ({
+                    ...prev,
+                    empId: emp._id || prev.empId,
+                    employeeCode: emp.empId || prev.employeeCode,
+                    employeeName: emp.name || prev.employeeName,
+                    employeeEmail: emp.email || prev.employeeEmail,
+                    department: emp.department || prev.department,
+                    designation: emp.details?.designation || prev.designation,
+                    pan: emp.details?.panNumber || prev.pan,
+                    dob: formatDateForInput(emp.details?.dateOfBirth) || prev.dob,
+                    gender: emp.details?.gender || prev.gender
+                }));
+            } else {
+                // Fallback to user context when employee record not found
+                setSelfEmployee(null);
+                setFormData(prev => ({
+                    ...prev,
+                    empId: user._id || prev.empId,
+                    employeeCode: user.empId || prev.employeeCode,
+                    employeeName: user.name || prev.employeeName,
+                    employeeEmail: user.email || prev.employeeEmail,
+                    department: user.department || prev.department,
+                    designation: user.details?.designation || prev.designation,
+                    pan: user.details?.panNumber || prev.pan,
+                    dob: formatDateForInput(user.details?.dateOfBirth) || prev.dob,
+                    gender: user.details?.gender || prev.gender
+                }));
+            }
         }
-    }, []);
+    }, [user, employees]);
+
+
 
     const formatDateForInput = (dateString) => {
         if (!dateString) return '';
@@ -174,23 +186,6 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
         }
     };
 
-    const checkGoogleDriveStatus = async () => {
-        try {
-            const resp = await axios.get(
-                `${API_BASE_URL}/api/google-drive/status`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                    withCredentials: true,
-                }
-            );
-            setDriveConnected(Boolean(resp.data?.connected));
-        } catch (err) {
-            console.error("Error checking Google Drive status:", err);
-            setDriveConnected(false);
-        }
-    };
 
     const fetchEmployees = async () => {
         setEmployeesLoading(true);
@@ -238,40 +233,39 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
     const fetchExistingDeclaration = async () => {
         setLoading(true);
         try {
-            console.log("Fetching Declaration for:", employeeId, "Year:", propFinancialYear);
-            const response = await getDeclarationByEmployee(employeeId, propFinancialYear || '2025-26');
-            console.log("Retrieved Data for Form:", response.declaration);
+            const response = await axiosInstance.get('/api/investmentDeclaration/declaration/employee', {
+                params: {
+                    employeeId,
+                    financialYear: propFinancialYear || formData.financialYear
+                }
+            });
+            console.log("Retrieved Data for Form:", response.data.declaration);
 
-            if (response.declaration) {
-                setDeclaration(response.declaration);
+            if (response.data.declaration) {
+                const decData = response.data.declaration;
+                setDeclaration(decData);
                 setFormData(prev => {
-                    const updated = {
-                        ...prev,
-                        ...response.declaration,
-                        // Ensure nested objects exist even if missing in old records
-                        otherDeductions: {
-                            ...prev.otherDeductions,
-                            ...(response.declaration.otherDeductions || {})
-                        },
-                        declaration: {
-                            ...prev.declaration,
-                            ...(response.declaration.declaration || {})
-                        },
-                        // Format DOB for date input
-                        dob: formatDateForInput(response.declaration.dob),
-                        // Ensure department is mapped if available
-                        department: response.declaration.department || prev.department,
-                        // Ensure employeeId object doesn't overwrite the simple ID needed for state if it's populated
-                        empId: response.declaration.employeeId?._id || response.declaration.employeeId || prev.empId
-                    };
-                    console.log("Final Form State after Population:", updated);
+                    // 1. Start with initial/current state
+                    let updated = { ...prev };
+
+                    // 2. Unflatten metadata from decData.formData if it exists
+                    // This populates flags like isApplicable, hasRentReceipt, etc.
+                    if (decData.formData) {
+                        updated = { ...updated, ...decData.formData };
+                    }
+
+                    // 3. Apply root-level declaration metadata (employee info, financial year, etc.)
+                    // and crucially, the populated/grouped documents which are at the root
+                    updated = { ...updated, ...decData };
+
+                    // 4. Force specific overrides for complex fields
+                    updated.dob = formatDateForInput(decData.dob);
+                    updated.department = decData.department || updated.department || prev.department;
+                    updated.empId = decData.employeeId?._id || decData.employeeId || prev.empId;
+
+                    console.log("Final Form State after Unflattening:", updated);
                     return updated;
                 });
-
-                // toast({
-                //     title: 'Data Loaded',
-                //     description: `Existing declaration for FY ${response.declaration.financialYear} loaded.`
-                // });
             }
         } catch (error) {
             console.error('Error in fetchExistingDeclaration:', error);
@@ -370,10 +364,10 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
             if (!declarationId) {
                 toast({
                     title: 'Error',
-                    description: 'Please save declaration first before uploading to Google Drive',
+                    description: 'Please save declaration first before uploading documents',
                     variant: 'destructive'
                 });
-                return false;
+                return null;
             }
 
             setUploadingDocs(prev => ({
@@ -381,14 +375,13 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                 [documentType]: true
             }));
 
-            const formData = new FormData();
-            formData.append('document', file.file);
-            formData.append('documentType', documentType);
-            formData.append('declarationId', declarationId);
+            const fd = new FormData();
+            fd.append('document', file.file);
+            fd.append('section', documentType);
 
             const response = await axios.post(
-                `${API_BASE_URL}/api/investment-declaration/declaration/${declarationId}/upload-document`,
-                formData,
+                `${API_BASE_URL}/api/investmentDeclaration/declaration/${declarationId}/upload-document`,
+                fd,
                 {
                     headers: {
                         'Content-Type': 'multipart/form-data',
@@ -398,32 +391,22 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                 }
             );
 
-            if (response.status === 200) {
-                toast({
-                    title: 'Success',
-                    description: `Document "${file.name}" uploaded to Google Drive successfully`,
-                    variant: 'success'
-                });
-                return true;
+            if (response.status === 200 || response.status === 201) {
+                return response.data.document || null;
             }
+
+            return null;
         } catch (error) {
             console.error(`Error uploading ${file.name}:`, error);
             const errorMsg = error.response?.data?.message || error.message || 'Failed to upload document';
 
-            if (errorMsg.includes('Google Drive')) {
-                toast({
-                    title: 'Google Drive Not Connected',
-                    description: 'Please connect your Google Drive account first',
-                    variant: 'destructive'
-                });
-            } else {
-                toast({
-                    title: 'Upload Error',
-                    description: errorMsg,
-                    variant: 'destructive'
-                });
-            }
-            return false;
+            toast({
+                title: 'Upload Error',
+                description: errorMsg,
+                variant: 'destructive'
+            });
+
+            return null;
         } finally {
             setUploadingDocs(prev => ({
                 ...prev,
@@ -432,87 +415,11 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
         }
     };
 
-    const connectGoogleDrive = async () => {
-        try {
-            const response = await axios.get(
-                `${API_BASE_URL}/api/google-drive/connect`,
-                {
-                    params: {
-                        returnUrl: '/investment-declaration'
-                    },
-                    withCredentials: true,
-                }
-            );
-
-            // Redirect user to Google's OAuth consent page
-            window.location.href = response.data.url;
-        } catch (err) {
-            console.error("Error connecting Google Drive:", err);
-            toast({
-                title: 'Connection Error',
-                description:
-                    err.response?.data?.message ||
-                    'Failed to connect to Google Drive. Please try again.',
-                variant: 'destructive'
-            });
-        }
-    };
-
-    const disconnectGoogleDrive = async () => {
-        try {
-            setLoading(true);
-            const response = await axios.post(
-                `${API_BASE_URL}/api/google-drive/disconnect`,
-                {},
-                {
-                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-                    withCredentials: true,
-                }
-            );
-
-            // Small delay to ensure DB is updated
-            await new Promise((resolve) => setTimeout(resolve, 500));
-
-            // Verify disconnection by checking status
-            const statusResp = await axios.get(
-                `${API_BASE_URL}/api/google-drive/status`,
-                {
-                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-                    withCredentials: true,
-                }
-            );
-
-            setDriveConnected(Boolean(statusResp.data?.connected));
-            toast({
-                title: 'Disconnected',
-                description: response.data?.message || 'Google Drive disconnected successfully.',
-                variant: 'default'
-            });
-            setLoading(false);
-        } catch (err) {
-            console.error("Disconnect error:", err);
-            setLoading(false);
-            toast({
-                title: 'Disconnection Error',
-                description:
-                    err.response?.data?.message || 'Failed to disconnect Google Drive. Please try again.',
-                variant: 'destructive'
-            });
-        }
-    };
-
-    const handleGoogleDriveToggle = () => {
-        if (driveConnected) {
-            disconnectGoogleDrive();
-        } else {
-            connectGoogleDrive();
-        }
-    };
 
     const handleSection80CAdd = () => {
         setFormData(prev => ({
             ...prev,
-            section80CDeductions: [...prev.section80CDeductions, { itemName: '', amount: '' }]
+            section80CDeductions: [...prev.section80CDeductions, { itemName: 'Life Insurance Premium (LIC)', amount: '' }]
         }));
     };
 
@@ -570,9 +477,9 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
     };
 
     const calculateSection80CTotal = () => {
-        const section80C = formData.section80CDeductions.reduce((sum, item) => sum + (parseInt(item.amount) || 0), 0);
-        const section80CCC = parseInt(formData.section80CCDeduction.amount) || 0;
-        const section80CCD1 = parseInt(formData.section80CCD1Deduction.amount) || 0;
+        const section80C = formData.section80CDeductions.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+        const section80CCC = parseFloat(formData.section80CCDeduction.amount) || 0;
+        const section80CCD1 = parseFloat(formData.section80CCD1Deduction.amount) || 0;
 
         const aggregateTotal = section80C + section80CCC + section80CCD1;
 
@@ -582,9 +489,25 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
         }));
     };
 
+    // Recalculate Section 80C total whenever its components change. This avoids timing issues
+    // caused by setTimeout-based recalculations and ensures the total stays accurate.
+    useEffect(() => {
+        const section80C = formData.section80CDeductions.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+        const section80CCC = parseFloat(formData.section80CCDeduction.amount) || 0;
+        const section80CCD1 = parseFloat(formData.section80CCD1Deduction.amount) || 0;
+
+        const aggregateTotal = section80C + section80CCC + section80CCD1;
+
+        setFormData(prev => ({
+            ...prev,
+            section80CTotal: Math.min(aggregateTotal, 150000)
+        }));
+    }, [formData.section80CDeductions, formData.section80CCDeduction.amount, formData.section80CCD1Deduction.amount]);
+
     const handleSaveDraft = async () => {
         setSubmitting(true);
         try {
+            console.log("EMPLOYEE ID for Save Draft:", formData.empId, employeeId);
             const selectedEmployeeId = formData.empId || employeeId;
 
             if (!selectedEmployeeId) {
@@ -599,7 +522,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
 
             const { empId, employeeCode, ...restFormData } = formData;
 
-            await createOrUpdateDeclaration({
+            await axiosInstance.post('/api/investmentDeclaration/declaration', {
                 employeeId: selectedEmployeeId,
                 ...restFormData,
                 status: 'Draft'
@@ -610,9 +533,10 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
             });
             if (onSuccess) onSuccess();
         } catch (error) {
+            const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to save declaration';
             toast({
                 title: 'Error',
-                description: error.message || 'Failed to save declaration',
+                description: errorMsg,
                 variant: 'destructive'
             });
         } finally {
@@ -641,19 +565,48 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
 
         setSubmitting(true);
         try {
-            const selectedEmployeeId = formData.employeeCode;
+            console.log("Form Data on Submit:", formData);
+            const selectedEmployeeId = formData.empId;
             // First save the data
-            const saveResponse = await createOrUpdateDeclaration({
+            console.log("Submitting Declaration for Employee ID:", selectedEmployeeId);
+            const saveResponse = await axiosInstance.post('/api/investmentDeclaration/declaration', {
                 employeeId: selectedEmployeeId,
                 ...formData,
                 status: 'Submitted'
             });
 
+            const declarationId = saveResponse.data.declaration._id;
+
             // Then submit
-            const submitResponse = await submitDeclaration(saveResponse.declaration._id, selectedEmployeeId);
+            const submitResponse = await axiosInstance.post('/api/investmentDeclaration/declaration/submit', {
+                declarationId,
+                employeeId: selectedEmployeeId
+            });
 
             // Update declaration state with new data
-            setDeclaration(submitResponse.declaration || saveResponse.declaration);
+            const newDeclaration = submitResponse.data.declaration || saveResponse.data.declaration;
+            setDeclaration(newDeclaration);
+
+            // After successful submit, upload all local documents for this declaration
+            // const declarationId = newDeclaration._id;
+            const sections = ['hraDocuments', 'ltaDocuments', 'section80CDocuments', 'section80CCDDocuments', 'section80DDocuments', 'housingLoanDocuments', 'declarationDocuments'];
+            const uploadedDocs = [];
+
+            for (const section of sections) {
+                const files = (formData[section] || []).filter(f => f && f.file);
+                for (const f of files) {
+                    const doc = await uploadDocumentToGoogleDrive(f, section, declarationId);
+                    if (doc) {
+                        uploadedDocs.push(doc);
+                        // Append locally so user sees immediately
+                        setDeclaration(prev => ({
+                            ...prev,
+                            documents: [...(prev.documents || []), doc]
+                        }));
+                    }
+                }
+            }
+
 
             toast({
                 title: 'Success',
@@ -662,9 +615,46 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
             });
             if (onSuccess) onSuccess();
         } catch (error) {
+            const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to submit declaration';
             toast({
                 title: 'Error',
-                description: error.message || 'Failed to submit declaration',
+                description: errorMsg,
+                variant: 'destructive'
+            });
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const [rejectionReason, setRejectionReason] = useState('');
+    const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+
+    const handleStatusUpdate = async (newStatus, reason = '') => {
+        if (!declaration?._id) return;
+
+        setSubmitting(true);
+        try {
+            const response = await axiosInstance.put('/api/investmentDeclaration/declaration/status', {
+                declarationId: declaration._id,
+                status: newStatus,
+                rejectionReason: reason
+            });
+
+            setDeclaration(response.data.declaration);
+            toast({
+                title: 'Success',
+                description: `Declaration ${newStatus.toLowerCase()} successfully`,
+                variant: 'success'
+            });
+
+            if (onSuccess) onSuccess();
+            setIsRejectDialogOpen(false);
+            setRejectionReason('');
+        } catch (error) {
+            console.error('Error updating status:', error);
+            toast({
+                title: 'Error',
+                description: error.response?.data?.message || error.message || 'Failed to update status',
                 variant: 'destructive'
             });
         } finally {
@@ -739,13 +729,13 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                 {declaration.status === 'Approved' && 'Your investment declaration has been approved by the admin.'}
                                 {declaration.status === 'Rejected' && 'Your declaration was rejected. Please review the remarks and resubmit.'}
                             </p>
-                            {declaration.approvalRemarks && (
+                            {declaration.rejectionReason && (
                                 <div className={`mt-3 p-3 rounded border-l-4 ${declaration.status === 'Rejected'
                                     ? 'bg-red-100 border-red-400 text-red-900'
                                     : 'bg-white bg-opacity-50 border-current'
                                     }`}>
-                                    <p className="text-xs font-semibold">Admin Remarks:</p>
-                                    <p className="text-sm mt-1">{declaration.approvalRemarks}</p>
+                                    <p className="text-xs font-semibold">Rejection Reason:</p>
+                                    <p className="text-sm mt-1">{declaration.rejectionReason}</p>
                                 </div>
                             )}
                             <div className="flex flex-wrap gap-4 text-xs mt-3">
@@ -765,59 +755,6 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                 </div>
             )}
 
-            {/* Google Drive Connection Section */}
-            <button
-                onClick={handleGoogleDriveToggle}
-                disabled={loading}
-                className={`w-full md:w-auto flex items-center justify-between px-5 py-4 rounded-xl border transition-all ${driveConnected
-                    ? 'bg-green-50 border-green-200 hover:border-green-400'
-                    : 'bg-red-50 border-red-200 hover:border-red-400'
-                    }`}
-            >
-                <div className="flex items-center gap-3">
-                    <div
-                        className={`h-10 w-10 rounded-lg flex items-center justify-center ${driveConnected ? 'bg-green-100' : 'bg-red-100'
-                            }`}
-                    >
-                        {driveConnected ? (
-                            <Cloud className="w-5 h-5 text-green-600" />
-                        ) : (
-                            <CloudOff className="w-5 h-5 text-red-600" />
-                        )}
-                    </div>
-
-                    <div className="text-left">
-                        <div
-                            className={`text-sm font-semibold ${driveConnected ? 'text-green-900' : 'text-red-900'
-                                }`}
-                        >
-                            Google Drive
-                        </div>
-                        <div
-                            className={`text-xs ${driveConnected ? 'text-green-700' : 'text-red-700'
-                                }`}
-                        >
-                            {driveConnected ? 'Connected' : 'Not Connected'}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="ml-auto">
-                    {loading ? (
-                        <Loader2 className="w-5 h-5 animate-spin text-gray-600" />
-                    ) : (
-                        <div
-                            className={`relative w-12 h-6 rounded-full transition-all ${driveConnected ? 'bg-green-500' : 'bg-gray-300'
-                                }`}
-                        >
-                            <div
-                                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${driveConnected ? 'translate-x-6' : 'translate-x-0.5'
-                                    }`}
-                            />
-                        </div>
-                    )}
-                </div>
-            </button>
 
             {/* Form Tabs */}
             <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
@@ -844,7 +781,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                             Select Financial Year
                                         </label>
                                         <div className='relative'>
-                                            <Select
+                                            <Select disabled={isReadOnly}
                                                 value={formData.financialYear}
                                                 onValueChange={(value) =>
                                                     handleInputChange("financialYear", value)
@@ -866,52 +803,65 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                     </div>
                                 </div>
 
-                                <div>
-                                    {/* Employee Selection */}
-                                    <label className="block text-sm text-card-foreground font-semibold mb-2">
-                                        Select Employee
-                                    </label>
-                                    <div className='relative'>
-                                        <Select
-                                            value={formData.employeeName || ""}
-                                            onValueChange={handleEmployeeSelect}
-                                        >
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue
-                                                    placeholder={
-                                                        employeesLoading
-                                                            ? "Loading employees..."
-                                                            : "Select an employee"
-                                                    }
-                                                />
-                                            </SelectTrigger>
+                                {(user && (user.role === 'accountant' || user.role === 'superAdmin')) ? (
+                                    <div>
+                                        {/* Employee Selection (accountant / superAdmin only) */}
+                                        <label className="block text-sm text-card-foreground font-semibold mb-2">
+                                            Select Employee
+                                        </label>
+                                        <div className='relative'>
+                                            <Select disabled={isReadOnly}
+                                                value={formData.employeeName || ""}
+                                                onValueChange={handleEmployeeSelect}
+                                            >
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue
+                                                        placeholder={
+                                                            employeesLoading
+                                                                ? "Loading employees..."
+                                                                : "Select an employee"
+                                                        }
+                                                    />
+                                                </SelectTrigger>
 
-                                            <SelectContent>
-                                                {employees.map((emp) => (
-                                                    <SelectItem key={emp.empId} value={emp.name}>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                                                <User className="w-4 h-4 text-primary" />
+                                                <SelectContent>
+                                                    {employees.map((emp) => (
+                                                        <SelectItem key={emp.empId} value={emp.name}>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                                                    <User className="w-4 h-4 text-primary" />
+                                                                </div>
+                                                                <div>
+                                                                    <p className="font-medium">{emp.name}</p>
+                                                                    <p className="text-xs text-muted-foreground">
+                                                                        {emp.empId} • {emp.department}
+                                                                    </p>
+                                                                </div>
                                                             </div>
-                                                            <div>
-                                                                <p className="font-medium">{emp.name}</p>
-                                                                <p className="text-xs text-muted-foreground">
-                                                                    {emp.empId} • {emp.department}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
+                                        </div>
+
+
+                                        <p className="text-xs text-muted-foreground mt-2">
+                                            Select an employee to auto-populate the details below.
+                                        </p>
                                     </div>
-
-
-                                    <p className="text-xs text-muted-foreground mt-2">
-                                        Select an employee to auto-populate the details below.
-                                    </p>
-                                </div>
+                                ) : (
+                                    <div>
+                                        <label className="block text-sm text-card-foreground font-semibold mb-2">Employee</label>
+                                        <div className="p-2 rounded-md border bg-white">
+                                            <p className="font-medium">
+                                                {selfEmployee?.name || user?.userName}
+                                                <span className="text-xs text-muted-foreground"> • {selfEmployee?.department || user?.department}</span>
+                                            </p>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-1 pl-1">You are filling this form for yourself. Details have been auto-populated.</p>
+                                    </div>
+                                )}
                             </div>
 
 
@@ -919,7 +869,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                             <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
                                 <label className="block text-sm text-card-foreground font-semibold mb-2">Select Tax Scheme for FY {formData.financialYear}</label>
                                 <div className="relative">
-                                    <Select value={formData.taxScheme} onValueChange={(value) => handleInputChange('taxScheme', value)}>
+                                    <Select disabled={isReadOnly} value={formData.taxScheme} onValueChange={(value) => handleInputChange('taxScheme', value)}>
                                         <SelectTrigger className="w-full">
                                             <SelectValue />
                                         </SelectTrigger>
@@ -940,16 +890,16 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-semibold">Employee ID</label>
-                                    <Input
+                                    <Input disabled={isReadOnly}
                                         value={formData.empId}
-                                        disabled
+                                        // disabled
                                         placeholder="Employee ID (Auto-filled)"
                                         className="mt-2"
                                     />
                                 </div>
                                 <div>
                                     <label className="text-sm font-semibold">Employee Name</label>
-                                    <Input
+                                    <Input disabled={isReadOnly}
                                         value={formData.employeeName}
                                         onChange={(e) => handleInputChange('employeeName', e.target.value)}
                                         placeholder="Full Name"
@@ -958,7 +908,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                 </div>
                                 <div>
                                     <label className="text-sm font-semibold">Designation</label>
-                                    <Input
+                                    <Input disabled={isReadOnly}
                                         value={formData.designation}
                                         onChange={(e) => handleInputChange('designation', e.target.value)}
                                         placeholder="Designation"
@@ -967,7 +917,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                 </div>
                                 <div>
                                     <label className="text-sm font-semibold">PAN</label>
-                                    <Input
+                                    <Input disabled={isReadOnly}
                                         value={formData.pan}
                                         onChange={(e) => handleInputChange('pan', e.target.value)}
                                         placeholder="PAN Number"
@@ -976,7 +926,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                 </div>
                                 <div>
                                     <label className="text-sm font-semibold">Date of Birth</label>
-                                    <Input
+                                    <Input disabled={isReadOnly}
                                         type="date"
                                         value={formData.dob}
                                         onChange={(e) => handleInputChange('dob', e.target.value)}
@@ -986,7 +936,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                 <div>
                                     <label className="text-sm font-semibold">Gender</label>
                                     <div className='relative'>
-                                        <Select value={formData.gender} onValueChange={(value) => handleInputChange('gender', value)}>
+                                        <Select disabled={isReadOnly} value={formData.gender} onValueChange={(value) => handleInputChange('gender', value)}>
                                             <SelectTrigger className="mt-2">
                                                 <SelectValue placeholder="Select Gender" />
                                             </SelectTrigger>
@@ -1016,7 +966,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="flex items-center space-x-2">
-                                    <Checkbox
+                                    <Checkbox disabled={isReadOnly}
                                         checked={formData.exemptions.houseRentAllowance.isApplicable}
                                         onCheckedChange={(checked) =>
                                             handleDeepNestedChange('exemptions', 'houseRentAllowance', 'isApplicable', checked)
@@ -1029,7 +979,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded">
                                         <div>
                                             <label className="text-sm font-semibold">Rent Paid (Rs.)</label>
-                                            <Input
+                                            <Input disabled={isReadOnly}
                                                 type="number"
                                                 value={formData.exemptions.houseRentAllowance.rentDetails.rentPaid}
                                                 onChange={(e) =>
@@ -1044,7 +994,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         </div>
                                         <div>
                                             <label className="text-sm font-semibold">Number of Months</label>
-                                            <Input
+                                            <Input disabled={isReadOnly}
                                                 type="number"
                                                 value={formData.exemptions.houseRentAllowance.rentDetails.months}
                                                 onChange={(e) =>
@@ -1059,7 +1009,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         </div>
                                         <div>
                                             <label className="text-sm font-semibold">Landlord PAN</label>
-                                            <Input
+                                            <Input disabled={isReadOnly}
                                                 value={formData.exemptions.houseRentAllowance.rentDetails.landlordPAN}
                                                 onChange={(e) =>
                                                     handleDeepNestedChange('exemptions', 'houseRentAllowance', 'rentDetails', {
@@ -1073,7 +1023,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         </div>
                                         <div></div>
                                         <div className="flex items-center space-x-2">
-                                            <Checkbox
+                                            <Checkbox disabled={isReadOnly}
                                                 checked={formData.exemptions.houseRentAllowance.rentDetails.hasRentReceipt}
                                                 onCheckedChange={(checked) =>
                                                     handleDeepNestedChange('exemptions', 'houseRentAllowance', 'rentDetails', {
@@ -1088,19 +1038,21 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         {formData.exemptions.houseRentAllowance.rentDetails.hasRentReceipt && (
                                             <div className="border-t pt-4 mt-4">
                                                 <label className="block text-sm font-semibold mb-3">Upload HRA Receipts & Agreements</label>
-                                                <div className="flex items-center gap-3 mb-3">
-                                                    <label className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/50 rounded-md cursor-pointer hover:bg-primary/20 transition">
-                                                        <Upload className="w-4 h-4" />
-                                                        <span className="text-sm">Choose Files</span>
-                                                        <input
-                                                            type="file"
-                                                            multiple
-                                                            onChange={(e) => handleDocumentUpload('hraDocuments', e.target.files)}
-                                                            className="hidden"
-                                                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                                        />
-                                                    </label>
-                                                </div>
+                                                {!isReadOnly && (
+                                                    <div className="flex items-center gap-3 mb-3">
+                                                        <label className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/50 rounded-md cursor-pointer hover:bg-primary/20 transition">
+                                                            <Upload className="w-4 h-4" />
+                                                            <span className="text-sm">Choose Files</span>
+                                                            <input
+                                                                type="file"
+                                                                multiple
+                                                                onChange={(e) => handleDocumentUpload('hraDocuments', e.target.files)}
+                                                                className="hidden"
+                                                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                                            />
+                                                        </label>
+                                                    </div>
+                                                )}
                                                 {formData.hraDocuments.length > 0 && (
                                                     <div className="space-y-2">
                                                         {formData.hraDocuments.map((doc, index) => (
@@ -1126,45 +1078,55 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                                                     </div>
                                                                 </div>
                                                                 <div className="flex gap-1">
-                                                                    {driveConnected && declaration?._id && !doc.driveUrl && (
+                                                                    {doc._id ? (
+                                                                        <>
+                                                                            <Button
+                                                                                type="button"
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                onClick={() => window.open(`${API_BASE_URL}/api/investmentDeclaration/document/preview/${doc._id}`, "_blank")}
+                                                                                className="h-8 w-8 text-primary hover:bg-primary/10"
+                                                                                title="Preview"
+                                                                            >
+                                                                                <Eye className="w-4 h-4" />
+                                                                            </Button>
+                                                                            <Button
+                                                                                type="button"
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                onClick={() => window.open(`${API_BASE_URL}/api/investmentDeclaration/document/download/${doc._id}`, "_blank")}
+                                                                                className="h-8 w-8 text-slate-500 hover:bg-slate-100"
+                                                                                title="Download"
+                                                                            >
+                                                                                <Download className="w-4 h-4" />
+                                                                            </Button>
+                                                                        </>
+                                                                    ) : (
+                                                                        declaration?._id && (
+                                                                            <div className="h-8 w-8 flex items-center justify-center text-amber-700" title="Pending upload after submit">
+                                                                                <Clock className="w-4 h-4" />
+                                                                            </div>
+                                                                        )
+                                                                    )}
+                                                                    {!isReadOnly && (
                                                                         <Button
                                                                             type="button"
                                                                             variant="ghost"
                                                                             size="icon"
-                                                                            onClick={() => uploadDocumentToGoogleDrive(doc, 'hraDocuments', declaration._id)}
-                                                                            disabled={uploadingDocs.hraDocuments}
-                                                                            title="Upload to Google Drive"
-                                                                            className="h-8 w-8 text-blue-600 hover:bg-blue-50"
+                                                                            onClick={() => removeDocument('hraDocuments', index)}
+                                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                                                         >
-                                                                            {uploadingDocs.hraDocuments ? (
-                                                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                                                            ) : (
-                                                                                <Cloud className="w-4 h-4" />
-                                                                            )}
+                                                                            <X className="w-4 h-4" />
                                                                         </Button>
                                                                     )}
-                                                                    {doc.driveUrl && (
-                                                                        <div className="h-8 w-8 flex items-center justify-center text-green-600" title="Uploaded to Google Drive">
-                                                                            <CheckCircle className="w-4 h-4" />
-                                                                        </div>
-                                                                    )}
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        onClick={() => removeDocument('hraDocuments', index)}
-                                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                                                    >
-                                                                        <X className="w-4 h-4" />
-                                                                    </Button>
                                                                 </div>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 )}
-                                                {!driveConnected && (
+                                                {/* {!driveConnected && (
                                                     <p className="text-xs text-amber-600 mt-2">💡 Tip: Connect your Google Drive to upload documents automatically</p>
-                                                )}
+                                                )} */}
                                             </div>
                                         )}
                                     </div>
@@ -1179,7 +1141,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="flex items-center space-x-2">
-                                    <Checkbox
+                                    <Checkbox disabled={isReadOnly}
                                         checked={formData.exemptions.lta.isApplicable}
                                         onCheckedChange={(checked) =>
                                             handleDeepNestedChange('exemptions', 'lta', 'isApplicable', checked)
@@ -1192,7 +1154,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                     <div className="space-y-4 bg-gray-50 p-4 rounded">
                                         <div>
                                             <label className="text-sm font-semibold">Proposed Travel Details</label>
-                                            <Textarea
+                                            <Textarea disabled={isReadOnly}
                                                 value={formData.exemptions.lta.proposedTravel}
                                                 onChange={(e) =>
                                                     handleDeepNestedChange('exemptions', 'lta', 'proposedTravel', e.target.value)
@@ -1206,7 +1168,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
                                                 <label className="text-sm font-semibold">Claims during 2023</label>
-                                                <Input
+                                                <Input disabled={isReadOnly}
                                                     value={formData.exemptions.lta.claimsDetails.claims2023}
                                                     onChange={(e) =>
                                                         setFormData(prev => ({
@@ -1229,7 +1191,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                             </div>
                                             <div>
                                                 <label className="text-sm font-semibold">Claims during 2024</label>
-                                                <Input
+                                                <Input disabled={isReadOnly}
                                                     value={formData.exemptions.lta.claimsDetails.claims2024}
                                                     onChange={(e) =>
                                                         setFormData(prev => ({
@@ -1253,7 +1215,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         </div>
 
                                         <div className="flex items-center space-x-2">
-                                            <Checkbox
+                                            <Checkbox disabled={isReadOnly}
                                                 checked={formData.exemptions.lta.claimsDetails.willingToProduceBills === 'Yes'}
                                                 onCheckedChange={(checked) =>
                                                     setFormData(prev => ({
@@ -1277,19 +1239,21 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         {formData.exemptions.lta.claimsDetails.willingToProduceBills === 'Yes' && (
                                             <div className="border-t pt-4 mt-4">
                                                 <label className="block text-sm font-semibold mb-3">Upload LTA Bills & Documents</label>
-                                                <div className="flex items-center gap-3 mb-3">
-                                                    <label className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/50 rounded-md cursor-pointer hover:bg-primary/20 transition">
-                                                        <Upload className="w-4 h-4" />
-                                                        <span className="text-sm">Choose Files</span>
-                                                        <input
-                                                            type="file"
-                                                            multiple
-                                                            onChange={(e) => handleDocumentUpload('ltaDocuments', e.target.files)}
-                                                            className="hidden"
-                                                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                                        />
-                                                    </label>
-                                                </div>
+                                                {!isReadOnly && (
+                                                    <div className="flex items-center gap-3 mb-3">
+                                                        <label className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/50 rounded-md cursor-pointer hover:bg-primary/20 transition">
+                                                            <Upload className="w-4 h-4" />
+                                                            <span className="text-sm">Choose Files</span>
+                                                            <input
+                                                                type="file"
+                                                                multiple
+                                                                onChange={(e) => handleDocumentUpload('ltaDocuments', e.target.files)}
+                                                                className="hidden"
+                                                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                                            />
+                                                        </label>
+                                                    </div>
+                                                )}
                                                 {formData.ltaDocuments.length > 0 && (
                                                     <div className="space-y-2">
                                                         {formData.ltaDocuments.map((doc, index) => (
@@ -1315,45 +1279,55 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                                                     </div>
                                                                 </div>
                                                                 <div className="flex gap-1">
-                                                                    {driveConnected && declaration?._id && !doc.driveUrl && (
+                                                                    {doc._id ? (
+                                                                        <>
+                                                                            <Button
+                                                                                type="button"
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                onClick={() => window.open(`${API_BASE_URL}/api/investmentDeclaration/document/preview/${doc._id}`, "_blank")}
+                                                                                className="h-8 w-8 text-primary hover:bg-primary/10"
+                                                                                title="Preview"
+                                                                            >
+                                                                                <Eye className="w-4 h-4" />
+                                                                            </Button>
+                                                                            <Button
+                                                                                type="button"
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                onClick={() => window.open(`${API_BASE_URL}/api/investmentDeclaration/document/download/${doc._id}`, "_blank")}
+                                                                                className="h-8 w-8 text-slate-500 hover:bg-slate-100"
+                                                                                title="Download"
+                                                                            >
+                                                                                <Download className="w-4 h-4" />
+                                                                            </Button>
+                                                                        </>
+                                                                    ) : (
+                                                                        declaration?._id && (
+                                                                            <div className="h-8 w-8 flex items-center justify-center text-amber-700" title="Pending upload after submit">
+                                                                                <Clock className="w-4 h-4" />
+                                                                            </div>
+                                                                        )
+                                                                    )}
+                                                                    {!isReadOnly && (
                                                                         <Button
                                                                             type="button"
                                                                             variant="ghost"
                                                                             size="icon"
-                                                                            onClick={() => uploadDocumentToGoogleDrive(doc, 'ltaDocuments', declaration._id)}
-                                                                            disabled={uploadingDocs.ltaDocuments}
-                                                                            title="Upload to Google Drive"
-                                                                            className="h-8 w-8 text-blue-600 hover:bg-blue-50"
+                                                                            onClick={() => removeDocument('ltaDocuments', index)}
+                                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                                                         >
-                                                                            {uploadingDocs.ltaDocuments ? (
-                                                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                                                            ) : (
-                                                                                <Cloud className="w-4 h-4" />
-                                                                            )}
+                                                                            <X className="w-4 h-4" />
                                                                         </Button>
                                                                     )}
-                                                                    {doc.driveUrl && (
-                                                                        <div className="h-8 w-8 flex items-center justify-center text-green-600" title="Uploaded to Google Drive">
-                                                                            <CheckCircle className="w-4 h-4" />
-                                                                        </div>
-                                                                    )}
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        onClick={() => removeDocument('ltaDocuments', index)}
-                                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                                                    >
-                                                                        <X className="w-4 h-4" />
-                                                                    </Button>
                                                                 </div>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 )}
-                                                {!driveConnected && (
+                                                {/* {!driveConnected && (
                                                     <p className="text-xs text-amber-600 mt-2">💡 Tip: Connect your Google Drive to upload documents automatically</p>
-                                                )}
+                                                )} */}
                                             </div>
                                         )}
                                     </div>
@@ -1379,7 +1353,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
                                                     <div>
                                                         <label className="text-sm font-semibold">Property Type</label>
-                                                        <Select
+                                                        <Select disabled={isReadOnly}
                                                             value={loan.type}
                                                             onValueChange={(value) => handleHousingLoanUpdate(index, 'type', value)}
                                                         >
@@ -1395,7 +1369,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                                     </div>
                                                     <div>
                                                         <label className="text-sm font-semibold">Interest Amount (Rs.)</label>
-                                                        <Input
+                                                        <Input disabled={isReadOnly}
                                                             type="number"
                                                             placeholder="Enter interest amount"
                                                             value={loan.amount}
@@ -1406,7 +1380,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                                     {loan.type === 'Let-out Property' && (
                                                         <div>
                                                             <label className="text-sm font-semibold">Net Rental Income (Rs.)</label>
-                                                            <Input
+                                                            <Input disabled={isReadOnly}
                                                                 type="number"
                                                                 placeholder="Enter rental income"
                                                                 value={loan.rentalIncome}
@@ -1422,55 +1396,63 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    onClick={() => handleHousingLoanRemove(index)}
-                                                    className="ml-4"
-                                                >
-                                                    Remove
-                                                </Button>
+                                                {!isReadOnly && (
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        onClick={() => handleHousingLoanRemove(index)}
+                                                        className="ml-4"
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                )}
                                             </div>
 
                                             <div className="border-t pt-3">
                                                 <label className="text-xs font-semibold uppercase text-muted-foreground mb-2 block">Upload Banker's Certificate</label>
-                                                <Input
-                                                    type="file"
-                                                    onChange={(e) => {
-                                                        // Handle certificate upload specifically for this loan item if needed
-                                                        // For now, we use the general document upload if collective
-                                                    }}
-                                                    className="text-xs"
-                                                />
+                                                {!isReadOnly && (
+                                                    <Input disabled={isReadOnly}
+                                                        type="file"
+                                                        onChange={(e) => {
+                                                            // Handle certificate upload specifically for this loan item if needed
+                                                            // For now, we use the general document upload if collective
+                                                        }}
+                                                        className="text-xs"
+                                                    />
+                                                )}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
 
-                                <Button
-                                    variant="outline"
-                                    onClick={handleHousingLoanAdd}
-                                    className="w-full"
-                                >
-                                    + Add Housing Loan Deduction
-                                </Button>
+                                {!isReadOnly && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleHousingLoanAdd}
+                                        className="w-full"
+                                    >
+                                        + Add Housing Loan Deduction
+                                    </Button>
+                                )}
 
                                 {/* Housing Loan Documents */}
                                 <div className="border-t pt-4 mt-4">
                                     <label className="block text-sm font-semibold mb-3">Upload Housing Loan Banker's Certificates</label>
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <label className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/50 rounded-md cursor-pointer hover:bg-primary/20 transition">
-                                            <Upload className="w-4 h-4" />
-                                            <span className="text-sm">Choose Files</span>
-                                            <input
-                                                type="file"
-                                                multiple
-                                                onChange={(e) => handleDocumentUpload('housingLoanDocuments', e.target.files)}
-                                                className="hidden"
-                                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                            />
-                                        </label>
-                                    </div>
+                                    {!isReadOnly && (
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <label className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/50 rounded-md cursor-pointer hover:bg-primary/20 transition">
+                                                <Upload className="w-4 h-4" />
+                                                <span className="text-sm">Choose Files</span>
+                                                <input
+                                                    type="file"
+                                                    multiple
+                                                    onChange={(e) => handleDocumentUpload('housingLoanDocuments', e.target.files)}
+                                                    className="hidden"
+                                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                                />
+                                            </label>
+                                        </div>
+                                    )}
                                     {formData.housingLoanDocuments?.length > 0 && (
                                         <div className="space-y-2">
                                             {formData.housingLoanDocuments.map((doc, index) => (
@@ -1489,37 +1471,47 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                                         </div>
                                                     </div>
                                                     <div className="flex gap-1">
-                                                        {driveConnected && declaration?._id && !doc.driveUrl && (
+                                                        {doc._id ? (
+                                                            <>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => window.open(`${API_BASE_URL}/api/investmentDeclaration/document/preview/${doc._id}`, "_blank")}
+                                                                    className="h-8 w-8 text-primary hover:bg-primary/10"
+                                                                    title="Preview"
+                                                                >
+                                                                    <Eye className="w-4 h-4" />
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => window.open(`${API_BASE_URL}/api/investmentDeclaration/document/download/${doc._id}`, "_blank")}
+                                                                    className="h-8 w-8 text-slate-500 hover:bg-slate-100"
+                                                                    title="Download"
+                                                                >
+                                                                    <Download className="w-4 h-4" />
+                                                                </Button>
+                                                            </>
+                                                        ) : (
+                                                            declaration?._id && (
+                                                                <div className="h-8 w-8 flex items-center justify-center text-amber-700" title="Pending upload after submit">
+                                                                    <Clock className="w-4 h-4" />
+                                                                </div>
+                                                            )
+                                                        )}
+                                                        {!isReadOnly && (
                                                             <Button
                                                                 type="button"
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                onClick={() => uploadDocumentToGoogleDrive(doc, 'housingLoanDocuments', declaration._id)}
-                                                                disabled={uploadingDocs.housingLoanDocuments}
-                                                                title="Upload to Google Drive"
-                                                                className="h-8 w-8 text-blue-600 hover:bg-blue-50"
+                                                                onClick={() => removeDocument('housingLoanDocuments', index)}
+                                                                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                                             >
-                                                                {uploadingDocs.housingLoanDocuments ? (
-                                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                                ) : (
-                                                                    <Cloud className="w-4 h-4" />
-                                                                )}
+                                                                <X className="w-4 h-4" />
                                                             </Button>
                                                         )}
-                                                        {doc.driveUrl && (
-                                                            <div className="h-8 w-8 flex items-center justify-center text-green-600" title="Uploaded to Google Drive">
-                                                                <CheckCircle className="w-4 h-4" />
-                                                            </div>
-                                                        )}
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => removeDocument('housingLoanDocuments', index)}
-                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </Button>
                                                     </div>
                                                 </div>
                                             ))}
@@ -1538,52 +1530,71 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                 <div className="space-y-3">
                                     {formData.section80CDeductions.map((deduction, index) => (
                                         <div key={index} className="flex gap-2 bg-gray-50 p-3 rounded">
-                                            <Input
-                                                placeholder="Item Name (e.g., LIC, PPF, NSC, ELSS)"
-                                                value={deduction.itemName}
-                                                onChange={(e) => handleSection80CUpdate(index, 'itemName', e.target.value)}
-                                                className="flex-1"
-                                            />
-                                            <Input
+                                            <div className='relative w-full'>
+                                                <Select disabled={isReadOnly} value={deduction.itemName} onValueChange={(value) => handleSection80CUpdate(index, 'itemName', value)} className="flex-1">
+                                                    <SelectTrigger className="w-full">
+                                                        <SelectValue placeholder="Select deduction item" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Life Insurance Premium (LIC)">Life Insurance Premium (LIC)</SelectItem>
+                                                        <SelectItem value="Provident Fund (PF)">Provident Fund (PF)</SelectItem>
+                                                        <SelectItem value="Public Provident Fund (PPF)">Public Provident Fund (PPF)</SelectItem>
+                                                        <SelectItem value="Voluntary Provident Fund (VPF)">Voluntary Provident Fund (VPF)</SelectItem>
+                                                        <SelectItem value="National Savings Certificate (NSC)">National Savings Certificate (NSC)</SelectItem>
+                                                        <SelectItem value="ULIP - Unit Linked Insurance Policy">ULIP - Unit Linked Insurance Policy</SelectItem>
+                                                        <SelectItem value="ELSS - Equity Linked Savings Scheme">ELSS - Equity Linked Savings Scheme</SelectItem>
+                                                        <SelectItem value="Tuition Fees for Children (Max 2)">Tuition Fees for Children (Max 2)</SelectItem>
+                                                        <SelectItem value="Principal Repayment of Housing Loan">Principal Repayment of Housing Loan</SelectItem>
+                                                        <SelectItem value="Stamp Duty & Registration (1st year only)">Stamp Duty & Registration (1st year only)</SelectItem>
+                                                        <SelectItem value="Infrastructure Bonds">Infrastructure Bonds</SelectItem>
+                                                        <SelectItem value="Bank FD (5+ years)">Bank FD (5+ years)</SelectItem>
+                                                        <SelectItem value="Post Office TD (5+ years)">Post Office TD (5+ years)</SelectItem>
+                                                        <SelectItem value="Senior Citizen Savings Scheme">Senior Citizen Savings Scheme</SelectItem>
+                                                        <SelectItem value="Sukanya Samriddhi Account">Sukanya Samriddhi Account</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
+                                            </div>
+                                            <Input disabled={isReadOnly}
                                                 type="number"
                                                 placeholder="Amount"
                                                 value={deduction.amount}
                                                 onChange={(e) => {
                                                     handleSection80CUpdate(index, 'amount', e.target.value);
-                                                    setTimeout(calculateSection80CTotal, 100);
                                                 }}
                                                 className="w-32"
                                             />
-                                            <Button
-                                                variant="destructive"
-                                                size="sm"
-                                                onClick={() => {
-                                                    handleSection80CRemove(index);
-                                                    setTimeout(calculateSection80CTotal, 100);
-                                                }}
-                                            >
-                                                Remove
-                                            </Button>
+                                            {!isReadOnly && (
+                                                <Button
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        handleSection80CRemove(index);
+                                                    }}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
 
-                                <Button
-                                    variant="outline"
-                                    onClick={handleSection80CAdd}
-                                    className="w-full"
-                                >
-                                    + Add Deduction Item
-                                </Button>
+                                {!isReadOnly && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleSection80CAdd}
+                                        className="w-full"
+                                    >
+                                        + Add Deduction Item
+                                    </Button>
+                                )}
 
                                 <div className="bg-primary/10 p-3 rounded border border-primary/50 text-muted-foreground">
                                     <div className="flex justify-between items-center">
                                         <span className="font-semibold">Total Amount (Max 150,000):</span>
-                                        <span className="text-lg font-bold text-primary">Rs. {formData.section80CTotal || "0.00"}</span>
+                                        <span className="text-lg font-bold text-primary">Rs. {(formData.section80CTotal ? Number(formData.section80CTotal).toFixed(2) : "0.00")}</span>
                                     </div>
-                                </div>
-
-                                <div className="text-xs text-gray-600 space-y-1">
+                                    {/* <div className="text-xs text-gray-600 space-y-1">
                                     <p><strong>Eligible Items:</strong></p>
                                     <ul className="list-disc pl-5">
                                         <li>Life Insurance Premium (LIC)</li>
@@ -1602,8 +1613,9 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         <li>Senior Citizen Savings Scheme</li>
                                         <li>Sukanya Samriddhi Account</li>
                                     </ul>
+                                </div> */}
                                 </div>
-                                
+
                                 {/*
                                     <div className="flex items-center justify-between mb-3">
                                         <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -1630,17 +1642,19 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                             <Paperclip className="w-4 h-4 text-primary" />
                                             Upload Section 80C Documents
                                         </h4>
-                                        <label className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg cursor-pointer transition-colors border border-primary/20 group">
-                                            <Upload className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                                            <span className="text-xs font-medium">Upload Documents</span>
-                                            <input
-                                                type="file"
-                                                multiple
-                                                onChange={(e) => handleDocumentUpload('section80CDocuments', e.target.files)}
-                                                className="hidden"
-                                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                            />
-                                        </label>
+                                        {!isReadOnly && (
+                                            <label className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg cursor-pointer transition-colors border border-primary/20 group">
+                                                <Upload className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                                                <span className="text-xs font-medium">Upload Documents</span>
+                                                <input
+                                                    type="file"
+                                                    multiple
+                                                    onChange={(e) => handleDocumentUpload('section80CDocuments', e.target.files)}
+                                                    className="hidden"
+                                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                                />
+                                            </label>
+                                        )}
                                     </div>
                                     {formData.section80CDocuments?.length > 0 && (
                                         <div className="space-y-2">
@@ -1660,37 +1674,47 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                                         </div>
                                                     </div>
                                                     <div className="flex gap-1">
-                                                        {driveConnected && declaration?._id && !doc.driveUrl && (
+                                                        {doc._id ? (
+                                                            <>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => window.open(`${API_BASE_URL}/api/investmentDeclaration/document/preview/${doc._id}`, "_blank")}
+                                                                    className="h-8 w-8 text-primary hover:bg-primary/10"
+                                                                    title="Preview"
+                                                                >
+                                                                    <Eye className="w-4 h-4" />
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => window.open(`${API_BASE_URL}/api/investmentDeclaration/document/download/${doc._id}`, "_blank")}
+                                                                    className="h-8 w-8 text-slate-500 hover:bg-slate-100"
+                                                                    title="Download"
+                                                                >
+                                                                    <Download className="w-4 h-4" />
+                                                                </Button>
+                                                            </>
+                                                        ) : (
+                                                            declaration?._id && (
+                                                                <div className="h-8 w-8 flex items-center justify-center text-amber-700" title="Pending upload after submit">
+                                                                    <Clock className="w-4 h-4" />
+                                                                </div>
+                                                            )
+                                                        )}
+                                                        {!isReadOnly && (
                                                             <Button
                                                                 type="button"
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                onClick={() => uploadDocumentToGoogleDrive(doc, 'section80CDocuments', declaration._id)}
-                                                                disabled={uploadingDocs.section80CDocuments}
-                                                                title="Upload to Google Drive"
-                                                                className="h-8 w-8 text-blue-600 hover:bg-blue-50"
+                                                                onClick={() => removeDocument('section80CDocuments', index)}
+                                                                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                                             >
-                                                                {uploadingDocs.section80CDocuments ? (
-                                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                                ) : (
-                                                                    <Cloud className="w-4 h-4" />
-                                                                )}
+                                                                <X className="w-4 h-4" />
                                                             </Button>
                                                         )}
-                                                        {doc.driveUrl && (
-                                                            <div className="h-8 w-8 flex items-center justify-center text-green-600" title="Uploaded to Google Drive">
-                                                                <CheckCircle className="w-4 h-4" />
-                                                            </div>
-                                                        )}
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => removeDocument('section80CDocuments', index)}
-                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </Button>
                                                     </div>
                                                 </div>
                                             ))}
@@ -1709,7 +1733,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                 {/* Section 80CCC */}
                                 <div className="space-y-3">
                                     <div className="flex items-center space-x-2">
-                                        <Checkbox
+                                        <Checkbox disabled={isReadOnly}
                                             checked={formData.section80CCDeduction.isApplicable}
                                             onCheckedChange={(checked) =>
                                                 setFormData(prev => ({
@@ -1721,7 +1745,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         <label className="text-sm font-medium">u/s 80CCC - Contribution to Pension Funds (Max 1.5L, shared with 80C)</label>
                                     </div>
                                     {formData.section80CCDeduction.isApplicable && (
-                                        <Input
+                                        <Input disabled={isReadOnly}
                                             type="number"
                                             placeholder="Enter amount"
                                             value={formData.section80CCDeduction.amount}
@@ -1730,7 +1754,6 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                                     ...prev,
                                                     section80CCDeduction: { ...prev.section80CCDeduction, amount: e.target.value }
                                                 }));
-                                                setTimeout(calculateSection80CTotal, 100);
                                             }}
                                             className="ml-6"
                                         />
@@ -1740,7 +1763,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                 {/* Section 80CCD(1) */}
                                 <div className="space-y-3">
                                     <div className="flex items-center space-x-2">
-                                        <Checkbox
+                                        <Checkbox disabled={isReadOnly}
                                             checked={formData.section80CCD1Deduction.isApplicable}
                                             onCheckedChange={(checked) =>
                                                 setFormData(prev => ({
@@ -1752,7 +1775,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         <label className="text-sm font-medium">u/s 80CCD(1) - Pension Scheme of Central Govt (Max 1.5L, shared with 80C)</label>
                                     </div>
                                     {formData.section80CCD1Deduction.isApplicable && (
-                                        <Input
+                                        <Input disabled={isReadOnly}
                                             type="number"
                                             placeholder="Enter amount"
                                             value={formData.section80CCD1Deduction.amount}
@@ -1761,7 +1784,6 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                                     ...prev,
                                                     section80CCD1Deduction: { ...prev.section80CCD1Deduction, amount: e.target.value }
                                                 }));
-                                                setTimeout(calculateSection80CTotal, 100);
                                             }}
                                             className="ml-6"
                                         />
@@ -1771,7 +1793,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                 {/* Section 80CCD(1B) */}
                                 <div className="space-y-3">
                                     <div className="flex items-center space-x-2">
-                                        <Checkbox
+                                        <Checkbox disabled={isReadOnly}
                                             checked={formData.section80CCD1BDeduction.isApplicable}
                                             onCheckedChange={(checked) =>
                                                 setFormData(prev => ({
@@ -1783,7 +1805,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         <label className="text-sm font-medium">u/s 80CCD(1B) - Additional NPS Contribution (Max Rs. 50,000/-)</label>
                                     </div>
                                     {formData.section80CCD1BDeduction.isApplicable && (
-                                        <Input
+                                        <Input disabled={isReadOnly}
                                             type="number"
                                             placeholder="Enter amount"
                                             value={formData.section80CCD1BDeduction.amount}
@@ -1797,7 +1819,6 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         />
                                     )}
                                 </div>
-                                
                                 {/* Pension/NPS Documents */}
                                 <div className="border-t pt-4 mt-4">
                                     <div className="flex items-center justify-between mb-3">
@@ -1805,17 +1826,19 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                             <Paperclip className="w-4 h-4 text-primary" />
                                             Upload Pension/NPS Proofs
                                         </h4>
-                                        <label className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg cursor-pointer transition-colors border border-primary/20 group">
-                                            <Upload className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                                            <span className="text-xs font-medium">Upload Proofs</span>
-                                            <input
-                                                type="file"
-                                                multiple
-                                                onChange={(e) => handleDocumentUpload('section80CCDDocuments', e.target.files)}
-                                                className="hidden"
-                                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                            />
-                                        </label>
+                                        {!isReadOnly && (
+                                            <label className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg cursor-pointer transition-colors border border-primary/20 group">
+                                                <Upload className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                                                <span className="text-xs font-medium">Upload Proofs</span>
+                                                <input
+                                                    type="file"
+                                                    multiple
+                                                    onChange={(e) => handleDocumentUpload('section80CCDDocuments', e.target.files)}
+                                                    className="hidden"
+                                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                                />
+                                            </label>
+                                        )}
                                     </div>
 
                                     {formData.section80CCDDocuments?.length > 0 && (
@@ -1836,37 +1859,47 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                                         </div>
                                                     </div>
                                                     <div className="flex gap-1">
-                                                        {driveConnected && declaration?._id && !doc.driveUrl && (
+                                                        {doc._id ? (
+                                                            <>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => window.open(`${API_BASE_URL}/api/investmentDeclaration/document/preview/${doc._id}`, "_blank")}
+                                                                    className="h-8 w-8 text-primary hover:bg-primary/10"
+                                                                    title="Preview"
+                                                                >
+                                                                    <Eye className="w-4 h-4" />
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => window.open(`${API_BASE_URL}/api/investmentDeclaration/document/download/${doc._id}`, "_blank")}
+                                                                    className="h-8 w-8 text-slate-500 hover:bg-slate-100"
+                                                                    title="Download"
+                                                                >
+                                                                    <Download className="w-4 h-4" />
+                                                                </Button>
+                                                            </>
+                                                        ) : (
+                                                            declaration?._id && (
+                                                                <div className="h-8 w-8 flex items-center justify-center text-amber-700" title="Pending upload after submit">
+                                                                    <Clock className="w-4 h-4" />
+                                                                </div>
+                                                            )
+                                                        )}
+                                                        {!isReadOnly && (
                                                             <Button
                                                                 type="button"
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                onClick={() => uploadDocumentToGoogleDrive(doc, 'section80CCDDocuments', declaration._id)}
-                                                                disabled={uploadingDocs.section80CCDDocuments}
-                                                                title="Upload to Google Drive"
-                                                                className="h-8 w-8 text-blue-600 hover:bg-blue-50"
+                                                                onClick={() => removeDocument('section80CCDDocuments', index)}
+                                                                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                                             >
-                                                                {uploadingDocs.section80CCDDocuments ? (
-                                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                                ) : (
-                                                                    <Cloud className="w-4 h-4" />
-                                                                )}
+                                                                <X className="w-4 h-4" />
                                                             </Button>
                                                         )}
-                                                        {doc.driveUrl && (
-                                                            <div className="h-8 w-8 flex items-center justify-center text-green-600" title="Uploaded to Google Drive">
-                                                                <CheckCircle className="w-4 h-4" />
-                                                            </div>
-                                                        )}
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => removeDocument('section80CCDDocuments', index)}
-                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </Button>
                                                     </div>
                                                 </div>
                                             ))}
@@ -1885,7 +1918,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                             <CardContent className="space-y-4">
                                 <div>
                                     <div className="flex items-center space-x-2 mb-3">
-                                        <Checkbox
+                                        <Checkbox disabled={isReadOnly}
                                             checked={formData.section80DDeductions.medicalInsuranceIndividual.isApplicable}
                                             onCheckedChange={(checked) =>
                                                 setFormData(prev => ({
@@ -1903,7 +1936,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         <label className="text-sm font-medium">Medical Insurance - Individual, Spouse & Children</label>
                                     </div>
                                     {formData.section80DDeductions.medicalInsuranceIndividual.isApplicable && (
-                                        <Input
+                                        <Input disabled={isReadOnly}
                                             type="number"
                                             placeholder="Enter amount (Max: Rs. 25,000 + 25,000 for Senior Citizen)"
                                             value={formData.section80DDeductions.medicalInsuranceIndividual.amount}
@@ -1926,7 +1959,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
 
                                 <div>
                                     <div className="flex items-center space-x-2 mb-3">
-                                        <Checkbox
+                                        <Checkbox disabled={isReadOnly}
                                             checked={formData.section80DDeductions.medicalInsuranceParents.isApplicable}
                                             onCheckedChange={(checked) =>
                                                 setFormData(prev => ({
@@ -1944,7 +1977,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         <label className="text-sm font-medium">Medical Insurance - Parents</label>
                                     </div>
                                     {formData.section80DDeductions.medicalInsuranceParents.isApplicable && (
-                                        <Input
+                                        <Input disabled={isReadOnly}
                                             type="number"
                                             placeholder="Enter amount (Max: Rs. 25,000 + 25,000 for Senior Citizen)"
                                             value={formData.section80DDeductions.medicalInsuranceParents.amount}
@@ -1967,7 +2000,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
 
                                 <div>
                                     <div className="flex items-center space-x-2 mb-3">
-                                        <Checkbox
+                                        <Checkbox disabled={isReadOnly}
                                             checked={formData.section80DDeductions.preventiveHealthCheckup.isApplicable}
                                             onCheckedChange={(checked) =>
                                                 setFormData(prev => ({
@@ -1985,7 +2018,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         <label className="text-sm font-medium">Preventive Health Check-up</label>
                                     </div>
                                     {formData.section80DDeductions.preventiveHealthCheckup.isApplicable && (
-                                        <Input
+                                        <Input disabled={isReadOnly}
                                             type="number"
                                             placeholder="Enter amount (Max: Rs. 5,000)"
                                             value={formData.section80DDeductions.preventiveHealthCheckup.amount}
@@ -2012,17 +2045,19 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                             <Paperclip className="w-4 h-4 text-primary" />
                                             Medical Insurance Proofs
                                         </h4>
-                                        <label className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg cursor-pointer transition-colors border border-primary/20 group">
-                                            <Upload className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                                            <span className="text-xs font-medium">Upload Proofs</span>
-                                            <input
-                                                type="file"
-                                                multiple
-                                                onChange={(e) => handleDocumentUpload('section80DDocuments', e.target.files)}
-                                                className="hidden"
-                                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                            />
-                                        </label>
+                                        {!isReadOnly && (
+                                            <label className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg cursor-pointer transition-colors border border-primary/20 group">
+                                                <Upload className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                                                <span className="text-xs font-medium">Upload Proofs</span>
+                                                <input
+                                                    type="file"
+                                                    multiple
+                                                    onChange={(e) => handleDocumentUpload('section80DDocuments', e.target.files)}
+                                                    className="hidden"
+                                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                                />
+                                            </label>
+                                        )}
                                     </div>
                                     {formData.section80DDocuments?.length > 0 && (
                                         <div className="space-y-2">
@@ -2042,37 +2077,47 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                                         </div>
                                                     </div>
                                                     <div className="flex gap-1">
-                                                        {driveConnected && declaration?._id && !doc.driveUrl && (
+                                                        {doc._id ? (
+                                                            <>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => window.open(`${API_BASE_URL}/api/investmentDeclaration/document/preview/${doc._id}`, "_blank")}
+                                                                    className="h-8 w-8 text-primary hover:bg-primary/10"
+                                                                    title="Preview"
+                                                                >
+                                                                    <Eye className="w-4 h-4" />
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => window.open(`${API_BASE_URL}/api/investmentDeclaration/document/download/${doc._id}`, "_blank")}
+                                                                    className="h-8 w-8 text-slate-500 hover:bg-slate-100"
+                                                                    title="Download"
+                                                                >
+                                                                    <Download className="w-4 h-4" />
+                                                                </Button>
+                                                            </>
+                                                        ) : (
+                                                            declaration?._id && (
+                                                                <div className="h-8 w-8 flex items-center justify-center text-amber-700" title="Pending upload after submit">
+                                                                    <Clock className="w-4 h-4" />
+                                                                </div>
+                                                            )
+                                                        )}
+                                                        {!isReadOnly && (
                                                             <Button
                                                                 type="button"
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                onClick={() => uploadDocumentToGoogleDrive(doc, 'section80DDocuments', declaration._id)}
-                                                                disabled={uploadingDocs.section80DDocuments}
-                                                                title="Upload to Google Drive"
-                                                                className="h-8 w-8 text-blue-600 hover:bg-blue-50"
+                                                                onClick={() => removeDocument('section80DDocuments', index)}
+                                                                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                                             >
-                                                                {uploadingDocs.section80DDocuments ? (
-                                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                                ) : (
-                                                                    <Cloud className="w-4 h-4" />
-                                                                )}
+                                                                <X className="w-4 h-4" />
                                                             </Button>
                                                         )}
-                                                        {doc.driveUrl && (
-                                                            <div className="h-8 w-8 flex items-center justify-center text-green-600" title="Uploaded to Google Drive">
-                                                                <CheckCircle className="w-4 h-4" />
-                                                            </div>
-                                                        )}
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => removeDocument('section80DDocuments', index)}
-                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </Button>
                                                     </div>
                                                 </div>
                                             ))}
@@ -2089,7 +2134,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="flex items-center space-x-2 mb-3">
-                                    <Checkbox
+                                    <Checkbox disabled={isReadOnly}
                                         checked={formData.section80EDeduction.isApplicable}
                                         onCheckedChange={(checked) =>
                                             setFormData(prev => ({
@@ -2104,7 +2149,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                     <label className="text-sm font-medium">Claim Interest on Education Loan Deduction</label>
                                 </div>
                                 {formData.section80EDeduction.isApplicable && (
-                                    <Input
+                                    <Input disabled={isReadOnly}
                                         type="number"
                                         placeholder="Enter interest amount (No limit)"
                                         value={formData.section80EDeduction.amount}
@@ -2129,7 +2174,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="flex items-center space-x-2 mb-3">
-                                    <Checkbox
+                                    <Checkbox disabled={isReadOnly}
                                         checked={formData.section80TTADeduction.isApplicable}
                                         onCheckedChange={(checked) =>
                                             setFormData(prev => ({
@@ -2144,7 +2189,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                     <label className="text-sm font-medium">Claim Savings Account Interest Deduction</label>
                                 </div>
                                 {formData.section80TTADeduction.isApplicable && (
-                                    <Input
+                                    <Input disabled={isReadOnly}
                                         type="number"
                                         placeholder="Enter interest amount (Max: Rs. 10,000)"
                                         value={formData.section80TTADeduction.amount}
@@ -2171,7 +2216,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="text-sm font-semibold">Description</label>
-                                        <Input
+                                        <Input disabled={isReadOnly}
                                             placeholder="Enter description"
                                             value={formData.otherDeductions?.description}
                                             onChange={(e) =>
@@ -2185,7 +2230,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                     </div>
                                     <div>
                                         <label className="text-sm font-semibold">Amount (Rs.)</label>
-                                        <Input
+                                        <Input disabled={isReadOnly}
                                             type="number"
                                             placeholder="Enter amount"
                                             value={formData.otherDeductions?.amount}
@@ -2213,7 +2258,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                         <CardContent className="space-y-4">
                             <div>
                                 <label className="text-sm font-semibold">Income after Exemptions (Rs.)</label>
-                                <Input
+                                <Input disabled={isReadOnly}
                                     type="number"
                                     value={formData.previousEmploymentIncome.incomeAfterExemptions}
                                     onChange={(e) =>
@@ -2232,7 +2277,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
 
                             <div>
                                 <label className="text-sm font-semibold">Provident Fund (PF) (Rs.)</label>
-                                <Input
+                                <Input disabled={isReadOnly}
                                     type="number"
                                     value={formData.previousEmploymentIncome.providentFund}
                                     onChange={(e) =>
@@ -2251,7 +2296,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
 
                             <div>
                                 <label className="text-sm font-semibold">Professional Tax (PT) (Rs.)</label>
-                                <Input
+                                <Input disabled={isReadOnly}
                                     type="number"
                                     value={formData.previousEmploymentIncome.professionalTax}
                                     onChange={(e) =>
@@ -2286,7 +2331,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                     </p>
                     <div className="flex flex-col md:flex-row gap-6">
                         <div className="flex items-center space-x-2">
-                            <Checkbox
+                            <Checkbox disabled={isReadOnly}
                                 id="declaration-agree"
                                 checked={formData.declaration.isAgreed}
                                 onCheckedChange={(checked) =>
@@ -2302,7 +2347,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                         </div>
                         <div className="flex-1">
                             <label className="text-sm font-semibold mb-2 block">Employee Signature (Type Full Name)</label>
-                            <Input
+                            <Input disabled={isReadOnly}
                                 placeholder="Enter your full name as signature"
                                 value={formData.declaration.employeeSignature}
                                 onChange={(e) =>
@@ -2315,31 +2360,158 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                             />
                         </div>
                     </div>
+
+                    <div className="pt-4 border-t border-primary/20">
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                                <Paperclip className="w-4 h-4 text-primary" />
+                                Upload Signed Declaration
+                            </h4>
+                            {!isReadOnly && (
+                                <label className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg cursor-pointer transition-colors border border-primary/20 group">
+                                    <Upload className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                                    <span className="text-xs font-medium">Upload File</span>
+                                    <input
+                                        type="file"
+                                        multiple
+                                        onChange={(e) => handleDocumentUpload('declarationDocuments', e.target.files)}
+                                        className="hidden"
+                                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                    />
+                                </label>
+                            )}
+                        </div>
+                        {formData.declarationDocuments?.length > 0 && (
+                            <div className="space-y-2">
+                                {formData.declarationDocuments.map((doc, index) => (
+                                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-white border border-border/50 group max-w-[500px]">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="p-2 rounded-lg bg-background">
+                                                {doc.file?.type?.startsWith("image/") || (doc.filename && /\.(jpg|jpeg|png|gif)$/i.test(doc.filename)) ? (
+                                                    <FileImage className="w-4 h-4 text-primary" />
+                                                ) : (
+                                                    <FileText className="w-4 h-4 text-orange-500" />
+                                                )}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-medium text-foreground truncate">{doc.name || doc.filename}</p>
+                                                <p className="text-xs text-muted-foreground">{formatFileSize(doc.size)}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            {doc.driveWebViewLink || doc.driveUrl ? (
+                                                <div className="h-8 w-8 flex items-center justify-center text-green-600" title="Uploaded">
+                                                    <CheckCircle className="w-4 h-4" />
+                                                </div>
+                                            ) : (
+                                                declaration?._id && (
+                                                    <div className="h-8 w-8 flex items-center justify-center text-amber-700" title="Pending upload after submit">
+                                                        <Clock className="w-4 h-4" />
+                                                    </div>
+                                                )
+                                            )}
+                                            {!isReadOnly && (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => removeDocument('declarationDocuments', index)}
+                                                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-2 italic">
+                            Tip: You can upload a signed copy of this declaration for record-keeping.
+                        </p>
+                    </div>
                 </CardContent>
             </Card>
 
 
             {/* Action Buttons */}
-            <div className="flex gap-3 justify-end">
-                {/* <Button
-                    variant="outline"
-                    onClick={handleSaveDraft}
-                    disabled={submitting}
-                    className="gap-2"
-                >
-                    <Save className="w-4 h-4" />
-                    Save as Draft
-                </Button> */}
-                <Button
-                    onClick={handleSubmit}
-                    disabled={submitting}
-                    className="gap-2"
-                >
-                    <Send className="w-4 h-4" />
-                    {submitting ? 'Submitting...' : declaration ? 'Edit Declaration' : 'Submit Declaration'}
-                </Button>
-            </div>
-        </div >
+            {!isReadOnly && (
+                <div className="flex gap-3 justify-end">
+                    {/* <Button
+                        variant="outline"
+                        onClick={handleSaveDraft}
+                        disabled={submitting}
+                        className="gap-2"
+                    >
+                        <Save className="w-4 h-4" />
+                        Save as Draft
+                    </Button> */}
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={submitting}
+                        className="gap-2"
+                    >
+                        <Send className="w-4 h-4" />
+                        {submitting ? 'Submitting...' : declaration ? 'Edit Declaration' : 'Submit Declaration'}
+                    </Button>
+                </div>
+            )}
+            {isReadOnly && (user?.role === 'accountant' || user?.role === 'superAdmin') && declaration?.status === 'Submitted' && (
+                <div className="flex gap-3 justify-end mt-6 pt-6 border-t border-slate-200">
+                    <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button
+                                variant="destructive"
+                                className="gap-2"
+                            >
+                                <XCircle className="w-4 h-4" />
+                                Reject Declaration
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                            {/* <DialogHeader> */}
+                                <DialogTitle>Rejection Reason</DialogTitle>
+                                <DialogDescription>
+                                    Please provide a reason for rejecting this declaration. This will be visible to the employee.
+                                </DialogDescription>
+                            {/* </DialogHeader> */}
+                            <div className="py-4">
+                                <Textarea
+                                    placeholder="Enter rejection reason..."
+                                    value={rejectionReason}
+                                    onChange={(e) => setRejectionReason(e.target.value)}
+                                    className="min-h-[100px]"
+                                />
+                            </div>
+                            <DialogFooter>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setIsRejectDialogOpen(false)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    onClick={() => handleStatusUpdate('Rejected', rejectionReason)}
+                                    disabled={submitting || !rejectionReason.trim()}
+                                >
+                                    {submitting ? 'Rejecting...' : 'Confirm Rejection'}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    <Button
+                        onClick={() => handleStatusUpdate('Approved')}
+                        disabled={submitting}
+                        className="gap-2 bg-green-600 hover:bg-green-700"
+                    >
+                        <CheckCircle className="w-4 h-4" />
+                        Approve Declaration
+                    </Button>
+                </div>
+            )}
+        </div>
     );
 };
 

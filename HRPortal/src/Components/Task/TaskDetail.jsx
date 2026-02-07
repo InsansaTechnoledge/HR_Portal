@@ -8,7 +8,8 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Calendar, User, Clock, Tag, MessageSquare, Paperclip, Edit2, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { userContext } from '../../Context/userContext';
-import { addComment, deleteTask } from '../../api/taskApi';
+import axios from 'axios';
+import API_BASE_URL from '../../config';
 import { useToast } from '../ui/use-toast';
 
 const TaskDetail = ({ task, open, onClose, onEdit, onUpdate, onDelete }) => {
@@ -29,22 +30,29 @@ const TaskDetail = ({ task, open, onClose, onEdit, onUpdate, onDelete }) => {
     const isAssignee = task.assignedTo?.some(a => a.assigneeId === user._id);
     const canEdit = isAdmin;
 
+    // Create axios instance for this component
+    const axiosInstance = axios.create({
+        baseURL: API_BASE_URL,
+        withCredentials: true
+    });
+
     const handleAddComment = async () => {
         if (!commentText.trim()) return;
 
         setSubmittingComment(true);
         try {
-            await addComment(task._id, commentText);
+            await axiosInstance.post(`/api/task/${task._id}/comment`, { text: commentText });
             toast({
                 title: 'Success',
                 description: 'Comment added successfully'
             });
             setCommentText('');
-            onUpdate(); // Refresh task data
+            // Refresh task data without showing the global "Task updated successfully" toast and keep the dialog open
+            onUpdate && onUpdate({}, { suppressToast: true, keepOpen: true });
         } catch (error) {
             toast({
                 title: 'Error',
-                description: error.message || 'Failed to add comment',
+                description: error.response?.data?.message || error.message || 'Failed to add comment',
                 variant: 'destructive'
             });
         } finally {
@@ -56,7 +64,7 @@ const TaskDetail = ({ task, open, onClose, onEdit, onUpdate, onDelete }) => {
         if (!confirm('Are you sure you want to delete this task?')) return;
 
         try {
-            await deleteTask(task._id);
+            await axiosInstance.delete(`/api/task/${task._id}`);
             toast({
                 title: 'Success',
                 description: 'Task deleted successfully'
@@ -66,7 +74,7 @@ const TaskDetail = ({ task, open, onClose, onEdit, onUpdate, onDelete }) => {
         } catch (error) {
             toast({
                 title: 'Error',
-                description: error.message || 'Failed to delete task',
+                description: error.response?.data?.message || error.message || 'Failed to delete task',
                 variant: 'destructive'
             });
         }
@@ -84,15 +92,14 @@ const TaskDetail = ({ task, open, onClose, onEdit, onUpdate, onDelete }) => {
 
     const getDaysLeft = () => {
         if (!task.dueDate) return null;
-        
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const dueDate = new Date(task.dueDate);
         dueDate.setHours(0, 0, 0, 0);
-        
+
         const timeDiff = dueDate - today;
         const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
-        
+
         return daysLeft;
     };
 
@@ -266,7 +273,7 @@ const TaskDetail = ({ task, open, onClose, onEdit, onUpdate, onDelete }) => {
                             </div>
 
                             {/* Add Comment */}
-                            { isAdmin &&
+                            {isAdmin &&
                                 <div className="space-y-2">
                                     <Textarea
                                         placeholder="Add a comment..."

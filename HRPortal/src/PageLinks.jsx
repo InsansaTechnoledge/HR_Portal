@@ -69,6 +69,7 @@ function PageLinks() {
           <Route path="/expense-tracker" element={<ExpenseTracker />} />
           <Route path="/my-tasks" element={<MyTasks />} />
           <Route path="/investment-declaration" element={<InvestmentDeclaration />} />
+          <Route path="/investment-tracker" element={<InvestmentDeclarationTracker />} />
 
 
 
@@ -95,7 +96,7 @@ function PageLinks() {
             <Route path="/emp-list" element={<EmployeeList />} />
             <Route path="/payslip" element={<PayslipGenerator />} />
             <Route path="/expense" element={<ExpenseGenerator />} />
-            <Route path="/investment-tracker" element={<InvestmentDeclarationTracker />} />
+            {/* <Route path="/investment-tracker" element={<InvestmentDeclarationTracker />} /> */}
           </Route>
         </Route>
       </Route>

@@ -3,34 +3,34 @@ import Employee from "../models/Employee.js"
 import stringTo6DigitNumber from "../utils/stringTo6digitNumber.js";
 
 export const addEmployee = async (req, res) => {
-    try{
+    try {
 
         const emp = req.body;
         const newEmp = new Employee({
             name: emp.name,
             email: emp.email,
             department: emp.department
-    });
-    const exists = await Employee.findOne({email: emp.email});
-    if(exists){
-        return res.status(202).json({message: "Employee already exists"});
-    }
+        });
+        const exists = await Employee.findOne({ email: emp.email });
+        if (exists) {
+            return res.status(202).json({ message: "Employee already exists" });
+        }
 
-    const savedEmp = await newEmp.save();
-    if(savedEmp){
-        res.status(201).json({message: "Employee saved!", savedEmp});
-    }
+        const savedEmp = await newEmp.save();
+        if (savedEmp) {
+            res.status(201).json({ message: "Employee saved!", savedEmp });
+        }
 
     }
-    catch(err){
+    catch (err) {
         console.log(err)
-        res.status(400).json({message: err});
+        res.status(400).json({ message: err });
     }
-} 
+}
 
-export const fetchEmployeeById = async (req,res) => {
-    try{
-        const {id} = req.params;
+export const fetchEmployeeById = async (req, res) => {
+    try {
+        const { id } = req.params;
         const { from, to, includeDocuments } = req.query; // optional date range filter and document inclusion
 
         // Validate Mongo ObjectId
@@ -91,7 +91,7 @@ export const fetchEmployeeById = async (req,res) => {
             if (!result.length) {
                 return res.status(404).json({ message: "Employee not found" });
             }
-            return res.status(200).json({message: "employee fetched", employee: result[0]});
+            return res.status(200).json({ message: "employee fetched", employee: result[0] });
         }
 
         const employee = await Employee.findById(id, baseProjection).lean({ defaults: true, getters: false });
@@ -100,16 +100,16 @@ export const fetchEmployeeById = async (req,res) => {
             return res.status(404).json({ message: "Employee not found" });
         }
 
-        res.status(200).json({message: "employee fetched",employee});
+        res.status(200).json({ message: "employee fetched", employee });
     }
-    catch(err){
+    catch (err) {
         console.log(err);
         res.status(500).json({ message: err.message || err });
     }
 }
 
-export const fetchEmployee = async (req,res) => {
-    try{
+export const fetchEmployee = async (req, res) => {
+    try {
         const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
         const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 200, 1), 500);
         const fields = req.query.fields;
@@ -117,7 +117,6 @@ export const fetchEmployee = async (req,res) => {
 
         // Build projection object
         let projection = {};
-        
         if (excludeDocuments) {
             // Use exclusion-only projection to remove document buffers
             projection = {
@@ -136,67 +135,87 @@ export const fetchEmployee = async (req,res) => {
         // If neither excludeDocuments nor fields, return all data (empty projection)
 
         const employees = await Employee.find({}, projection)
-          .skip((page - 1) * limit)
-          .limit(limit)
-          .lean({ defaults: true, getters: false });
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .lean({ defaults: true, getters: false });
 
-        return res.status(200).json({message: "Employees fetched", employees});
+        return res.status(200).json({ message: "Employees fetched", employees });
     }
-    catch(Err){
+    catch (Err) {
         console.log(Err);
-        res.status(400).json({message: Err});
+        res.status(400).json({ message: Err });
     }
 }
 
-export const addLeave = async (req,res) => {
-    try{
-        const {id} = req.params;
+export const addLeave = async (req, res) => {
+    try {
+        const { id } = req.params;
         const leaveHistory = req.body;
         const updatedEmp = await Employee.findByIdAndUpdate(
             id, // Find the employee by empId
             { $push: { leaveHistory: leaveHistory } }, // Append the new leaveHistory object to the array
             { new: true } // Return the updated document
         );
-    
+
         if (!updatedEmp) {
             return res.status(404).send({ message: "Employee not found" });
         }
-    
-        res.status(201).json({message:"Leave added", updatedEmp});
-    
+
+        // Create notifications for Admins/SuperAdmins
+        try {
+            const admins = await User.find({ role: { $in: ['admin', 'superAdmin'] } });
+            const notificationPromises = admins.map(admin => {
+                const notification = new Notification({
+                    recipient: admin._id,
+                    recipientType: 'User',
+                    sender: updatedEmp._id,
+                    senderType: 'Employee',
+                    type: 'LEAVE_APPLIED',
+                    message: `${updatedEmp.name} from ${updatedEmp.department} has applied for ${leaveHistory.type} leave from ${new Date(leaveHistory.startDate).toLocaleDateString()} to ${new Date(leaveHistory.endDate).toLocaleDateString()}.`,
+                    relatedId: updatedEmp._id
+                });
+                return notification.save();
+            });
+            await Promise.all(notificationPromises);
+        } catch (notifErr) {
+            console.error("Failed to create notifications:", notifErr);
+        }
+
+        res.status(201).json({ message: "Leave added", updatedEmp });
+
 
 
     }
-    catch(err){
+    catch (err) {
         console.log(err);
-        res.status(400).json({message:err});
+        res.status(400).json({ message: err });
     }
 }
 
-export const uploadDetails = async (req,res) => {
+export const uploadDetails = async (req, res) => {
     try {
 
         if (!req.body.newEmployee) {
             console.error("Missing newEmployee in body");
-            return res.status(400).json({message: "Employee details are required"});
+            return res.status(400).json({ message: "Employee details are required" });
         }
 
         const details = JSON.parse(req.body.newEmployee);
         const email = details.email;
 
         if (!email) {
-            return res.status(400).json({message: "Email is required in employee details"});
+            return res.status(400).json({ message: "Email is required in employee details" });
         }
 
         // Check if employee exists
-        const existingEmployee = await Employee.findOne({email: email});
-        if(existingEmployee && existingEmployee.details && Object.keys(existingEmployee.details).length > 0) {
-            return res.status(401).json({message: "Employee details already exists"});
+        const existingEmployee = await Employee.findOne({ email: email });
+        if (existingEmployee && existingEmployee.details && Object.keys(existingEmployee.details).length > 0) {
+            return res.status(401).json({ message: "Employee details already exists" });
         }
 
         if (!existingEmployee) {
             console.error("Employee not found:", email);
-            return res.status(404).json({message: "Employee not found with this email"});
+            return res.status(404).json({ message: "Employee not found with this email" });
         }
 
         // Helper to map Cloudinary file → schema object
@@ -238,108 +257,108 @@ export const uploadDetails = async (req,res) => {
         };
 
         const updatedEmp = await Employee.findOneAndUpdate(
-            {email: email},
-            {details: newDetails},
-            {new: true}
+            { email: email },
+            { details: newDetails },
+            { new: true }
         );
 
         if (!updatedEmp) {
             console.error("Update failed for:", email);
-            return res.status(404).json({message: "Failed to update employee"});
+            return res.status(404).json({ message: "Failed to update employee" });
         }
 
-        return res.status(200).json({message: "Details uploaded", updatedEmp});
-    } catch(err) {
+        return res.status(200).json({ message: "Details uploaded", updatedEmp });
+    } catch (err) {
         console.error("[uploadDetails] Error:", err);
-        return res.status(500).json({message: err.message || "Failed to upload details"});
+        return res.status(500).json({ message: err.message || "Failed to upload details" });
     }
 }
 
 export const fetchEmployeeByEmail = async (req, res) => {
-  try {
-    const { email } = req.params;
-   
-    const emp = await Employee.findOne({email : email})
+    try {
+        const { email } = req.params;
 
-    if (!emp) {
-      return res.status(404).json({ message: "Employee not found" });
+        const emp = await Employee.findOne({ email: email })
+
+        if (!emp) {
+            return res.status(404).json({ message: "Employee not found" });
+        }
+
+        res.status(200).json(emp);
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: "Server error" });
     }
-
-    res.status(200).json(emp);
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({ message: "Server error" });
-  }
 };
 
 
-export const updateSalary = async (req,res) => {
-    try{
+export const updateSalary = async (req, res) => {
+    try {
 
-        const {salary} = req.body;
-        const {id} = req.params;
-        
+        const { salary } = req.body;
+        const { id } = req.params;
+
         const updatedUser = await Employee.findByIdAndUpdate(
             id,
             { $set: { "details.salary": salary } }, // Using dot notation to update nested field
             { new: true } // Returns the updated document
         );
 
-        if(updatedUser){
-            res.status(201).json({message: "Salary updated successfully", updatedUser});
+        if (updatedUser) {
+            res.status(201).json({ message: "Salary updated successfully", updatedUser });
         }
     }
-    catch(err){
+    catch (err) {
         console.log(err);
     }
 }
 
 
 export const updateEmployee = async (req, res) => {
-  try {
-    const { id } = req.params;
+    try {
+        const { id } = req.params;
 
-    const employee = await Employee.findById(id);
-    if (!employee) {
-      return res.status(404).json({ message: "Employee not found" });
-    }
+        const employee = await Employee.findById(id);
+        if (!employee) {
+            return res.status(404).json({ message: "Employee not found" });
+        }
 
-    if (!employee.details || typeof employee.details !== "object") {
-      employee.details = {};
-    }
+        if (!employee.details || typeof employee.details !== "object") {
+            employee.details = {};
+        }
 
         //Parse payload properly (accepts string or object; fails fast on bad input)
         let payload = req.body?.newEmployee !== undefined ? req.body.newEmployee : req.body;
 
         if (typeof payload === "string") {
-                try {
-                        payload = JSON.parse(payload);
-                } catch (parseErr) {
-                        console.error("Update Employee JSON parse error:", parseErr);
-                        return res.status(400).json({ message: "Invalid payload format" });
-                }
+            try {
+                payload = JSON.parse(payload);
+            } catch (parseErr) {
+                console.error("Update Employee JSON parse error:", parseErr);
+                return res.status(400).json({ message: "Invalid payload format" });
+            }
         }
 
         // Guard against null/undefined after parse
         if (!payload || typeof payload !== "object") {
-                return res.status(400).json({ message: "Invalid payload content" });
+            return res.status(400).json({ message: "Invalid payload content" });
         }
 
-    //Update ONLY allowed fields
-    Object.entries(payload).forEach(([key, value]) => {
-      employee.details[key] = value;
-    });
+        //Update ONLY allowed fields
+        Object.entries(payload).forEach(([key, value]) => {
+            employee.details[key] = value;
+        });
 
-    await employee.save();
+        await employee.save();
 
-    res.status(200).json({
-      message: "Employee details updated successfully",
-      employee
-    });
-  } catch (err) {
-    console.error("Update Employee Error:", err);
-    res.status(500).json({ message: err.message });
-  }
+        res.status(200).json({
+            message: "Employee details updated successfully",
+            employee
+        });
+    } catch (err) {
+        console.error("Update Employee Error:", err);
+        res.status(500).json({ message: err.message });
+    }
 };
 
 
