@@ -31,25 +31,25 @@ const SuccessToast = ({ message, duration = 3500, onClose }) => {
       role="status"
       aria-live="polite"
       className={cn(
-        "fixed bottom-6 right-6 z-[100] w-[360px]",
+        "fixed bottom-4 right-4 z-[100] w-auto max-w-[280px] sm:w-[360px]",
         "rounded-2xl p-[1px]",
         "bg-gradient-to-br from-emerald-400/60 via-emerald-300/40 to-teal-400/60",
         "shadow-[0_20px_40px_-15px_rgba(16,185,129,0.6)]",
         leaving
           ? "translate-x-6 opacity-0 scale-95"
-          : "translate-x-0 opacity-100 scale-100",
+          : "opacity-100 scale-100",
         "transition-all duration-300 ease-out"
       )}
     >
       {/* Glass container */}
-      <div className="relative rounded-2xl bg-background/80 backdrop-blur-xl px-4 py-3">
+      <div className="relative rounded-2xl bg-background/80 backdrop-blur-xl px-3 py-2 sm:px-4 sm:py-3">
         {/* Glow */}
         <div className="absolute inset-0 rounded-2xl bg-emerald-500/10 blur-xl pointer-events-none" />
 
-        <div className="relative flex items-start gap-3">
+        <div className="relative flex items-start gap-2 sm:gap-3">
           {/* Icon */}
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15">
-            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+          <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-emerald-500/15">
+            <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500" />
           </div>
 
           {/* Content */}

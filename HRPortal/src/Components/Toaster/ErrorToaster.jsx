@@ -33,13 +33,13 @@ const ErrorToast = ({ error, duration = 4000, onClose }) => {
   return (
     <div
       className={cn(
-        "z-100 fixed bottom-5 right-5 flex items-center gap-3 min-w-[320px] max-w-md p-4 rounded-xl shadow-2xl",
+        "z-[100] fixed bottom-4 right-4 flex items-center gap-2 w-auto max-w-[280px] sm:min-w-[320px] sm:max-w-md p-3 sm:p-4 rounded-xl shadow-2xl",
         "bg-gradient-to-r from-destructive to-destructive/90 text-destructive-foreground",
         "border border-destructive/20 backdrop-blur-sm",
         "transform transition-all duration-300 ease-out",
         isLeaving
           ? "translate-x-full opacity-0"
-          : "translate-x-0 opacity-100 animate-slide-in-right"
+          : "opacity-100 animate-slide-in-right"
       )}
     >
       {/* Icon */}

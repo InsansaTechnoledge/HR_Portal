@@ -20,7 +20,15 @@ const NotificationBell = ({ isCollapsed }) => {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
     const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const fetchNotifications = async () => {
         try {
@@ -93,10 +101,10 @@ const NotificationBell = ({ isCollapsed }) => {
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-                align={isCollapsed ? "start" : "end"}
-                side={isCollapsed ? "right" : "bottom"}
-                sideOffset={isCollapsed ? 20 : 4}
-                className="w-80 p-0 border-sidebar-border/50 bg-background shadow-xl rounded-xl z-[100]"
+                align={isMobile ? "center" : (isCollapsed ? "start" : "end")}
+                side={isMobile ? "bottom" : (isCollapsed ? "right" : "bottom")}
+                sideOffset={isMobile ? 12 : (isCollapsed ? 20 : 4)}
+                className="w-[calc(100vw-2rem)] sm:w-96 p-0 border-sidebar-border/50 bg-background shadow-xl rounded-xl z-[100]"
             >
                 <div className="flex flex-col border-b border-sidebar-border/50 bg-muted/30">
                     <div className="flex items-center justify-between p-4 pb-2">

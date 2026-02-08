@@ -335,3 +335,15 @@ export const updateUserProfile = async (req, res) => {
     res.status(500).json({ message: err });
   }
 }
+
+export const getAllUsers = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit, 10) || 200;
+    const users = await User.find({}, "userName userEmail role")
+      .limit(limit)
+      .lean();
+    res.status(200).json({ users });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+}

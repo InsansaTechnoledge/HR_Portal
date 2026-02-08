@@ -22,6 +22,10 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
     const [currentTab, setCurrentTab] = useState('employee-info');
     const [employees, setEmployees] = useState([]);
     const [selfEmployee, setSelfEmployee] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const { toast } = useToast();
+    const [employeesLoading, setEmployeesLoading] = useState(false);
 
     // Google Drive upload states
     const [uploadingDocs, setUploadingDocs] = useState({
@@ -131,6 +135,8 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
     useEffect(() => {
         if (employeeId) {
             fetchExistingDeclaration();
+        } else {
+            setLoading(false);
         }
         fetchEmployees();
     }, [employeeId, propFinancialYear]);
@@ -239,7 +245,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                     financialYear: propFinancialYear || formData.financialYear
                 }
             });
-            console.log("Retrieved Data for Form:", response.data.declaration);
+            // console.log("Retrieved Data for Form:", response.data.declaration);
 
             if (response.data.declaration) {
                 const decData = response.data.declaration;
@@ -263,7 +269,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                     updated.department = decData.department || updated.department || prev.department;
                     updated.empId = decData.employeeId?._id || decData.employeeId || prev.empId;
 
-                    console.log("Final Form State after Unflattening:", updated);
+                    // console.log("Final Form State after Unflattening:", updated);
                     return updated;
                 });
             }
@@ -758,11 +764,11 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
 
             {/* Form Tabs */}
             <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-4 gap-2 bg-slate-100 p-1">
-                    <TabsTrigger value="employee-info" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Employee Info</TabsTrigger>
-                    <TabsTrigger value="exemptions" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Exemptions</TabsTrigger>
-                    <TabsTrigger value="deductions" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Deductions</TabsTrigger>
-                    <TabsTrigger value="previous-income" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Previous Income</TabsTrigger>
+                <TabsList className="flex flex-wrap sm:grid w-full sm:grid-cols-4 gap-2 bg-slate-100 p-1 h-auto sm:h-10">
+                    <TabsTrigger value="employee-info" className="flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm py-2">Employee Info</TabsTrigger>
+                    <TabsTrigger value="exemptions" className="flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm py-2">Exemptions</TabsTrigger>
+                    <TabsTrigger value="deductions" className="flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm py-2">Deductions</TabsTrigger>
+                    <TabsTrigger value="previous-income" className="flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm py-2">Previous Income</TabsTrigger>
                 </TabsList>
 
                 {/* Employee Information Tab */}
@@ -2470,10 +2476,10 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-[425px]">
                             {/* <DialogHeader> */}
-                                <DialogTitle>Rejection Reason</DialogTitle>
-                                <DialogDescription>
-                                    Please provide a reason for rejecting this declaration. This will be visible to the employee.
-                                </DialogDescription>
+                            <DialogTitle>Rejection Reason</DialogTitle>
+                            <DialogDescription>
+                                Please provide a reason for rejecting this declaration. This will be visible to the employee.
+                            </DialogDescription>
                             {/* </DialogHeader> */}
                             <div className="py-4">
                                 <Textarea

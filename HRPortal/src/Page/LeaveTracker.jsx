@@ -680,7 +680,7 @@ const LeaveTracker = () => {
             <h2 className="font-semibold text-lg">Leave Tracker</h2>
             <Button variant="outline" size="sm" onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}>
               <Filter className="w-4 h-4 mr-2" />
-              {mobileSidebarOpen ? "Hide Filters" : "Filters & Employees"}
+              {authUser && (authUser.role === 'admin' || authUser.role === 'superAdmin') ? mobileSidebarOpen ? "Hide Filters" : "Filters & Employees" : "Filter Months"}
             </Button>
           </div>
 
@@ -869,7 +869,7 @@ const LeaveTracker = () => {
           )}
 
           {/* Main Content */}
-          <div className="flex-1 p-4 lg:p-8">
+          <div className="flex-1 p-4 lg:p-8 overflow-x-hidden">
             <div className="max-w-6xl mx-auto space-y-6">
               {/* Header */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

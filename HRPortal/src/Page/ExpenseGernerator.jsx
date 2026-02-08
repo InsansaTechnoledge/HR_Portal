@@ -355,7 +355,6 @@ const ExpenseGenerator = () => {
   // Helper to check if an international expense actually needs conversion values
   const needsConversion = (expense) => {
     const items = expense.expenses || [];
-    console.log(items);
     const isIntl = items.some(e => e.location?.toLowerCase() === 'international');
     const missingConversion = items.some(e => e.location === 'International' && (!e.convertedAmount || Number(e.convertedAmount) <= 0 || e.amount === e.convertedAmount));
 
@@ -840,7 +839,6 @@ const ExpenseGenerator = () => {
                           <div className="flex items-center justify-end gap-2">
                             {(() => {
                               const needsConv = needsConversion(exp);
-                              console.log(`[DEBUG] Row ${exp._id} render: needsConversion=${needsConv}`);
                               return needsConv ? (
                                 <Button
                                   size="sm"

@@ -13,8 +13,7 @@ const ToastViewport = React.forwardRef(({ className, ...props }, ref) => (
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed z-[100] flex max-h-screen w-full flex-col-reverse gap-3 p-4",
-      "sm:bottom-4 sm:right-4 sm:top-auto sm:flex-col md:max-w-[420px]",
+      "fixed z-[100] flex max-h-screen w-full flex-col-reverse gap-2 p-2 bottom-0 right-0 items-end sm:bottom-4 sm:right-4 sm:top-auto sm:flex-col sm:gap-3 sm:p-4 md:max-w-[420px]",
       className
     )}
     {...props}
@@ -27,8 +26,8 @@ ToastViewport.displayName = ToastPrimitives.Viewport.displayName;
 /* ---------------------------------- */
 const toastVariants = cva(
   [
-    "group pointer-events-auto relative flex w-full items-start gap-4 overflow-hidden",
-    "rounded-2xl border p-4 pr-10",
+    "group pointer-events-auto relative flex w-full max-w-[300px] sm:max-w-none items-start gap-4 overflow-hidden",
+    "rounded-2xl border p-3 pr-8 sm:p-4 sm:pr-10",
     "bg-background/80 backdrop-blur-xl",
     "shadow-[0_10px_30px_-10px_rgba(0,0,0,0.35)]",
     "transition-all duration-300 ease-out",
@@ -67,11 +66,11 @@ const Toast = React.forwardRef(({ className, variant, ...props }, ref) => (
       className={cn(
         "absolute left-0 top-0 h-full w-1.5 rounded-l-2xl",
         variant === "success" &&
-          "bg-gradient-to-b from-emerald-400 to-emerald-600",
+        "bg-gradient-to-b from-emerald-400 to-emerald-600",
         variant === "destructive" &&
-          "bg-gradient-to-b from-red-400 to-red-600",
+        "bg-gradient-to-b from-red-400 to-red-600",
         variant === "default" &&
-          "bg-gradient-to-b from-primary to-primary/70"
+        "bg-gradient-to-b from-primary to-primary/70"
       )}
     />
     {props.children}
