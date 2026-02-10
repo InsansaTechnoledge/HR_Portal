@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useMemo } from 'react';
+﻿import React, { useState, useEffect, useContext, useMemo } from 'react';
 import {
     Search,
     Filter,
@@ -18,7 +18,8 @@ import {
     Clock,
     FileCheck,
     FileQuestion,
-    Paperclip
+    Paperclip,
+    DownloadIcon
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../Components/ui/card';
 import { Button } from '../Components/ui/button';
@@ -42,6 +43,10 @@ import { useToast } from '../Components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 
 import InvestmentDeclarationForm from '../Components/InvestmentDeclaration/InvestmentDeclarationForm';
+import { downloadForm12BB } from '../templates/InvestmentDeclarationPDFTemplate';
+
+
+
 
 const InvestmentDeclarationTracker = () => {
     const { user } = useContext(userContext);
@@ -133,6 +138,11 @@ const InvestmentDeclarationTracker = () => {
 
     const handleSearch = () => {
         fetchDeclarations();
+    };
+
+
+    const handleDownloadPDF = async (declaration) => {
+        await downloadForm12BB(declaration);
     };
 
     const handleDeleteClick = (declaration) => {
@@ -494,6 +504,7 @@ const InvestmentDeclarationTracker = () => {
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex items-center justify-end gap-1 transition-opacity">
+                                                        {/* 1. VIEW BUTTON - Always visible */}
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
@@ -503,8 +514,34 @@ const InvestmentDeclarationTracker = () => {
                                                         >
                                                             <Eye className="w-4 h-4" />
                                                         </Button>
-                                                        {user?.role !== 'user' && (
-                                                            <>
+
+                                                        {/* 2. PDF DOWNLOAD BUTTON */}
+                                                        {/* Visible if User and Approved, OR if Admin/Accountant (always) */}
+                                                        {((user?.role === 'user' && dec.status === 'Approved') ||
+                                                            (user?.role !== 'user')
+                                                        ) && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 text-slate-500 hover:text-green-600 hover:bg-green-50"
+                                                                    onClick={() => handleDownloadPDF(dec)}
+                                                                    title="Download Form 12BB"
+                                                                >
+                                                                    <DownloadIcon className="w-4 h-4" />
+                                                                </Button>
+                                                            )}
+
+                                                        {/* 3. EDIT BUTTON */}
+                                                        {/* User: Draft or Rejected only. Admin: All (except maybe Approved/Submitted locks? Keeping pure logic for now) */}
+                                                        {/* Assuming Admin can edit anytime, but usually Approved should be locked.
+                                                            Required Condition: User -> Rejected/Draft.
+                                                            Let's enable for Admin/Accountant always for flexibility, or follow same logic?
+                                                            Plan said: "Accountant: Keep existing actions". "User: Edit only if Rejected/Draft".
+                                                        */}
+                                                        {(
+                                                            (user?.role !== 'user') || // Admin/Accountant can edit
+                                                            (user?.role === 'user' && ['Draft', 'Rejected'].includes(dec.status)) // User can edit only Draft/Rejected
+                                                        ) && (
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="icon"
@@ -514,16 +551,19 @@ const InvestmentDeclarationTracker = () => {
                                                                 >
                                                                     <Edit className="w-4 h-4" />
                                                                 </Button>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50"
-                                                                    onClick={() => handleDeleteClick(dec)}
-                                                                    title="Delete Declaration"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" />
-                                                                </Button>
-                                                            </>
+                                                            )}
+
+                                                        {/* 4. DELETE BUTTON - Admin/Accountant Only */}
+                                                        {user?.role !== 'user' && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50"
+                                                                onClick={() => handleDeleteClick(dec)}
+                                                                title="Delete Declaration"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
                                                         )}
                                                     </div>
                                                 </td>

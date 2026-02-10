@@ -119,10 +119,13 @@ const navItems = [
   { icon: ListTodo, label: 'Task Management', path: '/task-management', roles: ['admin', 'superAdmin'] },
   { icon: FileSearch, label: 'Resume Analyzer', path: '/resume-analyzer', isAI: true, roles: ['admin'] },
   { icon: Shield, label: 'Authentication', path: '/auth', roles: ['admin', 'superAdmin'] },
+  // { icon: UserPlus, label: 'User Registration', path: '/user-upsert', roles: ['admin', 'superAdmin'] },
   { icon: ClipboardList, label: 'Employee Details', path: '/emp-list', roles: ['accountant'] },
   { icon: Calendar, label: 'Leave Tracker', path: '/leave-tracker', roles: ['accountant'] },
   { icon: Key, label: 'Change Password', path: '/change-password', roles: ['accountant'] },
   { icon: ListTodo, label: 'My Tasks', path: '/my-tasks', roles: ['accountant'] },
+  { icon: FilePlus, label: 'Investment Declaration', path: '/investment-declaration', roles: ['admin'] },
+  { icon: FileText, label: 'Investment Tracker', path: '/investment-tracker', roles: ['admin'] },
 ];
 
 const SidebarItem = ({

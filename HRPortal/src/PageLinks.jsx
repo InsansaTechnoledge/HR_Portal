@@ -40,6 +40,7 @@ import TaskManagement from "./Page/TaskManagement";
 import MyTasks from "./Page/MyTasks";
 import InvestmentDeclaration from "./Page/InvestmentDeclaration";
 import InvestmentDeclarationTracker from "./Page/InvestmentDeclarationTracker";
+import UserUpsertForm from "./Components/Form/UserUpsertForm";
 
 function PageLinks() {
   const { user, loading } = useContext(userContext);
@@ -85,6 +86,7 @@ function PageLinks() {
             <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />
             <Route path="/analysis-result" element={<AnalysisResult />} />
             <Route path="/task-management" element={<TaskManagement />} />
+            {/* <Route path="/user-upsert" element={<UserUpsertForm />} /> */}
           </Route>
 
           {/* ROLE BASED */}

@@ -30,7 +30,8 @@ export const login = async (req, res, next) => {
       expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year expiration
       httpOnly: true, // Prevents client-side JS access
       secure: process.env.NODE_ENV !== "development", // HTTPS only in production
-      sameSite: process.env.NODE_ENV === "development" ? "Lax" : "None", // Adjust for environment
+      // sameSite: process.env.NODE_ENV === "development" ? "Lax" : "None",
+      sameSite: "Lax", // Enable for both dev and prod for consistency and better 1st-party support
     });
 
     res.status(200).json({ message: "Login successful", user: user });
@@ -46,7 +47,8 @@ export const logout = async (req, res) => {
   res.clearCookie("jwtAuth", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production", // Match cookie settings
-    sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+    // sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+    sameSite: "Lax",
   });
 
   res

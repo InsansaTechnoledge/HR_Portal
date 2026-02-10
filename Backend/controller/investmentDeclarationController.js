@@ -31,6 +31,7 @@ export const createOrUpdateDeclaration = async (req, res) => {
             employeeCode: emp.empId,
             employeeEmail: emp.email,
             financialYear,
+            dateOfJoining: emp.dateOfJoining, // Added Date of Joining
             formData: rest,
             status
         };
@@ -94,6 +95,8 @@ const groupDocumentsBySection = (documents) => {
         section80DDocuments: [],
         housingLoanDocuments: [],
         declarationDocuments: [],
+        tdsDocuments: [],
+        otherSourcesDocuments: [],
         otherDocuments: []
     };
 
@@ -119,9 +122,9 @@ export const getDeclarationByEmployee = async (req, res) => {
         if (!employeeId || !financialYear) return res.status(400).json({ message: 'employeeId & financialYear required' });
 
         // If not admin/accountant/superAdmin, ensure the employeeId belongs to the current user
-        if (!hasRole(currentUser, ['admin', 'accountant', 'superAdmin']) && String(req.user._id) !== String(employeeId) && req.user.role !== 'employee') {
-            // Additional check: try matching employee by email
-            const employee = await Employee.findOne({ email: req.user.userEmail });
+        if (!hasRole(currentUser, ['admin', 'accountant', 'superAdmin'])) {
+            // Map User to Employee via email and verify ID matches requested employeeId
+            const employee = await Employee.findOne({ email: currentUser.userEmail });
             if (!employee || String(employee._id) !== String(employeeId)) {
                 return res.status(403).json({ message: 'Not authorized to view this declaration' });
             }

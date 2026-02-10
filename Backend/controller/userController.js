@@ -336,6 +336,7 @@ export const updateUserProfile = async (req, res) => {
   }
 }
 
+
 export const getAllUsers = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit, 10) || 200;
@@ -347,3 +348,44 @@ export const getAllUsers = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 }
+
+// Upsert User (Register or Update)
+export const upsertUser = async (req, res) => {
+  try {
+    const { userName, userEmail, password, role } = req.body;
+
+    if (!userEmail) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    let user = await User.findOne({ userEmail });
+
+    if (user) {
+      // Update existing user
+      if (userName) user.userName = userName;
+      if (role) user.role = role;
+      if (password) {
+        // password will be hashed by the 'pre save' hook in User model
+        user.password = password;
+      }
+      await user.save();
+      return res.status(200).json({ message: "User updated successfully", user });
+    } else {
+      // Create new user
+      if (!userName || !password) {
+        return res.status(400).json({ message: "Username and password are required for new users" });
+      }
+      const newUser = new User({
+        userName,
+        userEmail,
+        password,
+        role: role || "user"
+      });
+      await newUser.save();
+      return res.status(201).json({ message: "User created successfully", user: newUser });
+    }
+  } catch (err) {
+    console.error("Error in upsertUser:", err);
+    res.status(500).json({ message: "Failed to upsert user", error: err.message });
+  }
+};

@@ -9,14 +9,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useToast } from '../ui/use-toast';
 import { userContext } from '../../Context/userContext';
 // No longer importing from investmentDeclarationApi
-import { ChevronDown, Paperclip, Save, Send, AlertCircle, CheckCircle, XCircle, Clock, Upload, X, User, FileText, FileImage, Loader2, Cloud, CloudOff, Eye, Download } from 'lucide-react';
+import {
+    ChevronDown, Paperclip, Save, Send, AlertCircle, CheckCircle, XCircle, Clock,
+    Upload, X, User, FileText, FileImage, Loader2, Cloud, CloudOff, Eye, Download,
+    Trash2, Plus, Info, Calendar, Briefcase, Mail, Phone, Hash, CreditCard,
+    PieChart, Wallet, Trophy, PlusCircle, MinusCircle, ChevronUp, ExternalLink
+} from 'lucide-react';
 import axios from 'axios';
 import API_BASE_URL from '../../config';
 import Loader from '../Loader/Loader';
 import { DEPARTMENT_HIERARCHY } from '../../Constant/constant';
 import { Dialog, DialogContent, DialogTrigger, DialogFooter, DialogTitle, DialogDescription } from '../ui/dialog';
 
-const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYear, onSuccess, isReadOnly = false }) => {
+const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYear, onSuccess, isReadOnly: propReadOnly = false }) => {
     const { user } = useContext(userContext);
     const [declaration, setDeclaration] = useState(null);
     const [currentTab, setCurrentTab] = useState('employee-info');
@@ -26,6 +31,8 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
     const [submitting, setSubmitting] = useState(false);
     const { toast } = useToast();
     const [employeesLoading, setEmployeesLoading] = useState(false);
+    const [isLocked, setIsLocked] = useState(false);
+    const isReadOnly = propReadOnly || isLocked;
 
     // Google Drive upload states
     const [uploadingDocs, setUploadingDocs] = useState({
@@ -39,8 +46,8 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
 
     // Form state
     const [formData, setFormData] = useState({
-        empId: '',
-        financialYear: propFinancialYear || '2025-26',
+        empId: employeeId || '',
+        financialYear: propFinancialYear || '',
         taxScheme: 'Old Tax Scheme',
         employeeName: '',
         employeeCode: '',
@@ -50,6 +57,8 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
         pan: '',
         dob: '',
         gender: '',
+        dateOfJoining: '', // Added Date of Joining
+
 
         // Exemptions
         exemptions: {
@@ -65,8 +74,8 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
             },
             lta: {
                 isApplicable: false,
-                proposedTravel: '',
                 claimsDetails: {
+                    claims2022: '',
                     claims2023: '',
                     claims2024: '',
                     claims2025: '',
@@ -88,8 +97,8 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
         section80CCD1Deduction: { isApplicable: false, amount: '' },
         section80CCD1BDeduction: { isApplicable: false, amount: '' },
         section80DDeductions: {
-            medicalInsuranceIndividual: { isApplicable: false, amount: '' },
-            medicalInsuranceParents: { isApplicable: false, amount: '' },
+            medicalInsuranceIndividual: { isApplicable: false, amount: '', isSenior: false },
+            medicalInsuranceParents: { isApplicable: false, amount: '', isSenior: false },
             preventiveHealthCheckup: { isApplicable: false, amount: '' }
         },
         section80EDeduction: { isApplicable: false, amount: '' },
@@ -99,8 +108,14 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
         previousEmploymentIncome: {
             incomeAfterExemptions: '',
             providentFund: '',
-            professionalTax: ''
+            professionalTax: '',
+            tds: ''
         },
+
+        // Income from Other Sources
+        incomeFromOtherSources: [
+            { description: '', amount: '' }
+        ],
 
         // Other Deductions
         otherDeductions: {
@@ -132,14 +147,31 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
         withCredentials: true
     });
 
+    // Add interceptor to include Authorization header
+    axiosInstance.interceptors.request.use((config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    });
+
     useEffect(() => {
-        if (employeeId) {
+        fetchEmployees();
+    }, []);
+
+    useEffect(() => {
+        const targetEmpId = formData.empId || employeeId;
+        // console.log("Checking targetEmpId for fetch:", targetEmpId);
+        if (targetEmpId && targetEmpId !== user?._id) {
             fetchExistingDeclaration();
         } else {
+            // Reset state if no valid employee is selected
+            setDeclaration(null);
+            setIsLocked(false);
             setLoading(false);
         }
-        fetchEmployees();
-    }, [employeeId, propFinancialYear]);
+    }, [formData.empId, formData.financialYear, employeeId, propFinancialYear, user?._id]);
 
     // Auto-populate form with logged-in user's details for non-accountant/superAdmin roles
     useEffect(() => {
@@ -158,23 +190,12 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                     designation: emp.details?.designation || prev.designation,
                     pan: emp.details?.panNumber || prev.pan,
                     dob: formatDateForInput(emp.details?.dateOfBirth) || prev.dob,
-                    gender: emp.details?.gender || prev.gender
+                    gender: emp.details?.gender || prev.gender,
+                    dateOfJoining: formatDateForInput(emp.dateOfJoining) || prev.dateOfJoining // Auto-populate
                 }));
             } else {
-                // Fallback to user context when employee record not found
+                // Remove fallback to user._id as it's not an Employee ID
                 setSelfEmployee(null);
-                setFormData(prev => ({
-                    ...prev,
-                    empId: user._id || prev.empId,
-                    employeeCode: user.empId || prev.employeeCode,
-                    employeeName: user.name || prev.employeeName,
-                    employeeEmail: user.email || prev.employeeEmail,
-                    department: user.department || prev.department,
-                    designation: user.details?.designation || prev.designation,
-                    pan: user.details?.panNumber || prev.pan,
-                    dob: formatDateForInput(user.details?.dateOfBirth) || prev.dob,
-                    gender: user.details?.gender || prev.gender
-                }));
             }
         }
     }, [user, employees]);
@@ -196,9 +217,9 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
     const fetchEmployees = async () => {
         setEmployeesLoading(true);
         try {
-            const response = await axios.get(`${API_BASE_URL}/api/employee/`, {
+            const response = await axiosInstance.get('/api/employee/', {
                 params: {
-                    fields: "_id,name,empId,email,department,details.designation,details.panNumber,details.dateOfBirth,details.gender",
+                    fields: "_id,name,empId,email,department,dateOfJoining,details.designation,details.panNumber,details.dateOfBirth,details.gender",
                     limit: 500
                 },
             });
@@ -219,7 +240,8 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                             designation: emp.details?.designation || '',
                             pan: emp.details?.panNumber || '',
                             dob: formatDateForInput(emp.details?.dateOfBirth),
-                            gender: emp.details?.gender || ''
+                            gender: emp.details?.gender || '',
+                            dateOfJoining: formatDateForInput(emp.dateOfJoining) || '' // Auto-populate
                         }));
                     }
                 }
@@ -237,19 +259,49 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
     };
 
     const fetchExistingDeclaration = async () => {
+        if (!formData.financialYear) {
+            setDeclaration(null);
+            setIsLocked(false);
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
             const response = await axiosInstance.get('/api/investmentDeclaration/declaration/employee', {
                 params: {
-                    employeeId,
-                    financialYear: propFinancialYear || formData.financialYear
+                    employeeId: formData.empId,
+                    financialYear: formData.financialYear
                 }
             });
             // console.log("Retrieved Data for Form:", response.data.declaration);
 
             if (response.data.declaration) {
                 const decData = response.data.declaration;
+                // console.log("Found existing declaration:", decData.status, decData.financialYear);
                 setDeclaration(decData);
+
+                // Check if declaration is already submitted or approved to lock the form
+                const normalizedStatus = decData.status ? decData.status.toLowerCase() : "";
+                const isManagementRole = ['accountant', 'superAdmin'].includes(user?.role);
+                const isUserRole = user?.role === 'user';
+
+                // Only lock standard users if the form is submitted/approved. 
+                // Management roles (accountant/superAdmin) can still edit unless propReadOnly is true.
+                const shouldLock = isUserRole && ['submitted', 'approved'].includes(normalizedStatus);
+                setIsLocked(shouldLock);
+
+                // Show "Duplicate" toast only if this was NOT an initial load with props (i.e., user manually changed year/employee)
+                const isInitialLoadWithProps = formData.empId === employeeId && formData.financialYear === propFinancialYear;
+
+                if (['submitted', 'approved'].includes(normalizedStatus) && !isInitialLoadWithProps) {
+                    // console.log("Triggering toast for manual duplicate/submitted declaration selection");
+                    toast({
+                        title: 'Duplicate Declaration',
+                        description: `A declaration for ${decData.financialYear} has already been ${decData.status.toLowerCase()}. You cannot submit another one.`,
+                        variant: 'destructive'
+                    });
+                }
+
                 setFormData(prev => {
                     // 1. Start with initial/current state
                     let updated = { ...prev };
@@ -266,15 +318,21 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
 
                     // 4. Force specific overrides for complex fields
                     updated.dob = formatDateForInput(decData.dob);
+                    updated.dateOfJoining = formatDateForInput(decData.dateOfJoining); // Handle existing data
                     updated.department = decData.department || updated.department || prev.department;
                     updated.empId = decData.employeeId?._id || decData.employeeId || prev.empId;
 
                     // console.log("Final Form State after Unflattening:", updated);
                     return updated;
                 });
+            } else {
+                // If no declaration found for this year, reset state
+                setDeclaration(null);
+                setIsLocked(false);
             }
         } catch (error) {
             console.error('Error in fetchExistingDeclaration:', error);
+            setIsLocked(false);
         } finally {
             setLoading(false);
         }
@@ -326,7 +384,8 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                 designation: employeeData.details?.designation || '',
                 pan: employeeData.details?.panNumber || '',
                 dob: formatDateForInput(employeeData.details?.dateOfBirth),
-                gender: employeeData.details?.gender || ''
+                gender: employeeData.details?.gender || '',
+                dateOfJoining: formatDateForInput(employeeData.dateOfJoining) || ''
             }));
 
             // toast({
@@ -550,6 +609,41 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
         }
     };
 
+    const isDetailsEmpty = () => {
+        // 1. Check HRA
+        if (formData.exemptions.houseRentAllowance.rentDetails.rentPaid) return false;
+
+        // 2. Check LTA
+        const ltaClaims = formData.exemptions.lta.claimsDetails;
+        if (Object.values(ltaClaims).some(val => val && val !== '')) return false;
+
+        // 3. Check Housing Loan Deductions
+        if (formData.housingLoanDeductions.some(d => d.amount && d.amount !== '')) return false;
+
+        // 4. Check Section 80C
+        if (formData.section80CDeductions.some(d => d.amount && d.amount !== '')) return false;
+
+        // 5. Check Other Sections
+        const otherSections = [
+            formData.section80CCDeduction.amount,
+            formData.section80CCD1Deduction.amount,
+            formData.section80CCD1BDeduction.amount,
+            formData.section80DDeductions.medicalInsuranceIndividual.amount,
+            formData.section80DDeductions.medicalInsuranceParents.amount,
+            formData.section80DDeductions.preventiveHealthCheckup.amount,
+            formData.section80EDeduction.amount,
+            formData.section80TTADeduction.amount,
+            formData.previousEmploymentIncome.incomeAfterExemptions,
+            formData.otherDeductions.amount
+        ];
+        if (otherSections.some(val => val && val !== '')) return false;
+
+        // 6. Check Income from Other Sources
+        if (formData.incomeFromOtherSources.some(item => item.amount && item.amount !== '')) return false;
+
+        return true;
+    };
+
     const handleSubmit = async () => {
         if (!formData.declaration.isAgreed) {
             toast({
@@ -564,6 +658,15 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
             toast({
                 title: 'Signature Required',
                 description: 'Please type your full name as signature',
+                variant: 'destructive'
+            });
+            return;
+        }
+
+        if (isDetailsEmpty()) {
+            toast({
+                title: 'Incomplete Declaration',
+                description: 'Please fill in at least one investment or income detail before submitting.',
                 variant: 'destructive'
             });
             return;
@@ -696,69 +799,96 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
 
             )}
 
-            {/* Status Banner - Redesigned */}
-            {declaration && (
-                <div className={`rounded-lg border shadow-sm overflow-hidden ${declaration.status === 'Submitted'
-                    ? 'bg-emerald-50 border-emerald-200'
-                    : declaration.status === 'Approved'
-                        ? 'bg-green-50 border-green-200'
-                        : declaration.status === 'Rejected'
-                            ? 'bg-red-50 border-red-200'
-                            : 'bg-amber-50 border-amber-200'
-                    }`}>
-                    <div className="p-5 flex items-start gap-4">
-                        <div className={`pt-0.5 flex-shrink-0 ${declaration.status === 'Submitted' ? 'text-emerald-600' :
-                            declaration.status === 'Approved' ? 'text-green-600' :
-                                declaration.status === 'Rejected' ? 'text-red-600' :
-                                    'text-amber-600'
-                            }`}>
-                            {declaration.status === 'Draft' && <Clock className="w-6 h-6" />}
-                            {declaration.status === 'Submitted' && <Clock className="w-6 h-6" />}
-                            {declaration.status === 'Approved' && <CheckCircle className="w-6 h-6" />}
-                            {declaration.status === 'Rejected' && <XCircle className="w-6 h-6" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <h3 className={`font-bold text-lg ${declaration.status === 'Submitted' ? 'text-emerald-900' :
-                                declaration.status === 'Approved' ? 'text-green-900' :
-                                    declaration.status === 'Rejected' ? 'text-red-900' :
-                                        'text-amber-900'
-                                }`}>
-                                Declaration Status: {declaration.status}
-                            </h3>
-                            <p className={`text-sm mt-1 ${declaration.status === 'Submitted' ? 'text-emerald-800' :
-                                declaration.status === 'Approved' ? 'text-green-800' :
-                                    declaration.status === 'Rejected' ? 'text-red-800' :
-                                        'text-amber-800'
-                                }`}>
-                                {declaration.status === 'Draft' && 'Your form is saved as draft. You can continue editing and submit when ready.'}
-                                {declaration.status === 'Submitted' && 'Your declaration has been submitted successfully. Awaiting admin approval.'}
-                                {declaration.status === 'Approved' && 'Your investment declaration has been approved by the admin.'}
-                                {declaration.status === 'Rejected' && 'Your declaration was rejected. Please review the remarks and resubmit.'}
-                            </p>
-                            {declaration.rejectionReason && (
-                                <div className={`mt-3 p-3 rounded border-l-4 ${declaration.status === 'Rejected'
-                                    ? 'bg-red-100 border-red-400 text-red-900'
-                                    : 'bg-white bg-opacity-50 border-current'
-                                    }`}>
-                                    <p className="text-xs font-semibold">Rejection Reason:</p>
-                                    <p className="text-sm mt-1">{declaration.rejectionReason}</p>
+            {/* Status Banner - Redesigned with distinct contrast */}
+            {formData.financialYear && (
+                (() => {
+                    const status = declaration?.status || 'New';
+                    const configs = {
+                        Approved: {
+                            bg: 'bg-green-50',
+                            border: 'border-green-200',
+                            text: 'text-green-900',
+                            iconColor: 'text-green-600',
+                            icon: CheckCircle,
+                            desc: 'Your investment declaration has been approved by the admin.'
+                        },
+                        Submitted: {
+                            bg: 'bg-blue-50', // Changed to Blue for better distinction
+                            border: 'border-blue-200',
+                            text: 'text-blue-900',
+                            iconColor: 'text-blue-600',
+                            icon: Clock,
+                            desc: 'Your declaration has been submitted successfully. Awaiting admin approval.'
+                        },
+                        Rejected: {
+                            bg: 'bg-red-50',
+                            border: 'border-red-200',
+                            text: 'text-red-900',
+                            iconColor: 'text-red-600',
+                            icon: XCircle,
+                            desc: 'Your declaration was rejected. Please review the remarks and resubmit.'
+                        },
+                        Draft: {
+                            bg: 'bg-amber-50',
+                            border: 'border-amber-200',
+                            text: 'text-amber-900',
+                            iconColor: 'text-amber-600',
+                            icon: Clock,
+                            desc: 'Your form is saved as draft. You can continue editing and submit when ready.'
+                        },
+                        New: {
+                            bg: 'bg-slate-50', // Gray for empty state
+                            border: 'border-slate-200',
+                            text: 'text-slate-900',
+                            iconColor: 'text-slate-600',
+                            icon: PlusCircle,
+                            desc: `No declaration found for ${formData.financialYear}. You can start a new submission.`
+                        }
+                    };
+
+                    const config = configs[status] || configs.draft;
+                    const Icon = config.icon;
+
+                    return (
+                        <div className={`rounded-lg border shadow-sm overflow-hidden ${config.bg} ${config.border}`}>
+                            <div className="p-5 flex items-start gap-4">
+                                <div className={`pt-0.5 flex-shrink-0 ${config.iconColor}`}>
+                                    <Icon className="w-6 h-6" />
                                 </div>
-                            )}
-                            <div className="flex flex-wrap gap-4 text-xs mt-3">
-                                {declaration.submittedDate && (
-                                    <span className="text-gray-600">
-                                        Submitted: {new Date(declaration.submittedDate).toLocaleDateString()}
-                                    </span>
-                                )}
-                                {declaration.approvalDate && (
-                                    <span className="text-gray-600">
-                                        Reviewed: {new Date(declaration.approvalDate).toLocaleDateString()}
-                                    </span>
-                                )}
+                                <div className="flex-1 min-w-0">
+                                    <h3 className={`font-bold text-lg ${config.text}`}>
+                                        Declaration Status: {status === 'new' ? 'New' : (declaration?.status || 'New')}
+                                    </h3>
+                                    <p className={`text-sm mt-1 opacity-90 ${config.text}`}>
+                                        {config.desc}
+                                    </p>
+
+                                    {declaration?.rejectionReason && status === 'rejected' && (
+                                        <div className="mt-3 p-3 rounded border-l-4 bg-red-100 border-red-400 text-red-900">
+                                            <p className="text-xs font-semibold">Rejection Reason:</p>
+                                            <p className="text-sm mt-1">{declaration.rejectionReason}</p>
+                                        </div>
+                                    )}
+
+                                    {declaration && (
+                                        <div className="flex flex-wrap gap-4 text-xs mt-3 opacity-70">
+                                            {declaration.submittedDate && (
+                                                <span className="text-gray-600 font-medium">
+                                                    Submitted: {new Date(declaration.submittedDate).toLocaleDateString()}
+                                                </span>
+                                            )}
+                                            {declaration.approvalDate && (
+                                                <span className="text-gray-600 font-medium">
+                                                    Reviewed: {new Date(declaration.approvalDate).toLocaleDateString()}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
+                    );
+                })()
             )}
 
 
@@ -787,7 +917,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                             Select Financial Year
                                         </label>
                                         <div className='relative'>
-                                            <Select disabled={isReadOnly}
+                                            <Select disabled={propReadOnly}
                                                 value={formData.financialYear}
                                                 onValueChange={(value) =>
                                                     handleInputChange("financialYear", value)
@@ -816,7 +946,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                             Select Employee
                                         </label>
                                         <div className='relative'>
-                                            <Select disabled={isReadOnly}
+                                            <Select disabled={propReadOnly}
                                                 value={formData.employeeName || ""}
                                                 onValueChange={handleEmployeeSelect}
                                             >
@@ -927,6 +1057,15 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         value={formData.pan}
                                         onChange={(e) => handleInputChange('pan', e.target.value)}
                                         placeholder="PAN Number"
+                                        className="mt-2"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-semibold">Date of Joining</label>
+                                    <Input disabled={isReadOnly}
+                                        type="date"
+                                        value={formData.dateOfJoining}
+                                        onChange={(e) => handleInputChange('dateOfJoining', e.target.value)}
                                         className="mt-2"
                                     />
                                 </div>
@@ -1158,48 +1297,87 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
 
                                 {formData.exemptions.lta.isApplicable && (
                                     <div className="space-y-4 bg-gray-50 p-4 rounded">
-                                        <div>
-                                            <label className="text-sm font-semibold">Proposed Travel Details</label>
-                                            <Textarea disabled={isReadOnly}
-                                                value={formData.exemptions.lta.proposedTravel}
-                                                onChange={(e) =>
-                                                    handleDeepNestedChange('exemptions', 'lta', 'proposedTravel', e.target.value)
-                                                }
-                                                placeholder="Describe your proposed travel"
-                                                className="mt-2"
-                                                rows={3}
-                                            />
-                                        </div>
-
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
-                                                <label className="text-sm font-semibold">Claims during 2023</label>
+                                                <label className="text-sm font-semibold">Claim Amount 2022</label>
                                                 <Input disabled={isReadOnly}
-                                                    value={formData.exemptions.lta.claimsDetails.claims2023}
+                                                    type="number"
+                                                    value={formData.exemptions.lta.claimsDetails.claims2022}
                                                     onChange={(e) =>
-                                                        setFormData(prev => ({
-                                                            ...prev,
-                                                            exemptions: {
-                                                                ...prev.exemptions,
-                                                                lta: {
-                                                                    ...prev.exemptions.lta,
-                                                                    claimsDetails: {
-                                                                        ...prev.exemptions.lta.claimsDetails,
-                                                                        claims2023: e.target.value
-                                                                    }
-                                                                }
-                                                            }
-                                                        }))
+                                                        handleDeepNestedChange('exemptions', 'lta', 'claimsDetails', {
+                                                            ...formData.exemptions.lta.claimsDetails,
+                                                            claims2022: e.target.value
+                                                        })
                                                     }
-                                                    placeholder="Yes/No"
+                                                    placeholder="Amount for 2022"
                                                     className="mt-2"
                                                 />
                                             </div>
                                             <div>
-                                                <label className="text-sm font-semibold">Claims during 2024</label>
+                                                <label className="text-sm font-semibold">Claim Amount 2023</label>
                                                 <Input disabled={isReadOnly}
+                                                    type="number"
+                                                    value={formData.exemptions.lta.claimsDetails.claims2023}
+                                                    onChange={(e) =>
+                                                        handleDeepNestedChange('exemptions', 'lta', 'claimsDetails', {
+                                                            ...formData.exemptions.lta.claimsDetails,
+                                                            claims2023: e.target.value
+                                                        })
+                                                    }
+                                                    placeholder="Amount for 2023"
+                                                    className="mt-2"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-sm font-semibold">Claim Amount 2024</label>
+                                                <Input disabled={isReadOnly}
+                                                    type="number"
                                                     value={formData.exemptions.lta.claimsDetails.claims2024}
                                                     onChange={(e) =>
+                                                        handleDeepNestedChange('exemptions', 'lta', 'claimsDetails', {
+                                                            ...formData.exemptions.lta.claimsDetails,
+                                                            claims2024: e.target.value
+                                                        })
+                                                    }
+                                                    placeholder="Amount for 2024"
+                                                    className="mt-2"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-sm font-semibold">Claim Amount 2025</label>
+                                                <Input disabled={isReadOnly}
+                                                    type="number"
+                                                    value={formData.exemptions.lta.claimsDetails.claims2025}
+                                                    onChange={(e) =>
+                                                        handleDeepNestedChange('exemptions', 'lta', 'claimsDetails', {
+                                                            ...formData.exemptions.lta.claimsDetails,
+                                                            claims2025: e.target.value
+                                                        })
+                                                    }
+                                                    placeholder="Amount for 2025"
+                                                    className="mt-2"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-sm font-semibold">Claim Amount 2026</label>
+                                                <Input disabled={isReadOnly}
+                                                    type="number"
+                                                    value={formData.exemptions.lta.claimsDetails.claims2026}
+                                                    onChange={(e) =>
+                                                        handleDeepNestedChange('exemptions', 'lta', 'claimsDetails', {
+                                                            ...formData.exemptions.lta.claimsDetails,
+                                                            claims2026: e.target.value
+                                                        })
+                                                    }
+                                                    placeholder="Amount for 2026"
+                                                    className="mt-2"
+                                                />
+                                            </div>
+                                            <div></div>
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox disabled={isReadOnly}
+                                                    checked={formData.exemptions.lta.claimsDetails.willingToProduceBills === 'Yes'}
+                                                    onCheckedChange={(checked) =>
                                                         setFormData(prev => ({
                                                             ...prev,
                                                             exemptions: {
@@ -1208,134 +1386,111 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                                                     ...prev.exemptions.lta,
                                                                     claimsDetails: {
                                                                         ...prev.exemptions.lta.claimsDetails,
-                                                                        claims2024: e.target.value
+                                                                        willingToProduceBills: checked ? 'Yes' : 'No'
                                                                     }
                                                                 }
                                                             }
                                                         }))
                                                     }
-                                                    placeholder="Yes/No"
-                                                    className="mt-2"
                                                 />
+                                                <label className="text-sm font-medium">I agree to produce bills for verification</label>
                                             </div>
-                                        </div>
 
-                                        <div className="flex items-center space-x-2">
-                                            <Checkbox disabled={isReadOnly}
-                                                checked={formData.exemptions.lta.claimsDetails.willingToProduceBills === 'Yes'}
-                                                onCheckedChange={(checked) =>
-                                                    setFormData(prev => ({
-                                                        ...prev,
-                                                        exemptions: {
-                                                            ...prev.exemptions,
-                                                            lta: {
-                                                                ...prev.exemptions.lta,
-                                                                claimsDetails: {
-                                                                    ...prev.exemptions.lta.claimsDetails,
-                                                                    willingToProduceBills: checked ? 'Yes' : 'No'
-                                                                }
-                                                            }
-                                                        }
-                                                    }))
-                                                }
-                                            />
-                                            <label className="text-sm font-medium">I agree to produce bills for verification</label>
-                                        </div>
-
-                                        {formData.exemptions.lta.claimsDetails.willingToProduceBills === 'Yes' && (
-                                            <div className="border-t pt-4 mt-4">
-                                                <label className="block text-sm font-semibold mb-3">Upload LTA Bills & Documents</label>
-                                                {!isReadOnly && (
-                                                    <div className="flex items-center gap-3 mb-3">
-                                                        <label className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/50 rounded-md cursor-pointer hover:bg-primary/20 transition">
-                                                            <Upload className="w-4 h-4" />
-                                                            <span className="text-sm">Choose Files</span>
-                                                            <input
-                                                                type="file"
-                                                                multiple
-                                                                onChange={(e) => handleDocumentUpload('ltaDocuments', e.target.files)}
-                                                                className="hidden"
-                                                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                                            />
-                                                        </label>
-                                                    </div>
-                                                )}
-                                                {formData.ltaDocuments.length > 0 && (
-                                                    <div className="space-y-2">
-                                                        {formData.ltaDocuments.map((doc, index) => (
-                                                            <div
-                                                                key={index}
-                                                                className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border/50 group max-w-[500px]"
-                                                            >
-                                                                <div className="flex items-center gap-3 min-w-0">
-                                                                    <div className="p-2 rounded-lg bg-background">
-                                                                        {doc.file?.type?.startsWith("image/") || (doc.filename && /\.(jpg|jpeg|png|gif)$/i.test(doc.filename)) ? (
-                                                                            <FileImage className="w-4 h-4 text-primary" />
+                                            {formData.exemptions.lta.claimsDetails.willingToProduceBills === 'Yes' && (
+                                                <div className="border-t pt-4 mt-4">
+                                                    <label className="block text-sm font-semibold mb-3">Upload LTA Bills & Documents</label>
+                                                    {!isReadOnly && (
+                                                        <div className="flex items-center gap-3 mb-3">
+                                                            <label className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/50 rounded-md cursor-pointer hover:bg-primary/20 transition">
+                                                                <Upload className="w-4 h-4" />
+                                                                <span className="text-sm">Choose Files</span>
+                                                                <input
+                                                                    type="file"
+                                                                    multiple
+                                                                    onChange={(e) => handleDocumentUpload('ltaDocuments', e.target.files)}
+                                                                    className="hidden"
+                                                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                                                />
+                                                            </label>
+                                                        </div>
+                                                    )}
+                                                    {formData.ltaDocuments.length > 0 && (
+                                                        <div className="space-y-2">
+                                                            {formData.ltaDocuments.map((doc, index) => (
+                                                                <div
+                                                                    key={index}
+                                                                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border/50 group max-w-[500px]"
+                                                                >
+                                                                    <div className="flex items-center gap-3 min-w-0">
+                                                                        <div className="p-2 rounded-lg bg-background">
+                                                                            {doc.file?.type?.startsWith("image/") || (doc.filename && /\.(jpg|jpeg|png|gif)$/i.test(doc.filename)) ? (
+                                                                                <FileImage className="w-4 h-4 text-primary" />
+                                                                            ) : (
+                                                                                <FileText className="w-4 h-4 text-orange-500" />
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="min-w-0">
+                                                                            <p className="text-sm font-medium text-foreground truncate max-w-fit">
+                                                                                {doc.name || doc.filename}
+                                                                            </p>
+                                                                            <p className="text-xs text-muted-foreground">
+                                                                                {formatFileSize(doc.size)}
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-1">
+                                                                        {doc._id ? (
+                                                                            <>
+                                                                                <Button
+                                                                                    type="button"
+                                                                                    variant="ghost"
+                                                                                    size="icon"
+                                                                                    onClick={() => window.open(`${API_BASE_URL}/api/investmentDeclaration/document/preview/${doc._id}`, "_blank")}
+                                                                                    className="h-8 w-8 text-primary hover:bg-primary/10"
+                                                                                    title="Preview"
+                                                                                >
+                                                                                    <Eye className="w-4 h-4" />
+                                                                                </Button>
+                                                                                <Button
+                                                                                    type="button"
+                                                                                    variant="ghost"
+                                                                                    size="icon"
+                                                                                    onClick={() => window.open(`${API_BASE_URL}/api/investmentDeclaration/document/download/${doc._id}`, "_blank")}
+                                                                                    className="h-8 w-8 text-slate-500 hover:bg-slate-100"
+                                                                                    title="Download"
+                                                                                >
+                                                                                    <Download className="w-4 h-4" />
+                                                                                </Button>
+                                                                            </>
                                                                         ) : (
-                                                                            <FileText className="w-4 h-4 text-orange-500" />
+                                                                            declaration?._id && (
+                                                                                <div className="h-8 w-8 flex items-center justify-center text-amber-700" title="Pending upload after submit">
+                                                                                    <Clock className="w-4 h-4" />
+                                                                                </div>
+                                                                            )
+                                                                        )}
+                                                                        {!isReadOnly && (
+                                                                            <Button
+                                                                                type="button"
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                onClick={() => removeDocument('ltaDocuments', index)}
+                                                                                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                                                            >
+                                                                                <X className="w-4 h-4" />
+                                                                            </Button>
                                                                         )}
                                                                     </div>
-                                                                    <div className="min-w-0">
-                                                                        <p className="text-sm font-medium text-foreground truncate max-w-fit">
-                                                                            {doc.name || doc.filename}
-                                                                        </p>
-                                                                        <p className="text-xs text-muted-foreground">
-                                                                            {formatFileSize(doc.size)}
-                                                                        </p>
-                                                                    </div>
                                                                 </div>
-                                                                <div className="flex gap-1">
-                                                                    {doc._id ? (
-                                                                        <>
-                                                                            <Button
-                                                                                type="button"
-                                                                                variant="ghost"
-                                                                                size="icon"
-                                                                                onClick={() => window.open(`${API_BASE_URL}/api/investmentDeclaration/document/preview/${doc._id}`, "_blank")}
-                                                                                className="h-8 w-8 text-primary hover:bg-primary/10"
-                                                                                title="Preview"
-                                                                            >
-                                                                                <Eye className="w-4 h-4" />
-                                                                            </Button>
-                                                                            <Button
-                                                                                type="button"
-                                                                                variant="ghost"
-                                                                                size="icon"
-                                                                                onClick={() => window.open(`${API_BASE_URL}/api/investmentDeclaration/document/download/${doc._id}`, "_blank")}
-                                                                                className="h-8 w-8 text-slate-500 hover:bg-slate-100"
-                                                                                title="Download"
-                                                                            >
-                                                                                <Download className="w-4 h-4" />
-                                                                            </Button>
-                                                                        </>
-                                                                    ) : (
-                                                                        declaration?._id && (
-                                                                            <div className="h-8 w-8 flex items-center justify-center text-amber-700" title="Pending upload after submit">
-                                                                                <Clock className="w-4 h-4" />
-                                                                            </div>
-                                                                        )
-                                                                    )}
-                                                                    {!isReadOnly && (
-                                                                        <Button
-                                                                            type="button"
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            onClick={() => removeDocument('ltaDocuments', index)}
-                                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                                                        >
-                                                                            <X className="w-4 h-4" />
-                                                                        </Button>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                {/* {!driveConnected && (
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {/* {!driveConnected && (
                                                     <p className="text-xs text-amber-600 mt-2">💡 Tip: Connect your Google Drive to upload documents automatically</p>
                                                 )} */}
-                                            </div>
-                                        )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </CardContent>
@@ -1547,6 +1702,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                                         <SelectItem value="Public Provident Fund (PPF)">Public Provident Fund (PPF)</SelectItem>
                                                         <SelectItem value="Voluntary Provident Fund (VPF)">Voluntary Provident Fund (VPF)</SelectItem>
                                                         <SelectItem value="National Savings Certificate (NSC)">National Savings Certificate (NSC)</SelectItem>
+                                                        <SelectItem value="Interest accrued on NSC (Re-invested)">Interest accrued on NSC (Re-invested)</SelectItem>
                                                         <SelectItem value="ULIP - Unit Linked Insurance Policy">ULIP - Unit Linked Insurance Policy</SelectItem>
                                                         <SelectItem value="ELSS - Equity Linked Savings Scheme">ELSS - Equity Linked Savings Scheme</SelectItem>
                                                         <SelectItem value="Tuition Fees for Children (Max 2)">Tuition Fees for Children (Max 2)</SelectItem>
@@ -1942,24 +2098,43 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         <label className="text-sm font-medium">Medical Insurance - Individual, Spouse & Children</label>
                                     </div>
                                     {formData.section80DDeductions.medicalInsuranceIndividual.isApplicable && (
-                                        <Input disabled={isReadOnly}
-                                            type="number"
-                                            placeholder="Enter amount (Max: Rs. 25,000 + 25,000 for Senior Citizen)"
-                                            value={formData.section80DDeductions.medicalInsuranceIndividual.amount}
-                                            onChange={(e) =>
-                                                setFormData(prev => ({
-                                                    ...prev,
-                                                    section80DDeductions: {
-                                                        ...prev.section80DDeductions,
-                                                        medicalInsuranceIndividual: {
-                                                            ...prev.section80DDeductions.medicalInsuranceIndividual,
-                                                            amount: e.target.value
+                                        <div className="ml-6 space-y-3">
+                                            <Input disabled={isReadOnly}
+                                                type="number"
+                                                placeholder="Enter amount (Max: Rs. 25,000 + 25,000 if Senior Citizen)"
+                                                value={formData.section80DDeductions.medicalInsuranceIndividual.amount}
+                                                onChange={(e) =>
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        section80DDeductions: {
+                                                            ...prev.section80DDeductions,
+                                                            medicalInsuranceIndividual: {
+                                                                ...prev.section80DDeductions.medicalInsuranceIndividual,
+                                                                amount: e.target.value
+                                                            }
                                                         }
+                                                    }))
+                                                }
+                                            />
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox disabled={isReadOnly}
+                                                    checked={formData.section80DDeductions.medicalInsuranceIndividual.isSenior}
+                                                    onCheckedChange={(checked) =>
+                                                        setFormData(prev => ({
+                                                            ...prev,
+                                                            section80DDeductions: {
+                                                                ...prev.section80DDeductions,
+                                                                medicalInsuranceIndividual: {
+                                                                    ...prev.section80DDeductions.medicalInsuranceIndividual,
+                                                                    isSenior: checked
+                                                                }
+                                                            }
+                                                        }))
                                                     }
-                                                }))
-                                            }
-                                            className="ml-6"
-                                        />
+                                                />
+                                                <label className="text-xs font-medium">Is Senior Citizen?</label>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
 
@@ -1983,24 +2158,43 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                                         <label className="text-sm font-medium">Medical Insurance - Parents</label>
                                     </div>
                                     {formData.section80DDeductions.medicalInsuranceParents.isApplicable && (
-                                        <Input disabled={isReadOnly}
-                                            type="number"
-                                            placeholder="Enter amount (Max: Rs. 25,000 + 25,000 for Senior Citizen)"
-                                            value={formData.section80DDeductions.medicalInsuranceParents.amount}
-                                            onChange={(e) =>
-                                                setFormData(prev => ({
-                                                    ...prev,
-                                                    section80DDeductions: {
-                                                        ...prev.section80DDeductions,
-                                                        medicalInsuranceParents: {
-                                                            ...prev.section80DDeductions.medicalInsuranceParents,
-                                                            amount: e.target.value
+                                        <div className="ml-6 space-y-3">
+                                            <Input disabled={isReadOnly}
+                                                type="number"
+                                                placeholder="Enter amount (Max: Rs. 25,000 + 25,000 if Senior Citizen)"
+                                                value={formData.section80DDeductions.medicalInsuranceParents.amount}
+                                                onChange={(e) =>
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        section80DDeductions: {
+                                                            ...prev.section80DDeductions,
+                                                            medicalInsuranceParents: {
+                                                                ...prev.section80DDeductions.medicalInsuranceParents,
+                                                                amount: e.target.value
+                                                            }
                                                         }
+                                                    }))
+                                                }
+                                            />
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox disabled={isReadOnly}
+                                                    checked={formData.section80DDeductions.medicalInsuranceParents.isSenior}
+                                                    onCheckedChange={(checked) =>
+                                                        setFormData(prev => ({
+                                                            ...prev,
+                                                            section80DDeductions: {
+                                                                ...prev.section80DDeductions,
+                                                                medicalInsuranceParents: {
+                                                                    ...prev.section80DDeductions.medicalInsuranceParents,
+                                                                    isSenior: checked
+                                                                }
+                                                            }
+                                                        }))
                                                     }
-                                                }))
-                                            }
-                                            className="ml-6"
-                                        />
+                                                />
+                                                <label className="text-xs font-medium">Is Senior Citizen?</label>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
 
@@ -2257,69 +2451,127 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
 
                 {/* Previous Income Tab */}
                 <TabsContent value="previous-income">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Income from Previous Employment</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <label className="text-sm font-semibold">Income after Exemptions (Rs.)</label>
-                                <Input disabled={isReadOnly}
-                                    type="number"
-                                    value={formData.previousEmploymentIncome.incomeAfterExemptions}
-                                    onChange={(e) =>
-                                        setFormData(prev => ({
-                                            ...prev,
-                                            previousEmploymentIncome: {
-                                                ...prev.previousEmploymentIncome,
-                                                incomeAfterExemptions: e.target.value
-                                            }
-                                        }))
-                                    }
-                                    placeholder="Enter income amount"
-                                    className="mt-2"
-                                />
-                            </div>
+                    <div className="space-y-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Income from Previous Employment</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div>
+                                    <label className="text-sm font-semibold">Income after Exemptions (Rs.)</label>
+                                    <Input disabled={isReadOnly}
+                                        type="number"
+                                        value={formData.previousEmploymentIncome.incomeAfterExemptions}
+                                        onChange={(e) =>
+                                            handleNestedChange('previousEmploymentIncome', 'incomeAfterExemptions', e.target.value)
+                                        }
+                                        placeholder="Enter income amount"
+                                        className="mt-2"
+                                    />
+                                </div>
 
-                            <div>
-                                <label className="text-sm font-semibold">Provident Fund (PF) (Rs.)</label>
-                                <Input disabled={isReadOnly}
-                                    type="number"
-                                    value={formData.previousEmploymentIncome.providentFund}
-                                    onChange={(e) =>
-                                        setFormData(prev => ({
-                                            ...prev,
-                                            previousEmploymentIncome: {
-                                                ...prev.previousEmploymentIncome,
-                                                providentFund: e.target.value
-                                            }
-                                        }))
-                                    }
-                                    placeholder="Enter PF amount"
-                                    className="mt-2"
-                                />
-                            </div>
+                                <div>
+                                    <label className="text-sm font-semibold">Provident Fund (PF) (Rs.)</label>
+                                    <Input disabled={isReadOnly}
+                                        type="number"
+                                        value={formData.previousEmploymentIncome.providentFund}
+                                        onChange={(e) =>
+                                            handleNestedChange('previousEmploymentIncome', 'providentFund', e.target.value)
+                                        }
+                                        placeholder="Enter PF amount"
+                                        className="mt-2"
+                                    />
+                                </div>
 
-                            <div>
-                                <label className="text-sm font-semibold">Professional Tax (PT) (Rs.)</label>
-                                <Input disabled={isReadOnly}
-                                    type="number"
-                                    value={formData.previousEmploymentIncome.professionalTax}
-                                    onChange={(e) =>
-                                        setFormData(prev => ({
-                                            ...prev,
-                                            previousEmploymentIncome: {
-                                                ...prev.previousEmploymentIncome,
-                                                professionalTax: e.target.value
-                                            }
-                                        }))
-                                    }
-                                    placeholder="Enter PT amount"
-                                    className="mt-2"
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
+                                <div>
+                                    <label className="text-sm font-semibold">Professional Tax (PT) (Rs.)</label>
+                                    <Input disabled={isReadOnly}
+                                        type="number"
+                                        value={formData.previousEmploymentIncome.professionalTax}
+                                        onChange={(e) =>
+                                            handleNestedChange('previousEmploymentIncome', 'professionalTax', e.target.value)
+                                        }
+                                        placeholder="Enter PT amount"
+                                        className="mt-2"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-semibold">Tax Deducted At Source (TDS) (Rs.)</label>
+                                    <Input disabled={isReadOnly}
+                                        type="number"
+                                        value={formData.previousEmploymentIncome.tds}
+                                        onChange={(e) =>
+                                            handleNestedChange('previousEmploymentIncome', 'tds', e.target.value)
+                                        }
+                                        placeholder="Enter TDS amount"
+                                        className="mt-2"
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Income from Other Sources */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Income From Other Sources</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-3">
+                                    {(formData.incomeFromOtherSources || []).map((source, index) => (
+                                        <div key={index} className="flex gap-2 bg-gray-50 p-3 rounded">
+                                            <Input disabled={isReadOnly}
+                                                placeholder="Description (e.g. Interest, Rental)"
+                                                value={source.description}
+                                                onChange={(e) => {
+                                                    const updated = [...formData.incomeFromOtherSources];
+                                                    updated[index].description = e.target.value;
+                                                    handleInputChange('incomeFromOtherSources', updated);
+                                                }}
+                                                className="flex-1"
+                                            />
+                                            <Input disabled={isReadOnly}
+                                                type="number"
+                                                placeholder="Amount"
+                                                value={source.amount}
+                                                onChange={(e) => {
+                                                    const updated = [...formData.incomeFromOtherSources];
+                                                    updated[index].amount = e.target.value;
+                                                    handleInputChange('incomeFromOtherSources', updated);
+                                                }}
+                                                className="w-32"
+                                            />
+                                            {!isReadOnly && (
+                                                <Button
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        const updated = formData.incomeFromOtherSources.filter((_, i) => i !== index);
+                                                        handleInputChange('incomeFromOtherSources', updated);
+                                                    }}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {!isReadOnly && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            const updated = [...(formData.incomeFromOtherSources || []), { description: '', amount: '' }];
+                                            handleInputChange('incomeFromOtherSources', updated);
+                                        }}
+                                        className="w-full"
+                                    >
+                                        + Add Other Source
+                                    </Button>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
                 </TabsContent>
             </Tabs>
 
@@ -2462,7 +2714,7 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                     </Button>
                 </div>
             )}
-            {isReadOnly && (user?.role === 'accountant' || user?.role === 'superAdmin') && declaration?.status === 'Submitted' && (
+            {isReadOnly && (user?.role === 'accountant' || user?.role === 'superAdmin') && declaration?.status?.toLowerCase() === 'submitted' && (
                 <div className="flex gap-3 justify-end mt-6 pt-6 border-t border-slate-200">
                     <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
                         <DialogTrigger asChild>

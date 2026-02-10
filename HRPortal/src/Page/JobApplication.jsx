@@ -16,25 +16,27 @@ import {
   User,
   X as XIcon,
   Filter,
-  ChevronLeft, 
+  ChevronLeft,
   ChevronRight,
   Users,
-   CheckCircle,
-   XCircle,
-   Upload,
-   Cloud,
+  CheckCircle,
+  XCircle,
+  Upload,
+  Cloud,
   CloudOff,
   MapPin,
   ChevronDown,
-  Loader2
+  Loader2,
+  X as CloseIcon,
+  Download
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { Input } from "../Components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../Components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader,TableRow } from '../Components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../Components/ui/table';
 import { Button } from "../Components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle} from "../Components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../Components/ui/dialog";
 import { Badge } from "../Components/ui/badge";
 import { Label } from "../Components/ui/label";
@@ -77,7 +79,7 @@ const JobApplication = () => {
       setApplications(normalized);
     } catch (err) {
       console.error("Error fetching applications:", err);
-      toast ({
+      toast({
         variant: "destructive",
         title: "Fetch Error",
         description: err.response?.data?.message || "Failed to fetch applications.",
@@ -96,6 +98,15 @@ const JobApplication = () => {
     setResumeModalOpen(false);
     setResumeTarget(null);
     setResumeFile(null);
+  };
+
+  // Helper added
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const handleResumeUpload = async () => {
@@ -129,7 +140,7 @@ const JobApplication = () => {
           withCredentials: true,
         }
       );
-      
+
       const newUrl = resp.data?.resumeUrl;
       if (newUrl) {
         setApplications((prev) =>
@@ -145,10 +156,18 @@ const JobApplication = () => {
         });
       }
       closeResumeModal();
-      
+
     } catch (err) {
       console.error("Resume upload failed", err);
-      toast.error(err.response?.data?.message || "Failed to upload resume");
+      const isLargeFile = err.response?.status === 413 || err.message?.includes("too large") || err.response?.data?.message?.includes("too large");
+
+      toast({
+        variant: "destructive",
+        title: isLargeFile ? "File Too Large" : "Upload Error",
+        description: isLargeFile
+          ? "The resume file is too large. Maximum allowed size is 5MB."
+          : (err.response?.data?.message || "Failed to upload resume."),
+      });
     } finally {
       setResumeUploading(false);
     }
@@ -189,7 +208,7 @@ const JobApplication = () => {
       window.location.href = response.data.url;
     } catch (err) {
       console.error("Error connecting Google Drive:", err);
-      toast ({
+      toast({
         variant: "destructive",
         title: "Connection Error",
         description:
@@ -238,7 +257,7 @@ const JobApplication = () => {
     } catch (err) {
       console.error("Disconnect error:", err);
       setLoading(false);
-      toast ({
+      toast({
         variant: "destructive",
         title: "Disconnection Error",
         description:
@@ -254,14 +273,14 @@ const JobApplication = () => {
 
     if (connected === "google") {
       setDriveConnected(true);
-      toast ({
+      toast({
         title: "Google Drive Connected",
         description: "Google Drive connected successfully.",
       });
       navigate("/application", { replace: true });
     } else if (error) {
       setDriveConnected(false);
-      toast ({
+      toast({
         variant: "destructive",
         title: "Connection Error",
         description: "Failed to connect Google Drive.",
@@ -304,7 +323,7 @@ const JobApplication = () => {
             app._id === id ? { ...app, status: newStatus } : app
           )
         );
-        toast ({
+        toast({
           // variant: "success",
           title: "Status Updated",
           description: `Application status updated to ${newStatus}` || response.data?.message,
@@ -313,7 +332,7 @@ const JobApplication = () => {
       }
     } catch (error) {
       console.error("Error updating status:", error);
-      toast ({
+      toast({
         variant: "destructive",
         title: "Update Error",
         description:
@@ -329,7 +348,10 @@ const JobApplication = () => {
     if (hasResume) {
       window.open(resumeUrl, "_blank", "noopener,noreferrer");
     } else {
-      toast.error("Resume not uploaded yet. Upload now?");
+      toast({
+        title: "Resume Not Uploaded",
+        description: "Resume not uploaded yet. Upload now?",
+      });
       openResumeModal(app);
     }
   };
@@ -366,43 +388,52 @@ const JobApplication = () => {
   const handleViewProfile = (applicant) => {
     try {
       if (!applicant) {
-        toast.error("Applicant data not found");
+        toast({
+          title: "Error",
+          description: "Applicant data not found",
+        });
         return;
       }
       setSelectedApplicant(applicant);
       setShowProfileModal(true);
     } catch (err) {
       console.error("Error loading applicant profile:", err);
-      toast.error("Failed to load applicant profile");
+      toast({
+        title: "Error",
+        description: "Failed to load applicant profile",
+      });
     }
   };
 
- const uploadExcelFiles = async () => {
+  const uploadExcelFiles = async () => {
     try {
       if (!excelFile) {
-        toast.error("Please select an Excel file to upload.");
+        toast({
+          title: "Error",
+          description: "Please select an Excel file to upload.",
+        });
         return;
       }
- 
+
       const allowedTypes = [
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "application/vnd.ms-excel",
       ];
- 
+
       if (!allowedTypes.includes(excelFile.type)) {
-        toast ({
+        toast({
           variant: "destructive",
           title: "Invalid File Type",
           description: "Please upload a valid Excel file (.xlsx, .xls, .csv).",
         });
         return;
       }
- 
+
       setLoading(true);
- 
+
       const formData = new FormData();
       formData.append("file", excelFile);
- 
+
       const response = await axios.post(
         `${API_BASE_URL}/api/bulk-upload/applications`,
         formData,
@@ -411,47 +442,50 @@ const JobApplication = () => {
           withCredentials: true,
         }
       );
- 
+
       setExcelFile(null);
       document.getElementById("excelFileInput").value = null;
- 
+
       const { inserted, failedCount, failedRows: failed } = response.data;
- 
+
       // Store failed rows for download
       if (failed && failed.length > 0) {
         setFailedRows(failed);
       }
- 
+
       // Show appropriate message based on results
       if (failedCount === 0) {
-        toast ({
+        toast({
           variant: "success",
           title: "Upload Successful",
           description: `${inserted} records uploaded successfully.`,
         });
       } else if (inserted > 0 && failedCount > 0) {
-        toast ({
+        toast({
           variant: "destructive",
           title: "Partial Upload",
           description: `${inserted} records uploaded successfully, ${failedCount} failed. You can download the failed records for details.`,
         });
       } else {
-        toast ({
+        toast({
           variant: "destructive",
           title: "Upload Failed",
           description: `All records failed to upload. You can download the failed records for details.`,
         });
       }
- 
+
       await fetchApplications();
     } catch (error) {
       console.error("Error uploading Excel file:", error);
-      const errorMsg =
-        error.response?.data?.message ||
-        "Failed to upload Excel file. Please try again.";
-      toast ({
+      const isLargeFile = error.response?.status === 413 || error.message?.includes("too large") || error.response?.data?.message?.includes("too large");
+
+      const errorMsg = isLargeFile
+        ? "The Excel file is too large. Please ensure it is under the size limit."
+        : (error.response?.data?.message || "Failed to upload Excel file. Please try again.");
+
+      toast({
         variant: "destructive",
-        title: "Upload Error",
+        title: isLargeFile ? "File Too Large" : "Upload Error",
         description: errorMsg,
       });
       setError(errorMsg);
@@ -462,7 +496,7 @@ const JobApplication = () => {
 
   const handleDownloadFailedRows = () => {
     if (!failedRows || failedRows.length === 0) {
-      toast ({
+      toast({
         variant: "destructive",
         title: "No Failed Rows",
         description: "There are no failed rows to download.",
@@ -510,7 +544,7 @@ const JobApplication = () => {
     // Download file
     XLSX.writeFile(workbook, "failed_job_applications.xlsx");
     toast.success("Failed rows downloaded successfully!");
-    setFailedRows([]); 
+    setFailedRows([]);
   };
 
   // const handleDownloadTemplate = () => {
@@ -541,17 +575,20 @@ const JobApplication = () => {
   };
 
   const uploadBulkResumes = async () => {
-    if (!zipFile) return toast.error("Please select a ZIP file");
- 
+    if (!zipFile) return toast({
+      title: "Error",
+      description: "Please select a ZIP file",
+    });
+
     try {
-      toast ({
+      toast({
         title: "Uploading Resumes",
         description: "Please wait while the resumes are being uploaded...",
       });
- 
+
       const formData = new FormData();
       formData.append("zip", zipFile);
- 
+
       const response = await axios.post(
         `${API_BASE_URL}/api/bulk-upload/resumes`,
         formData,
@@ -560,16 +597,16 @@ const JobApplication = () => {
           withCredentials: true,
         }
       );
- 
+
       const { successCount, failed } = response.data;
- 
+
       // Show success message
-      toast ({
+      toast({
         variant: "success",
         title: "Upload Complete",
         description: `${successCount} resumes uploaded successfully.`,
       });
- 
+
       // Show failed uploads if any
       if (failed && failed.length > 0) {
         const phoneNotMatched = failed.filter(
@@ -578,29 +615,29 @@ const JobApplication = () => {
         const otherFailed = failed.filter(
           (f) => f.reason !== "No matching application"
         );
- 
+
         if (phoneNotMatched.length > 0) {
           const fileList = phoneNotMatched.map((f) => f.file).join(", ");
-          toast ({
+          toast({
             variant: "destructive",
             title: `${phoneNotMatched.length} file${phoneNotMatched.length !== 1 ? "s" : ""} failed`,
             description: `Phone number not found in database. Files: ${fileList}`,
           });
         }
- 
+
         if (otherFailed.length > 0) {
           const failureReasons = otherFailed
             .map((f) => `${f.file} (${f.reason})`)
             .join(", ");
-          toast.error(
-            `${otherFailed.length} file${
-              otherFailed.length !== 1 ? "s" : ""
-            } failed: ${failureReasons}`,
-            { duration: 8000 }
-          );
+          toast({
+            variant: "destructive",
+            title: `${otherFailed.length} file${otherFailed.length !== 1 ? "s" : ""
+              } failed: ${failureReasons}`,
+            duration: 8000,
+          });
         }
       }
- 
+
       // Reset zip file
       setZipFile(null);
       document.getElementById("BulkResume").value = null;
@@ -608,34 +645,28 @@ const JobApplication = () => {
       fetchApplications();
     } catch (err) {
       console.error("Resume upload error:", err);
-      toast ({
-        variant: "destructive",
-        title: "Upload Error",
-        description:
-          err.response?.data?.message ||  "Failed to upload resumes. Please try again.",
-      });
- 
+
       // Check if error is due to Google Drive not connected
-      if (
-        err.response?.status === 400 &&
-        err.response?.data?.message?.includes("Google Drive")
-      ) {
-        toast ({
+      if (err.response?.status === 400 && err.response?.data?.message?.includes("Google Drive")) {
+        toast({
           variant: "destructive",
           title: "Google Drive Not Connected",
+          description: "Please connect your Google Drive before uploading resumes.",
         });
         return;
       }
- 
-      toast ({
+
+      const isLargeFile = err.response?.status === 413 || err.message?.includes("too large") || err.response?.data?.message?.includes("too large");
+
+      toast({
         variant: "destructive",
-        title: "Upload Error",
-        description:
-          err.response?.data?.message ||  "Failed to upload resumes. Please try again.",
+        title: isLargeFile ? "Files Too Large" : "Upload Error",
+        description: isLargeFile
+          ? "The ZIP file or its contents are too large. Please ensure individual resumes are under 5MB."
+          : (err.response?.data?.message || "Failed to upload resumes. Please try again."),
       });
     }
   };
- 
 
   // Ensure external profile URLs open correctly by adding https:// when missing
   const normalizeUrl = (url) => {
@@ -679,361 +710,381 @@ const JobApplication = () => {
     rejected: applications.filter(a => a.status === 'Rejected').length,
   };
   return (
-      <div className="min-h-screen bg-background p-4 lg:p-8">
-          <div className="max-w-7xl mx-auto space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
-                  Job Applications
-                </h1>
-                <p className="text-muted-foreground">
-                  Manage and track all job applicants
-                </p>
+    <div className="min-h-screen bg-background p-4 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
+              Job Applications
+            </h1>
+            <p className="text-muted-foreground">
+              Manage and track all job applicants
+            </p>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: "Total Applications", value: stats.total, color: "text-primary", icon: Users },
+            { label: "Under Review", value: stats.underReview, color: "text-info", icon: Clock },
+            { label: "Selected", value: stats.selected, color: "text-success", icon: CheckCircle },
+            { label: "Rejected", value: stats.rejected, color: "text-destructive", icon: XCircle },
+          ].map((stat, i) => (
+            <Card key={i} className="border-0 shadow-card bg-card/50 backdrop-blur-sm">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
+                  </div>
+                  <stat.icon className={`w-8 h-8 ${stat.color} opacity-50`} />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        {/* Tools & Uploads */}
+        <Card className="border-0 shadow-card">
+          <CardHeader className="bg-muted/30 border-b border-border">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Upload className="w-5 h-5 text-primary" />
+              Tools & Uploads
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="p-6 space-y-6">
+            {/* Upload Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              {/* Bulk Excel Upload */}
+              <div className="p-4 rounded-xl border border-border bg-muted/20 hover:border-primary/50 transition-colors">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">Bulk Application Upload</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Upload Excel file (.xlsx, .xls, .csv)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="flex-1 cursor-pointer">
+                    <input
+                      type="file"
+                      id="excelFileInput"
+                      accept=".xlsx,.xls,.csv"
+                      onChange={(e) => setExcelFile(e.target.files[0] || null)}
+                      className="hidden"
+                    />
+                    <div className="px-4 py-2.5 border border-border rounded-lg bg-background text-foreground font-medium hover:border-primary transition text-center text-sm truncate">
+                      {excelFile ? excelFile.name : "Choose Excel File"}
+                    </div>
+                  </label>
+
+                  <Button
+                    size="sm"
+                    disabled={loading || !excelFile}
+                    onClick={uploadExcelFiles}
+                    className="gap-1"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Upload
+                  </Button>
+                </div>
+              </div>
+
+              {/* Bulk Resume ZIP Upload */}
+              <div className="p-4 rounded-xl border border-border bg-muted/20 hover:border-info/50 transition-colors">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-info" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">Bulk Resume Upload</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Upload ZIP file with resumes
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="flex-1 cursor-pointer">
+                    <input
+                      type="file"
+                      id="BulkResume"
+                      accept=".zip"
+                      onChange={(e) => setZipFile(e.target.files[0] || null)}
+                      className="hidden"
+                    />
+                    <div className="px-4 py-2.5 border border-border rounded-lg bg-background text-foreground font-medium hover:border-info transition text-center text-sm truncate">
+                      {zipFile ? zipFile.name : "Choose ZIP File"}
+                    </div>
+                  </label>
+
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={loading || !zipFile}
+                    onClick={uploadBulkResumes}
+                    className="gap-1"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Upload
+                  </Button>
+                </div>
               </div>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { label: "Total Applications", value: stats.total, color: "text-primary", icon: Users },
-                { label: "Under Review", value: stats.underReview, color: "text-info", icon: Clock },
-                { label: "Selected", value: stats.selected, color: "text-success", icon: CheckCircle },
-                { label: "Rejected", value: stats.rejected, color: "text-destructive", icon: XCircle },
-              ].map((stat, i) => (
-                <Card key={i} className="border-0 shadow-card bg-card/50 backdrop-blur-sm">
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">{stat.label}</p>
-                        <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
-                      </div>
-                      <stat.icon className={`w-8 h-8 ${stat.color} opacity-50`} />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            {/* Tools & Uploads */}
-            <Card className="border-0 shadow-card">
-              <CardHeader className="bg-muted/30 border-b border-border">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Upload className="w-5 h-5 text-primary" />
-                  Tools & Uploads
-                </CardTitle>
-              </CardHeader>
-
-              <CardContent className="p-6 space-y-6">
-                {/* Upload Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                  {/* Bulk Excel Upload */}
-                  <div className="p-4 rounded-xl border border-border bg-muted/20 hover:border-primary/50 transition-colors">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-foreground">Bulk Application Upload</h3>
-                        <p className="text-xs text-muted-foreground">
-                          Upload Excel file (.xlsx, .xls, .csv)
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <label className="flex-1 cursor-pointer">
-                        <input
-                          type="file"
-                          id="excelFileInput"
-                          accept=".xlsx,.xls,.csv"
-                          onChange={(e) => setExcelFile(e.target.files[0] || null)}
-                          className="hidden"
-                        />
-                        <div className="px-4 py-2.5 border border-border rounded-lg bg-background text-foreground font-medium hover:border-primary transition text-center text-sm truncate">
-                          {excelFile ? excelFile.name : "Choose Excel File"}
-                        </div>
-                      </label>
-
-                      <Button
-                        size="sm"
-                        disabled={loading || !excelFile}
-                        onClick={ uploadExcelFiles}
-                        className="gap-1"
-                      >
-                        <Upload className="w-4 h-4" />
-                        Upload
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Bulk Resume ZIP Upload */}
-                  <div className="p-4 rounded-xl border border-border bg-muted/20 hover:border-info/50 transition-colors">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-info" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-foreground">Bulk Resume Upload</h3>
-                        <p className="text-xs text-muted-foreground">
-                          Upload ZIP file with resumes
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <label className="flex-1 cursor-pointer">
-                        <input
-                          type="file"
-                          id="BulkResume"
-                          accept=".zip"
-                          onChange={(e) => setZipFile(e.target.files[0] || null)}
-                          className="hidden"
-                        />
-                        <div className="px-4 py-2.5 border border-border rounded-lg bg-background text-foreground font-medium hover:border-info transition text-center text-sm truncate">
-                          {zipFile ? zipFile.name : "Choose ZIP File"}
-                        </div>
-                      </label>
-
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        disabled={loading || !zipFile}
-                        onClick={uploadBulkResumes}
-                        className="gap-1"
-                      >
-                        <Upload className="w-4 h-4" />
-                        Upload
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Google Drive Toggle */}
-                <button
-                  onClick={driveConnected ? disconnectGoogleDrive : connectGoogleDrive}
-                  className={`w-full md:w-auto flex items-center justify-between px-5 py-4 rounded-xl border transition-all ${
-                    driveConnected
-                      ? "bg-success/10 border-success/30 hover:border-success/50"
-                      : "bg-destructive/10 border-destructive/30 hover:border-destructive/50"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                        driveConnected ? "bg-success/20" : "bg-destructive/20"
-                      }`}
-                    >
-                      {driveConnected ? (
-                        <Cloud className="w-5 h-5 text-success" />
-                      ) : (
-                        <CloudOff className="w-5 h-5 text-destructive" />
-                      )}
-                    </div>
-
-                    <div className="text-left">
-                      <div
-                        className={`text-sm font-semibold ${
-                          driveConnected ? "text-success" : "text-destructive"
-                        }`}
-                      >
-                        Google Drive
-                      </div>
-                      <div
-                        className={`text-xs ${
-                          driveConnected ? "text-success/70" : "text-destructive/70"
-                        }`}
-                      >
-                        {driveConnected ? "Connected" : "Disconnected"}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className={`relative w-12 h-6 rounded-full transition-all ${
-                      driveConnected ? "bg-success" : "bg-muted"
+            {/* Google Drive Toggle */}
+            <button
+              onClick={driveConnected ? disconnectGoogleDrive : connectGoogleDrive}
+              className={`w-full md:w-auto flex items-center justify-between px-5 py-4 rounded-xl border transition-all ${driveConnected
+                ? "bg-success/10 border-success/30 hover:border-success/50"
+                : "bg-destructive/10 border-destructive/30 hover:border-destructive/50"
+                }`}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className={`h-10 w-10 rounded-lg flex items-center justify-center ${driveConnected ? "bg-success/20" : "bg-destructive/20"
                     }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                        driveConnected ? "translate-x-6" : "translate-x-0"
-                      }`}
-                    />
-                  </div>
-                </button>
-                {failedRows.length > 0 && (
-                  <div className="mt-4 p-4 bg-red-600/20 border border-red-500/50 rounded-xl">
-                    <div className="mb-3">
-                      <p className="text-red-300 font-semibold mb-2">⚠️ Failed Records ({failedRows.length})</p>
-                      <p className="text-red-200/70 text-sm mb-3">Download the file to see which rows failed and the reasons why.</p>
-                    </div>
-                    <button
-                      onClick={handleDownloadFailedRows}
-                      className="w-full px-4 py-3 bg-red-600 text-white border border-red-400 rounded-lg hover:bg-red-700 hover:border-red-300 transition font-medium"
-                    >
-                      📥 Download Failed Rows ({failedRows.length})
-                    </button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Search & Filter */}
-            <Card className="border-0 shadow-card">
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search by name, email, or position..."
-                      className="pl-10"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="relative">
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-full sm:w-[180px]">
-                        {/* <Filter className="w-4 h-4 mr-2" /> */}
-                        <SelectValue placeholder="All Statuses" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="Under Review">Under Review</SelectItem>
-                        <SelectItem value="Selected">Selected</SelectItem>
-                        <SelectItem value="Rejected">Rejected</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
-                  
+                >
+                  {driveConnected ? (
+                    <Cloud className="w-5 h-5 text-success" />
+                  ) : (
+                    <CloudOff className="w-5 h-5 text-destructive" />
+                  )}
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Applications Table */}
-            <Card className="border-0 shadow-card overflow-hidden">
-              <CardHeader className="bg-muted/30 border-b border-border">
-                <CardTitle className="text-lg">
-                  Applications ({filteredApplications.length})
-                </CardTitle>
-              </CardHeader>
+                <div className="text-left">
+                  <div
+                    className={`text-sm font-semibold ${driveConnected ? "text-success" : "text-destructive"
+                      }`}
+                  >
+                    Google Drive
+                  </div>
+                  <div
+                    className={`text-xs ${driveConnected ? "text-success/70" : "text-destructive/70"
+                      }`}
+                  >
+                    {driveConnected ? "Connected" : "Disconnected"}
+                  </div>
+                </div>
+              </div>
 
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/20">
-                        <TableHead>Applicant</TableHead>
-                        <TableHead className="hidden md:table-cell">Contact</TableHead>
-                        <TableHead className="hidden lg:table-cell">Skills</TableHead>
-                        <TableHead className="hidden lg:table-cell">Experience</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-left">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
+              <div
+                className={`relative w-12 h-6 rounded-full transition-all ${driveConnected ? "bg-success" : "bg-muted"
+                  }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${driveConnected ? "translate-x-6" : "translate-x-0"
+                    }`}
+                />
+              </div>
+            </button>
+            {failedRows.length > 0 && (
+              <div className="mt-4 overflow-hidden rounded-xl border border-destructive/30 bg-destructive/5 shadow-lg animate-in fade-in slide-in-from-top-4 duration-300">
+                <div className="flex items-start justify-between p-5">
+                  <div className="flex gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-destructive/20">
+                      <XCircle className="h-6 w-6 text-destructive" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-foreground">
+                        Bulk Upload Failed
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        <span className="font-semibold text-destructive">{failedRows.length} records</span> could not be processed due to validation errors or duplicate entries.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setFailedRows([])}
+                    className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="bg-destructive/10 p-4 border-t border-destructive/10">
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    <Button
+                      onClick={handleDownloadFailedRows}
+                      variant="destructive"
+                      className="w-full sm:w-auto gap-2 shadow-sm shadow-destructive/20"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download Failed Records for Review
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      Fix the errors in the downloaded file and re-upload.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-                    <TableBody>
-                      {paginatedApplications.map((app) => (
-                        <TableRow key={app._id} className="hover:bg-muted/30 transition-colors">
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-info flex items-center justify-center text-primary-foreground font-bold">
-                                {app.name.charAt(0)}
-                              </div>
-                              <div>
-                                <p className="font-semibold text-foreground">{app.name}</p>
-                                <p className="text-xs text-muted-foreground">{app.position}</p>
-                              </div>
-                            </div>
-                          </TableCell>
+        {/* Search & Filter */}
+        <Card className="border-0 shadow-card">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name, email, or position..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
 
-                          <TableCell className="hidden md:table-cell">
-                            <div className="space-y-1 text-sm text-muted-foreground">
-                              <div className="flex items-center gap-1">
-                                <Mail className="w-3.5 h-3.5" /> {app.email}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Phone className="w-3.5 h-3.5" /> {app.phone.join(", ")}
-                              </div>
-                            </div>
-                          </TableCell>
+              <div className="relative">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    {/* <Filter className="w-4 h-4 mr-2" /> */}
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="Under Review">Under Review</SelectItem>
+                    <SelectItem value="Selected">Selected</SelectItem>
+                    <SelectItem value="Rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+                <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
 
-                          <TableCell className="hidden lg:table-cell">
-                            <div className="flex flex-wrap gap-1 max-w-[200px]">
-                              {(Array.isArray(app.skills) ? app.skills.slice(0, 2) : [app.skills]).map((skill, idx) => (
-                                <Badge key={idx} variant="secondary" className="text-xs">
-                                  {skill}
-                                </Badge>
-                              ))}
-                              {Array.isArray(app.skills) && app.skills.length > 2 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{app.skills.length - 2}
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
+            </div>
+          </CardContent>
+        </Card>
 
-                          <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                            {app.experience || "-"}
-                          </TableCell>
+        {/* Applications Table */}
+        <Card className="border-0 shadow-card overflow-hidden">
+          <CardHeader className="bg-muted/30 border-b border-border">
+            <CardTitle className="text-lg">
+              Applications ({filteredApplications.length})
+            </CardTitle>
+          </CardHeader>
 
-                          <TableCell>
-                          <div className="relative">
-                              <Select
-                                value={app.status}
-                                onValueChange={(val) => handleStatusChange(app._id, val)}
-                              >
-                                <SelectTrigger className="w-[140px] h-8 text-xs">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Under Review">Under Review</SelectItem>
-                                  <SelectItem value="Selected">Selected</SelectItem>
-                                  <SelectItem value="Rejected">Rejected</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/20">
+                    <TableHead>Applicant</TableHead>
+                    <TableHead className="hidden md:table-cell">Contact</TableHead>
+                    <TableHead className="hidden lg:table-cell">Skills</TableHead>
+                    <TableHead className="hidden lg:table-cell">Experience</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-left">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+
+                <TableBody>
+                  {paginatedApplications.map((app) => (
+                    <TableRow key={app._id} className="hover:bg-muted/30 transition-colors">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-info flex items-center justify-center text-primary-foreground font-bold">
+                            {app.name.charAt(0)}
                           </div>
-                            
-                          </TableCell>
+                          <div>
+                            <p className="font-semibold text-foreground">{app.name}</p>
+                            <p className="text-xs text-muted-foreground">{app.position}</p>
+                          </div>
+                        </div>
+                      </TableCell>
 
-                          <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                              <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    className="gap-1"
-                                    onClick={() => handleViewProfile(app)}
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                    <span className="hidden sm:inline">View</span>
-                                </Button>
-                              {app?.resume &&
-                                  app.resume !== "BULK_UPLOAD_PENDING" ? (
-                                    <Button 
-                                      variant="secondary" 
-                                      size="sm" 
-                                      className="gap-1"
-                                      onClick={() => window.open(app.resume, '_blank')}
-                                    >
-                                      <FileText className="w-4 h-4" />
-                                      <span className="hidden sm:inline">Resume</span>
-                                    </Button>
-                                  ) : (
-                                    <Button 
-                                      // variant="outline" 
-                                      size="sm" 
-                                      className="gap-1 bg-amber/20 border-hr-amber/50 text-hr-amber hover:bg-hr-amber/50 hover:text-amber-500"
-                                      onClick={() => openResumeModal(app)}
-                                    >
-                                      <Upload className="w-4 h-4" />
-                                      <span className="hidden sm:inline">Upload</span>
-                                    </Button>
-                                )}
-                              </div>
-                            {/* <div className="flex items-center justify-end gap-2">
+                      <TableCell className="hidden md:table-cell">
+                        <div className="space-y-1 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Mail className="w-3.5 h-3.5" /> {app.email}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Phone className="w-3.5 h-3.5" /> {app.phone.join(", ")}
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="hidden lg:table-cell">
+                        <div className="flex flex-wrap gap-1 max-w-[200px]">
+                          {(Array.isArray(app.skills) ? app.skills.slice(0, 2) : [app.skills]).map((skill, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {skill}
+                            </Badge>
+                          ))}
+                          {Array.isArray(app.skills) && app.skills.length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{app.skills.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                        {app.experience || "-"}
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="relative">
+                          <Select
+                            value={app.status}
+                            onValueChange={(val) => handleStatusChange(app._id, val)}
+                          >
+                            <SelectTrigger className="w-[140px] h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Under Review">Under Review</SelectItem>
+                              <SelectItem value="Selected">Selected</SelectItem>
+                              <SelectItem value="Rejected">Rejected</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
+
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => handleViewProfile(app)}
+                          >
+                            <Eye className="w-4 h-4" />
+                            <span className="hidden sm:inline">View</span>
+                          </Button>
+                          {app?.resume &&
+                            app.resume !== "BULK_UPLOAD_PENDING" ? (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="gap-1"
+                              onClick={() => window.open(app.resume, '_blank')}
+                            >
+                              <FileText className="w-4 h-4" />
+                              <span className="hidden sm:inline">Resume</span>
+                            </Button>
+                          ) : (
+                            <Button
+                              // variant="outline" 
+                              size="sm"
+                              className="gap-1 bg-amber/20 border-hr-amber/50 text-hr-amber hover:bg-hr-amber/50 hover:text-amber-500"
+                              onClick={() => openResumeModal(app)}
+                            >
+                              <Upload className="w-4 h-4" />
+                              <span className="hidden sm:inline">Upload</span>
+                            </Button>
+                          )}
+                        </div>
+                        {/* <div className="flex items-center justify-end gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -1044,258 +1095,258 @@ const JobApplication = () => {
                                 <span className="hidden sm:inline">View</span>
                               </Button>
                             </div> */}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+          {/* Pagination */}
+          {filteredApplications.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-border bg-muted/20">
+
+              {/* Items per page */}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Showing</span>
+
+                <div className="relative">
+                  <Select
+                    value={String(itemsPerPage)}
+                    onValueChange={(val) => {
+                      setItemsPerPage(Number(val));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-[80px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
-              </CardContent>
-              {/* Pagination */}
-              {filteredApplications.length > 0 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-border bg-muted/20">
 
-                  {/* Items per page */}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>Showing</span>
+                <span>of {filteredApplications.length}</span>
+              </div>
 
-                    <div className="relative">
-                      <Select
-                        value={String(itemsPerPage)}
-                        onValueChange={(val) => {
-                          setItemsPerPage(Number(val));
-                          setCurrentPage(1);
-                        }}
-                      >
-                        <SelectTrigger className="w-[80px] h-8">
-                          <SelectValue />
-                        </SelectTrigger>
+              {/* Page controls */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => p - 1)}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
 
-                        <SelectContent>
-                          <SelectItem value="5">5</SelectItem>
-                          <SelectItem value="10">10</SelectItem>
-                          <SelectItem value="20">20</SelectItem>
-                          <SelectItem value="50">50</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <span className="text-sm text-muted-foreground px-2">
+                  Page {currentPage} of {totalPages}
+                </span>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+
+        </Card>
+      </div>
+      {/* Profile Modal */}
+      <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto z-50">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-info flex items-center justify-center text-primary-foreground font-bold text-lg">
+                {selectedApplicant?.name.charAt(0)}
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">{selectedApplicant?.name}</h2>
+                <p className="text-sm text-muted-foreground font-normal">{selectedApplicant?.position}</p>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Contact Information */}
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                <div className="h-1 w-6 bg-primary rounded-full" />
+                Contact Information
+              </h3>
+              <div className="grid gap-3">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/10">
+                  <Mail className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Email</p>
+                    <p className="font-medium">{selectedApplicant?.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-success/5 border border-success/10">
+                  <Phone className="w-5 h-5 text-success" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Phone</p>
+                    <p className="font-medium">{selectedApplicant?.phone}</p>
+                  </div>
+                </div>
+                {selectedApplicant?.location && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-info/5 border border-info/10">
+                    <MapPin className="w-5 h-5 text-info" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Location</p>
+                      <p className="font-medium">{selectedApplicant.location}</p>
                     </div>
-
-                    <span>of {filteredApplications.length}</span>
                   </div>
+                )}
+              </div>
+            </div>
 
-                  {/* Page controls */}
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={currentPage === 1}
-                      onClick={() => setCurrentPage((p) => p - 1)}
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </Button>
-
-                    <span className="text-sm text-muted-foreground px-2">
-                      Page {currentPage} of {totalPages}
-                    </span>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={currentPage === totalPages}
-                      onClick={() => setCurrentPage((p) => p + 1)}
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  </div>
+            {/* Professional Details */}
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                <div className="h-1 w-6 bg-info rounded-full" />
+                Professional Details
+              </h3>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/30 border border-border">
+                  <p className="text-xs text-muted-foreground">Position</p>
+                  <p className="font-medium">{selectedApplicant?.rawJobTitle || selectedApplicant?.position}</p>
                 </div>
-              )}
+                <div className="p-3 rounded-lg bg-muted/30 border border-border">
+                  <p className="text-xs text-muted-foreground">Experience</p>
+                  <p className="font-medium">{selectedApplicant?.experience || 'Not specified'}</p>
+                </div>
+                {selectedApplicant?.noticePeriod && (
+                  <div className="p-3 rounded-lg bg-muted/30 border border-border">
+                    <p className="text-xs text-muted-foreground">Notice Period</p>
+                    <p className="font-medium">{selectedApplicant.noticePeriod}</p>
+                  </div>
+                )}
+              </div>
+            </div>
 
+            {/* Skills */}
+            {selectedApplicant?.skills && (
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                  <div className="h-1 w-6 bg-hr-amber rounded-full" />
+                  Skills
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {(Array.isArray(selectedApplicant.skills) ? selectedApplicant.skills : [selectedApplicant.skills]).map((skill, idx) => (
+                    <Badge key={idx} className="bg-hr-amber/10 text-hr-amber border-hr-amber/20">
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
 
-            </Card>
+            {/* Social Links */}
+            {(selectedApplicant?.linkedIn || selectedApplicant?.github) && (
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                  <div className="h-1 w-6 bg-destructive rounded-full" />
+                  Social Profiles
+                </h3>
+                <div className="space-y-2">
+                  {selectedApplicant?.linkedIn && (
+                    <a
+                      href={normalizeUrl(selectedApplicant.linkedIn)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-3 rounded-lg bg-[#0077b5]/10 border border-[#0077b5]/20 hover:border-[#0077b5]/40 transition"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Linkedin className="w-5 h-5 text-[#0077b5]" />
+                        <span className="text-sm text-[#0077b5]">LinkedIn Profile</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">Open ↗</span>
+                    </a>
+                  )}
+                  {selectedApplicant?.github && (
+                    <a
+                      href={normalizeUrl(selectedApplicant.github)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border hover:border-muted-foreground/30 transition"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Github className="w-5 h-5" />
+                        <span className="text-sm">GitHub Profile</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">Open ↗</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-          {/* Profile Modal */}
-              <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto z-50">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-info flex items-center justify-center text-primary-foreground font-bold text-lg">
-                        {selectedApplicant?.name.charAt(0)}
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-bold">{selectedApplicant?.name}</h2>
-                        <p className="text-sm text-muted-foreground font-normal">{selectedApplicant?.position}</p>
-                      </div>
-                    </DialogTitle>
-                  </DialogHeader>
 
-                  <div className="space-y-6 py-4">
-                    {/* Contact Information */}
-                    <div>
-                      <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                        <div className="h-1 w-6 bg-primary rounded-full" />
-                        Contact Information
-                      </h3>
-                      <div className="grid gap-3">
-                        <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/10">
-                          <Mail className="w-5 h-5 text-primary" />
-                          <div>
-                            <p className="text-xs text-muted-foreground">Email</p>
-                            <p className="font-medium">{selectedApplicant?.email}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 p-3 rounded-lg bg-success/5 border border-success/10">
-                          <Phone className="w-5 h-5 text-success" />
-                          <div>
-                            <p className="text-xs text-muted-foreground">Phone</p>
-                            <p className="font-medium">{selectedApplicant?.phone}</p>
-                          </div>
-                        </div>
-                        {selectedApplicant?.location && (
-                          <div className="flex items-center gap-3 p-3 rounded-lg bg-info/5 border border-info/10">
-                            <MapPin className="w-5 h-5 text-info" />
-                            <div>
-                              <p className="text-xs text-muted-foreground">Location</p>
-                              <p className="font-medium">{selectedApplicant.location}</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+          <DialogFooter>
+            <Button onClick={() => setShowProfileModal(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-                    {/* Professional Details */}
-                    <div>
-                      <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                        <div className="h-1 w-6 bg-info rounded-full" />
-                        Professional Details
-                      </h3>
-                      <div className="grid sm:grid-cols-2 gap-3">
-                        <div className="p-3 rounded-lg bg-muted/30 border border-border">
-                          <p className="text-xs text-muted-foreground">Position</p>
-                          <p className="font-medium">{selectedApplicant?.rawJobTitle || selectedApplicant?.position}</p>
-                        </div>
-                        <div className="p-3 rounded-lg bg-muted/30 border border-border">
-                          <p className="text-xs text-muted-foreground">Experience</p>
-                          <p className="font-medium">{selectedApplicant?.experience || 'Not specified'}</p>
-                        </div>
-                        {selectedApplicant?.noticePeriod && (
-                          <div className="p-3 rounded-lg bg-muted/30 border border-border">
-                            <p className="text-xs text-muted-foreground">Notice Period</p>
-                            <p className="font-medium">{selectedApplicant.noticePeriod}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+      {/* Resume Upload Modal */}
+      <Dialog open={resumeModalOpen} onOpenChange={setResumeModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              Upload Resume
+            </DialogTitle>
+          </DialogHeader>
 
-                    {/* Skills */}
-                    {selectedApplicant?.skills && (
-                      <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                          <div className="h-1 w-6 bg-hr-amber rounded-full" />
-                          Skills
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                          {(Array.isArray(selectedApplicant.skills) ? selectedApplicant.skills : [selectedApplicant.skills]).map((skill, idx) => (
-                            <Badge key={idx} className="bg-hr-amber/10 text-hr-amber border-hr-amber/20">
-                              {skill}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+          <div className="space-y-4 py-4">
+            <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
+              <p className="text-sm text-muted-foreground">
+                Candidate: <span className="font-semibold text-foreground">{resumeTarget?.name}</span>
+              </p>
+            </div>
 
-                    {/* Social Links */}
-                    {(selectedApplicant?.linkedIn || selectedApplicant?.github) && (
-                      <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                          <div className="h-1 w-6 bg-destructive rounded-full" />
-                          Social Profiles
-                        </h3>
-                        <div className="space-y-2">
-                          {selectedApplicant?.linkedIn && (
-                            <a
-                              href={normalizeUrl(selectedApplicant.linkedIn)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center justify-between p-3 rounded-lg bg-[#0077b5]/10 border border-[#0077b5]/20 hover:border-[#0077b5]/40 transition"
-                            >
-                              <div className="flex items-center gap-3">
-                                <Linkedin className="w-5 h-5 text-[#0077b5]" />
-                                <span className="text-sm text-[#0077b5]">LinkedIn Profile</span>
-                              </div>
-                              <span className="text-xs text-muted-foreground">Open ↗</span>
-                            </a>
-                          )}
-                          {selectedApplicant?.github && (
-                            <a
-                              href={normalizeUrl(selectedApplicant.github)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border hover:border-muted-foreground/30 transition"
-                            >
-                              <div className="flex items-center gap-3">
-                                <Github className="w-5 h-5" />
-                                <span className="text-sm">GitHub Profile</span>
-                              </div>
-                              <span className="text-xs text-muted-foreground">Open ↗</span>
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+            <div className="space-y-2">
+              <Label>Select Resume File</Label>
+              <Input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+                className="cursor-pointer"
+              />
+              {resumeFile && (
+                <p className="text-xs text-success flex items-center gap-1">
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  {resumeFile.name} ({formatFileSize(resumeFile.size)}) (Limit: 5MB)
+                </p>
+              )}
+            </div>
+          </div>
 
-                  <DialogFooter>
-                    <Button onClick={() => setShowProfileModal(false)}>Close</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-
-            {/* Resume Upload Modal */}
-              <Dialog open={resumeModalOpen} onOpenChange={setResumeModalOpen}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-primary" />
-                      Upload Resume
-                    </DialogTitle>
-                  </DialogHeader>
-
-                  <div className="space-y-4 py-4">
-                    <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
-                      <p className="text-sm text-muted-foreground">
-                        Candidate: <span className="font-semibold text-foreground">{resumeTarget?.name}</span>
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Select Resume File</Label>
-                      <Input
-                        type="file"
-                        accept=".pdf,.doc,.docx"
-                        onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
-                        className="cursor-pointer"
-                      />
-                      {resumeFile && (
-                        <p className="text-xs text-success flex items-center gap-1">
-                          <CheckCircle className="w-3.5 h-3.5" />
-                          {resumeFile.name}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setResumeModalOpen(false)} disabled={resumeUploading}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleResumeUpload} disabled={resumeUploading || !resumeFile}>
-                      {resumeUploading ? 'Uploading...' : 'Upload'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-        </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResumeModalOpen(false)} disabled={resumeUploading}>
+              Cancel
+            </Button>
+            <Button onClick={handleResumeUpload} disabled={resumeUploading || !resumeFile}>
+              {resumeUploading ? 'Uploading...' : 'Upload'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 

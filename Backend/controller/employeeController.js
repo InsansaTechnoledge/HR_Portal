@@ -9,7 +9,8 @@ export const addEmployee = async (req, res) => {
         const newEmp = new Employee({
             name: emp.name,
             email: emp.email,
-            department: emp.department
+            department: emp.department,
+            dateOfJoining: emp.dateOfJoining // Added Date of Joining
         });
         const exists = await Employee.findOne({ email: emp.email });
         if (exists) {

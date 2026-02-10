@@ -55,13 +55,22 @@ const InvestmentDeclaration = () => {
             if (storedEmployeeId) {
                 setEmployeeId(storedEmployeeId);
             } else if (user && user.userEmail) {
-                const response = await axiosInstance.get('/api/employee/', {
-                    params: { email: user.userEmail }
-                });
-
-                if (response.data.employees && response.data.employees.length > 0) {
-                    setEmployeeId(response.data.employees[0]._id);
-                    localStorage.setItem('employeeId', response.data.employees[0]._id);
+                const response = await fetch(
+                    `${API_BASE_URL}/api/employee/?email=${user.userEmail}`,
+                    {
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        }
+                    }
+                );
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.employees && data.employees.length > 0) {
+                        setEmployeeId(data.employees[0]._id);
+                        localStorage.setItem('employeeId', data.employees[0]._id);
+                    }
                 }
             }
         } catch (error) {
