@@ -11,6 +11,7 @@ const InvestmentDeclarationSchema = new mongoose.Schema({
     status: { type: String, enum: ['Draft', 'Submitted', 'Approved', 'Rejected'], default: 'Draft' },
     formData: { type: mongoose.Schema.Types.Mixed },
     documents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'InvestUpload' }],
+    dateOfJoining: Date,
     submittedAt: Date,
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     approvedAt: Date,
