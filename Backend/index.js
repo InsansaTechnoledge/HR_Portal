@@ -1,4 +1,11 @@
 import App from './app.js'
+import dotenv from 'dotenv';
+
+//if not production then load the environment variables
+if (process.env.NODE_ENV !== 'production') {
+    dotenv.config();
+}
+
 const PORT = process.env.PORT || 3000;
 
 const initializeApp = async () => {

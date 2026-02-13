@@ -3,11 +3,13 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import cors from 'cors';
 
-if (process.env.NODE_ENV !== 'production') {
-  import('dotenv').then((dotenv) => dotenv.config());
-}
+//removed async await
+// if (process.env.NODE_ENV !== 'production') {
+//   import('dotenv').then((dotenv) => dotenv.config());
+// }
 
-const configureApp = async (app) => {
+// const configureApp = async (app) => {
+const configureApp = (app) => {
   app.set('trust proxy', 1);
 
   // CORS configuration
@@ -25,7 +27,7 @@ const configureApp = async (app) => {
         return callback(new Error('Not allowed by CORS'));
       },
       credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH','OPTIONS'],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       allowedHeaders: [
         'Origin',
         'X-Requested-With',
@@ -42,7 +44,7 @@ const configureApp = async (app) => {
     if (!origin || allowedOrigins.includes(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin || '*');
     }
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE,PATCH, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.status(204).send();

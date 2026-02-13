@@ -1,14 +1,9 @@
-// const API_BASE_URL = 'https://talentportalnew-qk0w2rgl.b4a.run';
- 
-// Development URL
-// const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3000'
+    : 'https://hrportal.insansa.com';
+
+
 const apibaseURl = "http://127.0.0.1:8000";
- 
-// const API_BASE_URL = 'https://hr-portal-mu.vercel.app';
- 
-//Production URL
-const API_BASE_URL = 'https://hrportal.insansa.com';
- 
- 
+
 export default API_BASE_URL;
-export {apibaseURl};
+export { apibaseURl };

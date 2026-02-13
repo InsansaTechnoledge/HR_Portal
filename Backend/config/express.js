@@ -3,10 +3,10 @@ import errorHandler from '../middleware/errorHandler.js';
 import setupMiddleware from '../middleware/setupMiddleware.js';
 import routes from '../routes/routes.js';
 
-if(process.env.NODE_ENV !== "production"){
-    (await import('dotenv')).config();
+// if(process.env.NODE_ENV !== "production"){
+//     (await import('dotenv')).config();
 
-}
+// }
 
 const app = express();
 
