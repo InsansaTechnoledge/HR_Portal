@@ -7,6 +7,7 @@ if(process.env.NODE_ENV !== "production"){
 
 const checkCookies = async (req,res,next) => {
     let token = req.cookies?.jwtAuth;
+
         // Fallback to Authorization header if cookie is missing
         if (!token) {
             const authHeader =
