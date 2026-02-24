@@ -13,9 +13,10 @@ const configureApp = (app) => {
   app.set('trust proxy', 1);
 
   // CORS configuration
-  const allowedOrigins = [
-    process.env.CLIENT_ORIGIN,
-  ].filter(Boolean);
+  const allowedOrigins = (process.env.CLIENT_ORIGIN || '')
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean);
 
   app.use(
     cors({
