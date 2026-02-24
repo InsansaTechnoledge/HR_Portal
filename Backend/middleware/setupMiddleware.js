@@ -16,15 +16,20 @@ const configureApp = (app) => {
   const allowedOrigins = (process.env.CLIENT_ORIGIN || '')
     .split(',')
     .map(origin => origin.trim())
+    .map(origin => origin.replace(/^["']|["']$/g, '')) // Remove leading/trailing quotes
     .filter(Boolean);
+
+  console.log('Allowed Origins:', allowedOrigins);
 
   app.use(
     cors({
       origin: (origin, callback) => {
+        console.log('Incoming Origin:', origin);
         // Allow non-browser clients (no origin) and configured origins
         if (!origin || allowedOrigins.includes(origin)) {
           return callback(null, true);
         }
+        console.error(`Origin ${origin} not allowed by CORS. Allowed:`, allowedOrigins);
         return callback(new Error('Not allowed by CORS'));
       },
       credentials: true,
