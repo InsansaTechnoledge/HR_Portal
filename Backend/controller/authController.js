@@ -26,14 +26,18 @@ export const login = async (req, res, next) => {
     }
 
     const token = generateAuthToken(user);
+    const isProduction = process.env.NODE_ENV === "production" || !req.hostname.includes('localhost');
+
     res.cookie("jwtAuth", token, {
       expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year expiration
       httpOnly: true, // Prevents client-side JS access
-      secure: process.env.NODE_ENV !== "development", // HTTPS only in production
+      // secure: process.env.NODE_ENV !== "development",
+      secure: true, // Always true for SameSite: None (required for cross-origin)
       // sameSite: process.env.NODE_ENV === "development" ? "Lax" : "None",
-      sameSite: "Lax", // Enable for both dev and prod for consistency and better 1st-party support
+      // sameSite: "Lax", // Enable for both dev and prod for consistency and better 1st-party support
+      sameSite: "None", // Required for cross-site cookie transmission
     });
-    
+
     res.status(200).json({ message: "Login successful", user: user });
   } catch (error) {
     console.error("Error during login process:", error);
@@ -46,9 +50,11 @@ export const logout = async (req, res) => {
   // Clear the jwtAuth cookie
   res.clearCookie("jwtAuth", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production", // Match cookie settings
-    // sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
-    sameSite: "Lax",
+    // secure: process.env.NODE_ENV === "production", // Match cookie settings
+    // // sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+    // sameSite: "Lax",
+    secure: true,
+    sameSite: "None",
   });
 
   res

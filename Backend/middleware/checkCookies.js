@@ -7,11 +7,12 @@ if(process.env.NODE_ENV !== "production"){
 
 const checkCookies = async (req,res,next) => {
     let token = req.cookies?.jwtAuth;
+    console.log("TOKEN FROM COOKIE:", token);
         // Fallback to Authorization header if cookie is missing
         if (!token) {
             const authHeader =
                 req.headers.authorization || req.headers.Authorization;
-
+            console.log("AUTH HEADER:", authHeader);
             if (authHeader && authHeader.startsWith("Bearer ")) {
                 token = authHeader.split(" ")[1].trim();
             }
