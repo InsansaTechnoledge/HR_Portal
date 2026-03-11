@@ -609,69 +609,13 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
         }
     };
 
-    const isDetailsEmpty = () => {
-        // 1. Check HRA
-        if (formData.exemptions.houseRentAllowance.rentDetails.rentPaid) return false;
 
-        // 2. Check LTA
-        const ltaClaims = formData.exemptions.lta.claimsDetails;
-        if (Object.values(ltaClaims).some(val => val && val !== '')) return false;
+    const [rejectionReason, setRejectionReason] = useState('');
+    const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+    const [isConfirmSubmitOpen, setIsConfirmSubmitOpen] = useState(false);
 
-        // 3. Check Housing Loan Deductions
-        if (formData.housingLoanDeductions.some(d => d.amount && d.amount !== '')) return false;
-
-        // 4. Check Section 80C
-        if (formData.section80CDeductions.some(d => d.amount && d.amount !== '')) return false;
-
-        // 5. Check Other Sections
-        const otherSections = [
-            formData.section80CCDeduction.amount,
-            formData.section80CCD1Deduction.amount,
-            formData.section80CCD1BDeduction.amount,
-            formData.section80DDeductions.medicalInsuranceIndividual.amount,
-            formData.section80DDeductions.medicalInsuranceParents.amount,
-            formData.section80DDeductions.preventiveHealthCheckup.amount,
-            formData.section80EDeduction.amount,
-            formData.section80TTADeduction.amount,
-            formData.previousEmploymentIncome.incomeAfterExemptions,
-            formData.otherDeductions.amount
-        ];
-        if (otherSections.some(val => val && val !== '')) return false;
-
-        // 6. Check Income from Other Sources
-        if (formData.incomeFromOtherSources.some(item => item.amount && item.amount !== '')) return false;
-
-        return true;
-    };
-
-    const handleSubmit = async () => {
-        if (!formData.declaration.isAgreed) {
-            toast({
-                title: 'Declaration Required',
-                description: 'Please agree to the declaration and sign before submitting',
-                variant: 'destructive'
-            });
-            return;
-        }
-
-        if (!formData.declaration.employeeSignature) {
-            toast({
-                title: 'Signature Required',
-                description: 'Please type your full name as signature',
-                variant: 'destructive'
-            });
-            return;
-        }
-
-        if (isDetailsEmpty()) {
-            toast({
-                title: 'Incomplete Declaration',
-                description: 'Please fill in at least one investment or income detail before submitting.',
-                variant: 'destructive'
-            });
-            return;
-        }
-
+    const handleConfirmSubmit = async () => {
+        setIsConfirmSubmitOpen(false);
         setSubmitting(true);
         try {
             console.log("Form Data on Submit:", formData);
@@ -697,16 +641,13 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
             setDeclaration(newDeclaration);
 
             // After successful submit, upload all local documents for this declaration
-            // const declarationId = newDeclaration._id;
             const sections = ['hraDocuments', 'ltaDocuments', 'section80CDocuments', 'section80CCDDocuments', 'section80DDocuments', 'housingLoanDocuments', 'declarationDocuments'];
-            const uploadedDocs = [];
 
             for (const section of sections) {
                 const files = (formData[section] || []).filter(f => f && f.file);
                 for (const f of files) {
                     const doc = await uploadDocumentToGoogleDrive(f, section, declarationId);
                     if (doc) {
-                        uploadedDocs.push(doc);
                         // Append locally so user sees immediately
                         setDeclaration(prev => ({
                             ...prev,
@@ -715,7 +656,6 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                     }
                 }
             }
-
 
             toast({
                 title: 'Success',
@@ -735,8 +675,27 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
         }
     };
 
-    const [rejectionReason, setRejectionReason] = useState('');
-    const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+    const handleSubmit = async () => {
+        if (!formData.declaration.isAgreed) {
+            toast({
+                title: 'Declaration Required',
+                description: 'Please agree to the declaration and sign before submitting',
+                variant: 'destructive'
+            });
+            return;
+        }
+
+        if (!formData.declaration.employeeSignature) {
+            toast({
+                title: 'Signature Required',
+                description: 'Please type your full name as signature',
+                variant: 'destructive'
+            });
+            return;
+        }
+
+        setIsConfirmSubmitOpen(true);
+    };
 
     const handleStatusUpdate = async (newStatus, reason = '') => {
         if (!declaration?._id) return;
@@ -2704,14 +2663,48 @@ const InvestmentDeclarationForm = ({ employeeId, financialYear: propFinancialYea
                         <Save className="w-4 h-4" />
                         Save as Draft
                     </Button> */}
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={submitting}
-                        className="gap-2"
-                    >
-                        <Send className="w-4 h-4" />
-                        {submitting ? 'Submitting...' : declaration ? 'Edit Declaration' : 'Submit Declaration'}
-                    </Button>
+                    <Dialog open={isConfirmSubmitOpen} onOpenChange={setIsConfirmSubmitOpen}>
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={submitting}
+                            className="gap-2"
+                        >
+                            <Send className="w-4 h-4" />
+                            {submitting ? 'Submitting...' : declaration ? 'Edit Declaration' : 'Submit Declaration'}
+                        </Button>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogTitle>Confirm Submission</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to {declaration ? 'update' : 'submit'} your investment declaration? Once submitted, it will be sent for review and further modifications may require admin intervention.
+                            </DialogDescription>
+                            <DialogFooter className="mt-4">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setIsConfirmSubmitOpen(false)}
+                                    disabled={submitting}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleConfirmSubmit}
+                                    disabled={submitting}
+                                    className="gap-2"
+                                >
+                                    {submitting ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            Submitting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Send className="w-4 h-4" />
+                                            Confirm & Submit
+                                        </>
+                                    )}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </div>
             )}
             {isReadOnly && (user?.role === 'accountant' || user?.role === 'superAdmin') && declaration?.status?.toLowerCase() === 'submitted' && (
