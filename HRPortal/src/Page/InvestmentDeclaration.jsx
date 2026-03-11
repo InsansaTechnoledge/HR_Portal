@@ -52,9 +52,10 @@ const InvestmentDeclaration = () => {
     const findEmployeeRecord = async () => {
         try {
             const storedEmployeeId = localStorage.getItem('employeeId');
-            if (storedEmployeeId) {
-                setEmployeeId(storedEmployeeId);
-            } else if (user && user.userEmail) {
+            // if (storedEmployeeId) { // bypass API call if employeeId is already stored
+                // setEmployeeId(storedEmployeeId);
+            // } else
+                if (user && user.userEmail) {
                 const response = await fetch(
                     `${API_BASE_URL}/api/employee/?email=${user.userEmail}`,
                     {
