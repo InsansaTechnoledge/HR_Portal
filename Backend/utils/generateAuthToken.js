@@ -1,16 +1,20 @@
 import jwt from 'jsonwebtoken'
 
-if(process.env.NODE_ENV !== "production"){
+if (process.env.NODE_ENV !== "production") {
     (await import('dotenv')).config();
 }
 
 const generateAuthToken = (userData) => {
-    try{
-    const token = jwt.sign({"userId": userData._id, "role": userData.role}, process.env.JWT_KEY);
+    try {
+        const token = jwt.sign(
+            { "userId": userData._id, "role": userData.role }, 
+            process.env.JWT_KEY,
+            { expiresIn: '7d' }
+        );
 
-    return token;
+        return token;
     }
-    catch(err){
+    catch (err) {
         console.log("Error generating token", err);
     }
 }

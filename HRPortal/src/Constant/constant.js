@@ -23,6 +23,7 @@ export const DEPARTMENTS = [
   "Automation & Digital Transformation Department",
   "IT Support & Operations Department",
   "Architecture & Solution Design Department",
+  "Human Resources (HR) Department",
 ];
 
 export const DEPARTMENT_HIERARCHY = {
@@ -35,6 +36,7 @@ export const DEPARTMENT_HIERARCHY = {
     "SAP PP / QM Consultant",
     "SAP SuccessFactors Consultant",
     "SAP Ariba Consultant",
+    "SAP Functional Intern",
   ],
   "ERP / SAP Technical & Platform Department": [
     "SAP ABAP Developer",
@@ -43,11 +45,13 @@ export const DEPARTMENT_HIERARCHY = {
     "SAP BTP Developer",
     "SAP BASIS Administrator",
     "SAP Security / GRC Consultant",
+    "SAP Technical Intern",
   ],
   "SAP Analytics & Data Department": [
     "SAP BW Consultant",
     "SAP SAC Consultant",
     "SAP Analytics Developer",
+    "SAP Analytics Intern",
   ],
   "Software Development Department": [
     "Software Developer / Software Engineer",
@@ -59,6 +63,7 @@ export const DEPARTMENT_HIERARCHY = {
     ".NET Developer",
     "React Developer / Angular Developer",
     "Mobile App Developer (Android / iOS)",
+    "Software Development Intern",
   ],
   "Cloud, DevOps & Infrastructure Department": [
     "DevOps Engineer",
@@ -69,6 +74,7 @@ export const DEPARTMENT_HIERARCHY = {
     "Windows Server Administrator",
     "Network Engineer",
     "IT Infrastructure Engineer",
+    "DevOps / Cloud Intern",
   ],
   "Data, Analytics & AI Department": [
     "Data Analyst",
@@ -79,27 +85,41 @@ export const DEPARTMENT_HIERARCHY = {
     "Machine Learning Engineer",
     "AI Engineer",
     "Data Quality Analyst",
+    "Data / AI Intern",
   ],
   "Cybersecurity & Information Security Department": [
     "Cybersecurity Analyst",
     "Information Security Specialist",
     "Security Engineer",
     "Security Architect",
+    "Cybersecurity Intern",
   ],
   "Quality Assurance (QA) & Testing Department": [
     "QA Tester / QA Engineer",
     "Automation Test Engineer",
     "Performance Tester",
     "Test Lead",
+    "QA Intern",
   ],
   "Automation & Digital Transformation Department": [
     "RPA Developer",
+    "Automation Intern",
   ],
   "IT Support & Operations Department": [
     "Application Support Engineer",
+    "IT Support Intern",
   ],
   "Architecture & Solution Design Department": [
     "Solution Architect",
+    "Architecture Intern",
+  ],
+  "Human Resources (HR) Department": [
+    "HR Executive",
+    "HR Recruiter",
+    "HR Business Partner",
+    "HR Operations Specialist",
+    "Talent Acquisition Specialist",
+    "HR Intern",
   ],
 };
 

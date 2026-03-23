@@ -19,7 +19,8 @@ const canViewTask = (task, user) => {
 
     // Check if user is assigned to the task
     return task.assignedTo.some(assignee =>
-        assignee.assigneeId && assignee.assigneeId.toString() === String(user._id)
+        (assignee.assigneeId && assignee.assigneeId.toString() === String(user._id)) ||
+        (assignee.assigneeEmail && user.userEmail && assignee.assigneeEmail === user.userEmail)
     );
 };
 
@@ -224,7 +225,8 @@ export const getTaskById = async (req, res) => {
 
         // Check if user has permission to view
         const isAssignee = task.assignedTo.some(assignee =>
-            assignee.assigneeId.toString() === currentUser._id.toString()
+            (assignee.assigneeId && assignee.assigneeId.toString() === currentUser._id.toString()) ||
+            (assignee.assigneeEmail && currentUser.userEmail && assignee.assigneeEmail === currentUser.userEmail)
         );
 
         if (!isAdmin(currentUser) && currentUser.role !== 'accountant' && !isAssignee) {
@@ -257,7 +259,8 @@ export const updateTask = async (req, res) => {
 
         // Check permissions
         const isAssignee = task.assignedTo.some(assignee =>
-            assignee.assigneeId.toString() === currentUser._id.toString()
+            (assignee.assigneeId && assignee.assigneeId.toString() === currentUser._id.toString()) ||
+            (assignee.assigneeEmail && currentUser.userEmail && assignee.assigneeEmail === currentUser.userEmail)
         );
 
         if (!isAdmin(currentUser) && !isAssignee) {
@@ -380,7 +383,8 @@ export const addComment = async (req, res) => {
 
         // Check if user can view task (and thus comment)
         const isAssignee = task.assignedTo.some(assignee =>
-            assignee.assigneeId.toString() === currentUser._id.toString()
+            (assignee.assigneeId && assignee.assigneeId.toString() === currentUser._id.toString()) ||
+            (assignee.assigneeEmail && currentUser.userEmail && assignee.assigneeEmail === currentUser.userEmail)
         );
 
         if (!isAdmin(currentUser) && currentUser.role !== 'accountant' && !isAssignee) {

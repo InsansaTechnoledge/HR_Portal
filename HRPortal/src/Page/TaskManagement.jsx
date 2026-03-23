@@ -124,13 +124,24 @@ const TaskManagement = () => {
         }
     };
 
+    const handleStatusUpdate = async (taskId, newStatus) => {
+        try {
+            await axiosInstance.put(`/api/task/${taskId}`, { status: newStatus });
+            setSuccessMessage(`Task marked as ${newStatus}`);
+            fetchTasks();
+        } catch (error) {
+            setErrorMessage(error.response?.data?.message || 'Failed to update task status');
+            throw error;
+        }
+    };
+
     const handleUpdateTask = async (taskData, options = {}) => {
         const suppressToast = options.suppressToast || false;
         const keepOpen = options.keepOpen || false;
         try {
             await axiosInstance.put(`/api/task/${selectedTask._id}`, taskData);
             if (!suppressToast) {
-                setSuccessMessage('Task updated successfully');
+                setSuccessMessage(taskData.status === 'Completed' ? 'Task completed successfully' : 'Task updated successfully');
             }
             fetchTasks();
             if (!keepOpen) {
@@ -342,6 +353,7 @@ const TaskManagement = () => {
                                 task={task}
                                 onClick={handleTaskClick}
                                 onDelete={handleDeleteTask}
+                                onStatusUpdate={handleStatusUpdate}
                                 isCurrentUser={user?._id === task.assignedTo?.[0]?.assigneeId}
                             />
                         ))}

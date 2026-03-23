@@ -28,8 +28,11 @@ export const login = async (req, res, next) => {
     const token = generateAuthToken(user);
     const isProduction = process.env.NODE_ENV === "production" || !req.hostname.includes('localhost');
 
+    const expiresInMs = 7 * 24 * 60 * 60 * 1000; // 1 week expiration
+
     res.cookie("jwtAuth", token, {
-      expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year expiration
+      expires: new Date(Date.now() + expiresInMs),
+      maxAge: expiresInMs,
       httpOnly: true, // Prevents client-side JS access
       // secure: process.env.NODE_ENV !== "development",
       secure: true, // Always true for SameSite: None (required for cross-origin)

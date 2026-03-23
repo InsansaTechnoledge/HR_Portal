@@ -5,7 +5,7 @@ import { Badge } from '../ui/badge';
 import { Textarea } from '../ui/textarea';
 import { Separator } from '../ui/separator';
 import { ScrollArea } from '../ui/scroll-area';
-import { Calendar, User, Clock, Tag, MessageSquare, Paperclip, Edit2, X } from 'lucide-react';
+import { Calendar, User, Clock, Tag, MessageSquare, Paperclip, Edit2, X, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { userContext } from '../../Context/userContext';
 import axios from 'axios';
@@ -293,6 +293,18 @@ const TaskDetail = ({ task, open, onClose, onEdit, onUpdate, onDelete }) => {
                         </div>
                     </div>
                 </ScrollArea>
+                <DialogFooter className="mt-4">
+                    {task.status !== 'Completed' && task.status !== 'Cancelled' && (
+                        <Button
+                            variant="outline"
+                            className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                            onClick={() => onUpdate && onUpdate({ status: 'Completed' })}
+                        >
+                            <CheckCircle2 className="w-4 h-4 mr-2" />
+                            Complete Task
+                        </Button>
+                    )}
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

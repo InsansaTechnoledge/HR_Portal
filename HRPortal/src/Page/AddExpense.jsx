@@ -284,6 +284,7 @@ const AddExpense = () => {
   const expenseTypeList = Array.isArray(form.expenses)
     ? form.expenses.map((e) => e.type)
     : [];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 p-4 md:p-6 lg:p-8">
       <div className="max-w-2xl mx-auto space-y-6">
@@ -535,6 +536,11 @@ const AddExpense = () => {
                         <Badge variant="secondary">{expense.type}</Badge>
                         <span className="font-medium">
                           {expense.location === "International" ? (currencySymbols[expense.currency] || expense.currency) + " " + Number(expense.amount).toLocaleString() : "₹" + Number(expense.amount).toLocaleString("en-IN")}
+                          {expense.expenseDate && (
+                            <span className="italic text-muted-foreground ml-1">
+                              on {new Date(expense.expenseDate).toLocaleDateString()}
+                            </span>
+                          )}
                         </span>
                       </div>
 

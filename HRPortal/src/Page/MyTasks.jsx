@@ -101,12 +101,30 @@ const MyTasks = () => {
         setFilteredTasks(filtered);
     };
 
+    const handleStatusUpdate = async (taskId, newStatus) => {
+        try {
+            await axiosInstance.put(`/api/task/${taskId}`, { status: newStatus });
+            toast({
+                title: 'Success',
+                description: `Task marked as ${newStatus}`
+            });
+            fetchMyTasks();
+        } catch (error) {
+            toast({
+                title: 'Error',
+                description: error.response?.data?.message || 'Failed to update task status',
+                variant: 'destructive'
+            });
+            throw error;
+        }
+    };
+
     const handleUpdateTask = async (taskData) => {
         try {
             await axiosInstance.put(`/api/task/${selectedTask._id}`, taskData);
             toast({
                 title: 'Success',
-                description: 'Task updated successfully'
+                description: taskData.status === 'Completed' ? 'Task completed successfully' : 'Task updated successfully'
             });
             fetchMyTasks();
 
@@ -259,7 +277,7 @@ const MyTasks = () => {
                                     {filteredTasks
                                         .filter(t => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'Completed')
                                         .map((task) => (
-                                            <TaskCard key={task._id} task={task} onClick={handleTaskClick} />
+                                            <TaskCard key={task._id} task={task} onClick={handleTaskClick} onStatusUpdate={handleStatusUpdate} />
                                         ))}
                                 </div>
                             </div>
@@ -273,7 +291,7 @@ const MyTasks = () => {
                             </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {filteredTasks.map((task) => (
-                                    <TaskCard key={task._id} task={task} onClick={handleTaskClick} />
+                                    <TaskCard key={task._id} task={task} onClick={handleTaskClick} onStatusUpdate={handleStatusUpdate} />
                                 ))}
                             </div>
                         </div>

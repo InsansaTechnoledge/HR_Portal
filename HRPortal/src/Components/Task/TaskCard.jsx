@@ -125,26 +125,26 @@ const TaskCard = ({ task, onClick, onDelete }) => {
             task.priority === 'Critical'
               ? '#ef4444'
               : task.priority === 'High'
-              ? '#f97316'
-              : task.priority === 'Medium'
-              ? '#eab308'
-              : '#3b82f6',
+                ? '#f97316'
+                : task.priority === 'Medium'
+                  ? '#eab308'
+                  : '#3b82f6',
         }}
       >
         <CardContent className="p-4 space-y-4">
           {/* Header */}
           <div className="flex justify-between items-start gap-3">
             <div className="flex items-center gap-2 ">
-                {isTaskNew() && (
-                    <span className="relative flex h-2.5 w-2.5">
-                        <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping" />
-                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
-                    </span>
-                )}
+              {isTaskNew() && (
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
+                </span>
+              )}
 
-                <h3 className="font-semibold text-base line-clamp-2">
-                    {task.title}
-                </h3>
+              <h3 className="font-semibold text-base line-clamp-2">
+                {task.title}
+              </h3>
             </div>
 
             <div className="flex items-center gap-2">
@@ -154,25 +154,25 @@ const TaskCard = ({ task, onClick, onDelete }) => {
 
               {user && user.role === 'admin' || user.role === 'superAdmin' ?
                 <DropdownMenu>
-                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical size={16} />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowDeleteDialog(true);
-                    }}
-                    className="text-destructive"
-                  >
-                    <Trash2 size={14} className="mr-2" />
-                    Delete Task
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              :<></>}
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical size={16} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowDeleteDialog(true);
+                      }}
+                      className="text-destructive"
+                    >
+                      <Trash2 size={14} className="mr-2" />
+                      Delete Task
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                : <></>}
             </div>
           </div>
 
@@ -196,9 +196,8 @@ const TaskCard = ({ task, onClick, onDelete }) => {
           {/* Due Date */}
           {dueDateInfo && (
             <div
-              className={`flex items-center gap-2 text-sm ${
-                dueDateInfo.isOverdue ? 'text-destructive' : 'text-muted-foreground'
-              }`}
+              className={`flex items-center gap-2 text-sm ${dueDateInfo.isOverdue ? 'text-destructive' : 'text-muted-foreground'
+                }`}
             >
               <Calendar size={14} />
               {dueDateInfo.isOverdue ? 'Overdue' : dueDateInfo.formatted}
