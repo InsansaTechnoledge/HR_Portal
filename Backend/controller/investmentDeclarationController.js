@@ -31,7 +31,7 @@ export const createOrUpdateDeclaration = async (req, res) => {
             employeeCode: emp.empId,
             employeeEmail: emp.email,
             financialYear,
-            dateOfJoining: emp.dateOfJoining, // Added Date of Joining
+            dateOfJoining: emp.details?.dateOfJoining, // Use nested dateOfJoining
             formData: rest,
             status
         };

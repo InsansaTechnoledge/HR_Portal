@@ -19,12 +19,12 @@ const configureApp = (app) => {
     .map(origin => origin.replace(/^["']|["']$/g, '')) // Remove leading/trailing quotes
     .filter(Boolean);
 
-  console.log('Allowed Origins:', allowedOrigins);
+  // console.log('Allowed Origins:', allowedOrigins);
 
   app.use(
     cors({
       origin: (origin, callback) => {
-        console.log('Incoming Origin:', origin);
+        // console.log('Incoming Origin:', origin);
         // Allow non-browser clients (no origin) and configured origins
         if (!origin || allowedOrigins.includes(origin)) {
           return callback(null, true);

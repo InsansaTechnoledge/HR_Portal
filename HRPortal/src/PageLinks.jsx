@@ -86,6 +86,7 @@ function PageLinks() {
             <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />
             <Route path="/analysis-result" element={<AnalysisResult />} />
             <Route path="/task-management" element={<TaskManagement />} />
+            <Route path="/emp-list" element={<EmployeeList />} />
             {/* <Route path="/user-upsert" element={<UserUpsertForm />} /> */}
           </Route>
 

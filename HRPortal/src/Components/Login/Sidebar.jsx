@@ -4,6 +4,7 @@ import { userContext } from "../../Context/userContext";
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
 // import { toast } from '../../hooks/use-toast';
+import { Link } from 'react-router-dom';
 import {
   Home,
   Users,
@@ -67,7 +68,7 @@ const navItems = [
           { icon: FolderOpen, label: 'Employee Documents', path: '/docs', roles: ['admin', 'superAdmin'] },
           { icon: Calendar, label: 'Leave Tracker', path: '/leave-tracker', roles: ['admin', 'superAdmin'] },
           { icon: UserPlus, label: 'Add Employee', path: '/add-employee', roles: ['admin', 'superAdmin'] },
-          { icon: ClipboardList, label: 'Employee Details', path: '/emp-list', roles: ['superAdmin'] },
+          { icon: ClipboardList, label: 'Employee Details', path: '/emp-list', roles: ['admin', 'superAdmin'] },
         ]
       },
       {
@@ -371,24 +372,27 @@ const SidebarContent = ({
 
         <div className="relative p-3 border-t border-sidebar-border/50 space-y-3">
           {(!isCollapsed || isMobile) && (
-            <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-gradient-to-r from-sidebar-accent/40 to-sidebar-accent/20 backdrop-blur-sm">
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sidebar-primary/30 to-sidebar-primary/10 flex items-center justify-center ring-2 ring-sidebar-primary/20">
-                  <span className="text-base font-bold text-sidebar-primary">
-                    {user?.userName?.charAt(0).toUpperCase()}
-                  </span>
+            <Link to="/user-profile" className="block">
+              <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-gradient-to-r from-sidebar-accent/40 to-sidebar-accent/20 backdrop-blur-sm">
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sidebar-primary/30 to-sidebar-primary/10 flex items-center justify-center ring-2 ring-sidebar-primary/20">
+                    <span className="text-base font-bold text-sidebar-primary">
+                      {user?.userName?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-sidebar-foreground truncate">
+                    {user?.userName}
+                  </p>
+                  <p className="text-xs text-sidebar-foreground/50 capitalize flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-success" />
+                    {user?.role === 'superAdmin' ? 'Super Admin' : user?.role}
+                  </p>
                 </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-sidebar-foreground truncate">
-                  {user?.userName}
-                </p>
-                <p className="text-xs text-sidebar-foreground/50 capitalize flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-success" />
-                  {user?.role === 'superAdmin' ? 'Super Admin' : user?.role}
-                </p>
-              </div>
-            </div>
+            </Link>
+
           )}
 
           {isCollapsed && !isMobile ? (

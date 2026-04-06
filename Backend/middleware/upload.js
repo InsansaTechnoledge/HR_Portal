@@ -24,7 +24,7 @@ const storage = new CloudinaryStorage({
 
     return {
       folder: `employees/${phone}_${safeEmail}`,
-      resource_type: "raw",
+      resource_type: "auto",
       public_id: `${email}_${file.fieldname}`,
       allowed_formats: ["pdf", "png", "jpg", "jpeg"],
     };

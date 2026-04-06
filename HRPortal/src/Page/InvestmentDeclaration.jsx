@@ -51,7 +51,7 @@ const InvestmentDeclaration = () => {
 
     const findEmployeeRecord = async () => {
         try {
-            const storedEmployeeId = localStorage.getItem('employeeId');
+            // const storedEmployeeId = localStorage.getItem('employeeId');
             // if (storedEmployeeId) { // bypass API call if employeeId is already stored
                 // setEmployeeId(storedEmployeeId);
             // } else
@@ -70,7 +70,7 @@ const InvestmentDeclaration = () => {
                     const data = await response.json();
                     if (data.employees && data.employees.length > 0) {
                         setEmployeeId(data.employees[0]._id);
-                        localStorage.setItem('employeeId', data.employees[0]._id);
+                        // localStorage.setItem('employeeId', data.employees[0]._id);
                     }
                 }
             }

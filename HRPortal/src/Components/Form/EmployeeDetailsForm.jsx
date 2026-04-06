@@ -6,7 +6,7 @@ import Loader from "../Loader/Loader.jsx";
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card.jsx';
 import { Input } from '../ui/input.jsx';
 import { Label } from '../ui/label.jsx';
-import { Calendar, CloudUpload, Flag, IndianRupee, Mail, MapPinCheck, Phone, User, Building2, Briefcase, Save, ChevronDown, Gem, House, HousePlus, Loader2 } from "lucide-react";
+import { Calendar, CloudUpload, Flag, IndianRupee, Mail, MapPinCheck, Phone, User, Building2, Briefcase, Save, ChevronDown, Gem, House, HousePlus, Loader2, X } from "lucide-react";
 import { Button } from '../ui/button.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select.jsx";
 import { toast } from "../../hooks/useToast.js";
@@ -17,9 +17,26 @@ function EmployeeDetailsForm(props) {
 
     const Name = user?.userName; // fetching the name of user
     const [loading, setLoading] = useState(false);
+    const [isCustomDesignation, setIsCustomDesignation] = useState(false);
+    const [isCustomEmail, setIsCustomEmail] = useState(false);
 
     const [employees, setEmployees] = useState([]);
+    const [eligibleUsers, setEligibleUsers] = useState([]);
     const [file, setFile] = useState();
+
+    useEffect(() => {
+        const fetchEligibleUsers = async () => {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/api/employee/eligibleEmails`);
+                if (response.status === 200) {
+                    setEligibleUsers(response.data.eligible || []);
+                }
+            } catch (err) {
+                console.error("Error fetching eligible users", err);
+            }
+        };
+        fetchEligibleUsers();
+    }, []);
 
     // const [file, setFile] = useState();
     const [newEmployee, setNewEmployee] = useState({
@@ -57,6 +74,7 @@ function EmployeeDetailsForm(props) {
     const departments = Object.keys(DEPARTMENT_HIERARCHY);
 
     const handleDepartmentChange = (value) => {
+        setIsCustomDesignation(false);
         const updatedEmployee = { ...newEmployee, department: value, designation: "" };
         setNewEmployee(updatedEmployee);
         localStorage.setItem("employeeDetails", JSON.stringify(updatedEmployee));
@@ -93,87 +111,95 @@ function EmployeeDetailsForm(props) {
                 return;
             }
 
-            // Look up employee by the email entered in the form to avoid overwriting admin's record
-            const empResponse = await axios.get(`${API_BASE_URL}/api/employee/fetchEmployeeByEmail/${newEmployee.email}`);
+            // Check if employee expects an update or is completely new
+            try {
+                await axios.get(`${API_BASE_URL}/api/employee/fetchEmployeeByEmail/${newEmployee.email}`);
+            } catch (error) {
+                // Ignore 404 since uploadDetails handles creating new employees now
+                if (error.response?.status !== 404) {
+                    throw error;
+                }
+            }
 
-            if (empResponse.status === 200) {
-                const formData = new FormData();
-                // Backend reads email from newEmployee payload; no need to send empEmail separately
-                formData.append("newEmployee", JSON.stringify(newEmployee));
-                if (newEmployee.documentsPanCard) {
-                    formData.append("documentsPanCard", newEmployee.documentsPanCard);
-                }
-                if (newEmployee.documentsAadhar) {
-                    formData.append("documentsAadhar", newEmployee.documentsAadhar);
-                }
-                if (newEmployee.documentsDegree) {
-                    formData.append("documentsDegree", newEmployee.documentsDegree);
-                }
-                if (newEmployee.documentsExperience) {
-                    formData.append("documentsExperience", newEmployee.documentsExperience);
-                }
+            const formData = new FormData();
+            // Backend reads email from newEmployee payload; no need to send empEmail separately
+            formData.append("newEmployee", JSON.stringify(newEmployee));
+            if (newEmployee.documentsPanCard) {
+                formData.append("documentsPanCard", newEmployee.documentsPanCard);
+            }
+            if (newEmployee.documentsAadhar) {
+                formData.append("documentsAadhar", newEmployee.documentsAadhar);
+            }
+            if (newEmployee.documentsDegree) {
+                formData.append("documentsDegree", newEmployee.documentsDegree);
+            }
+            if (newEmployee.documentsExperience) {
+                formData.append("documentsExperience", newEmployee.documentsExperience);
+            }
 
-                const response = await axios.post(`${API_BASE_URL}/api/employee/uploadDetails`,
-                    formData, {
-                    headers: {
-                        'content-type': 'multipart/form-data'
-                    }
-                });
-
-                if (response.status === 200) {
-                    // alert("Details uploaded!");
-                    if (props.setEmployee) {
-                        props.setEmployee(response.data.updatedEmp);
-                    }
-                    setLoading(false);
-                    localStorage.removeItem("employeeDetails");
-                    toast({
-                        variant: "success",
-                        title: "Uploaded successfully",
-                        description: "Employee Details Uploaded Successfully",
-                    });
+            const response = await axios.post(`${API_BASE_URL}/api/employee/uploadDetails`,
+                formData, {
+                headers: {
+                    'content-type': 'multipart/form-data'
                 }
+            });
 
-                if (response.status === 401) {
-                    toast({
-                        variant: "error",
-                        title: "Uploading Failed",
-                        description: response.data.message || "Employee details already exists",
-                    });
+            if (response.status === 200) {
+                // alert("Details uploaded!");
+                if (props.setEmployee) {
+                    props.setEmployee(response.data.updatedEmp);
                 }
-
-                setNewEmployee({
-                    name: "",
-                    email: "",
-                    phone: "",
-                    dateOfBirth: "",
-                    gender: "",
-                    maritalStatus: "",
-                    nationality: "",
-                    currentAddress: "",
-                    permanentAddress: "",
-                    city: "",
-                    state: "",
-                    pincode: "",
-                    dateOfJoining: "",
-                    department: "",
-                    designation: "",
-                    nameAsPerBank: "",
-                    bankName: "",
-                    accountNumber: "",
-                    ifscCode: "",
-                    panNumber: "",
-                    aadharNumber: "",
-                    uanNumber: "",
-                    emergencyContactName: "",
-                    emergencyContactRelation: "",
-                    emergencyContactPhone: "",
-                    documentsPanCard: "",
-                    documentsAadhar: "",
-                    documentsDegree: "",
-                    documentsExperience: "",
+                setLoading(false);
+                localStorage.removeItem("employeeDetails");
+                setIsCustomEmail(false);
+                toast({
+                    variant: "success",
+                    title: "Uploaded successfully",
+                    description: "Employee Details Uploaded Successfully",
                 });
             }
+
+            if (response.status === 401) {
+                toast({
+                    variant: "error",
+                    title: "Uploading Failed",
+                    description: response.data.message || "Employee details already exists",
+                });
+            }
+
+            setIsCustomDesignation(false);
+            setNewEmployee({
+                name: "",
+                email: "",
+                phone: "",
+                dateOfBirth: "",
+                gender: "",
+                maritalStatus: "",
+                nationality: "",
+                currentAddress: "",
+                permanentAddress: "",
+                city: "",
+                state: "",
+                pincode: "",
+                dateOfJoining: "",
+                department: "",
+                designation: "",
+                nameAsPerBank: "",
+                bankName: "",
+                accountNumber: "",
+                ifscCode: "",
+                panNumber: "",
+                aadharNumber: "",
+                uanNumber: "",
+                emergencyContactName: "",
+                emergencyContactRelation: "",
+                emergencyContactPhone: "",
+                documentsPanCard: "",
+                documentsAadhar: "",
+                documentsDegree: "",
+                documentsExperience: "",
+            });
+
         } catch (error) {
             console.error("Error submitting employee details:", error);
             setLoading(false);
@@ -189,6 +215,7 @@ function EmployeeDetailsForm(props) {
     };
 
     const handleCancel = () => {
+        setIsCustomDesignation(false);
         setNewEmployee({
             name: "",
             email: "",
@@ -271,11 +298,72 @@ function EmployeeDetailsForm(props) {
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Email *</Label>
-                                        <div className="relative">
-                                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                            <Input type="email" placeholder="Enter Email" className="pl-10" value={newEmployee.email}
-                                                onChange={(e) => handleInputChange("email", e.target.value)} required />
-                                        </div>
+                                        {isCustomEmail ? (
+                                            <div className="relative flex items-center gap-2">
+                                                <div className="relative flex-grow">
+                                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                                    <Input
+                                                        type="email"
+                                                        placeholder="Enter Custom Email"
+                                                        className="pl-10"
+                                                        value={newEmployee.email}
+                                                        onChange={(e) => handleInputChange("email", e.target.value)}
+                                                        required
+                                                    />
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-10 w-10 text-muted-foreground hover:text-foreground"
+                                                    onClick={() => {
+                                                        setIsCustomEmail(false);
+                                                        handleInputChange("email", "");
+                                                    }}
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="relative">
+                                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+                                                <div className="relative">
+                                                    <Select
+                                                        value={newEmployee.email || ""}
+                                                        onValueChange={(value) => {
+                                                            if (value === "Custom") {
+                                                                setIsCustomEmail(true);
+                                                                handleInputChange("email", "");
+                                                            } else {
+                                                                const matchedUser = eligibleUsers.find(u => u.userEmail === value);
+                                                                const newFields = { ...newEmployee, email: value };
+
+                                                                if (matchedUser) {
+                                                                    newFields.name = matchedUser.userName || "";
+                                                                }
+
+                                                                setNewEmployee(newFields);
+                                                                localStorage.setItem("employeeDetails", JSON.stringify(newFields));
+                                                            }
+                                                        }}
+                                                    >
+                                                        <SelectTrigger className="flex h-10 w-full px-3 pl-10 pr-8">
+                                                            <SelectValue placeholder="Select Email" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {eligibleUsers.map((u) => (
+                                                                <SelectItem key={u.userEmail} value={u.userEmail}>
+                                                                    {u.userEmail} ({u.userName})
+                                                                </SelectItem>
+                                                            ))}
+                                                            <SelectItem value="Custom">Other (Custom)</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                                </div>
+
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="grid sm:grid-cols-2 gap-5">
@@ -467,26 +555,58 @@ function EmployeeDetailsForm(props) {
                                 <div className="grid sm:grid-cols-2 gap-5">
                                     <div className="space-y-2">
                                         <Label>Designation *</Label>
-                                        <div className="relative">
-                                            <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                            <Select
-                                                value={newEmployee.designation || ""}
-                                                onValueChange={(value) => handleInputChange("designation", value)}
-                                                disabled={!newEmployee.department}
-                                            >
-                                                <SelectTrigger className="flex h-10 w-full px-3 pl-10 pr-8">
-                                                    <SelectValue placeholder={newEmployee.department ? "Select Designation" : "Select Department first"} />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {newEmployee.department && DEPARTMENT_HIERARCHY[newEmployee.department]?.map((desig) => (
-                                                        <SelectItem key={desig} value={desig}>
-                                                            {desig}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                                        </div>
+                                        {isCustomDesignation ? (
+                                            <div className="flex gap-2">
+                                                <div className="relative flex-1">
+                                                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                                    <Input
+                                                        type="text"
+                                                        placeholder="Enter Custom Designation"
+                                                        className="pl-10 h-10"
+                                                        value={newEmployee.designation}
+                                                        onChange={(e) => handleInputChange("designation", e.target.value)}
+                                                        required
+                                                    />
+                                                </div>
+                                                <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => {
+                                                    setIsCustomDesignation(false);
+                                                    handleInputChange("designation", "");
+                                                }}>
+                                                    <X className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="relative">
+                                                <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                                <Select
+                                                    value={newEmployee.designation || ""}
+                                                    onValueChange={(value) => {
+                                                        if (value === "Custom") {
+                                                            setIsCustomDesignation(true);
+                                                            handleInputChange("designation", "");
+                                                        } else {
+                                                            handleInputChange("designation", value);
+                                                        }
+                                                    }}
+                                                    disabled={!newEmployee.department}
+                                                >
+                                                    <SelectTrigger className="flex h-10 w-full px-3 pl-10 pr-8">
+                                                        <SelectValue placeholder={newEmployee.department ? "Select Designation" : "Select Department first"} />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {newEmployee.department && DEPARTMENT_HIERARCHY[newEmployee.department]?.map((desig) => (
+                                                            <SelectItem key={desig} value={desig}>
+                                                                {desig}
+                                                            </SelectItem>
+                                                        ))}
+                                                        {newEmployee.department && (
+                                                            <SelectItem value="Custom">Other (Custom)</SelectItem>
+                                                        )}
+                                                    </SelectContent>
+                                                </Select>
+                                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </CardContent>

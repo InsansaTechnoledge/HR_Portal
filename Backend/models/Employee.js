@@ -43,9 +43,6 @@ const EmployeeSchema = new mongoose.Schema({
   details: {
     type: EmployeeDetailSchema,
   },
-  dateOfJoining: {
-    type: Date,
-  },
   payslips: {
     type: [
       {

@@ -7,7 +7,9 @@ import {
   Trash2,
   X,
   Search,
-  Building2
+  Building2,
+  Eye,
+  Loader2
 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
@@ -26,6 +28,7 @@ import * as XLSX from "xlsx";
 const EmployeeList = () => {
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [employees, setEmployees] = useState([]);
+  const [deletingDocs, setDeletingDocs] = useState({});
   const [toggleEditsalary, setToggleEditSalary] = useState(false);
   const { user } = useContext(userContext);
   const [isLoading, setIsLoading] = useState(true);
@@ -86,17 +89,16 @@ const EmployeeList = () => {
 
     const fetchEmployees = async () => {
       try {
-        // Request without document buffers - they'll be loaded on-demand when downloading
         const response = await axios.get(`${API_BASE_URL}/api/employee`, {
           params: {
-            excludeDocuments: "true",
             limit: 200,
           },
           signal,
         });
         if (response.status === 201 || response.status === 200) {
-          setAllEmployees(response.data.employees);
-          setEmployees(response.data.employees);
+          const fetchedEmployees = response.data.employees || [];
+          setAllEmployees(fetchedEmployees);
+          setEmployees(fetchedEmployees.filter(emp => emp?.details));
         }
       } catch (err) {
         if (axios.isCancel?.(err)) return;
@@ -372,6 +374,69 @@ const EmployeeList = () => {
     </div>
   );
 
+  const handleDeleteDocument = async (docType) => {
+    setDeletingDocs((prev) => ({ ...prev, [docType]: true }));
+    try {
+      const resp = await axios.delete(
+        `${API_BASE_URL}/api/employee/deleteDocument/${editingEmployee._id}/${docType}`
+      );
+      if (resp.status === 200) {
+        const updatedEmployee = resp.data.employee;
+        setEmployees((prev) =>
+          prev.map((emp) =>
+            emp._id === editingEmployee._id ? updatedEmployee : emp
+          )
+        );
+        setEditingEmployee(updatedEmployee);
+        setToastSuccessMessage(resp.data?.message || "Document deleted successfully");
+        setToastSuccessVisible(true);
+        setTimeout(() => setToastSuccessVisible(false), 3000);
+      }
+    } catch (err) {
+      console.error(err);
+      setToastErrorMessage(err.response?.data?.message || "Failed to delete document");
+      setToastErrorVisible(true);
+      setTimeout(() => setToastErrorVisible(false), 3000);
+    } finally {
+      setDeletingDocs((prev) => ({ ...prev, [docType]: false }));
+    }
+  };
+
+  const handleUploadDocument = async (docType, file) => {
+    if (!file) return;
+    try {
+      const formData = new FormData();
+      formData.append(docType, file);
+
+      // The backend uses upload middleware which expects email and phone to construct folder paths
+      formData.append('newEmployee', JSON.stringify({ email: editingEmployee.details.email, phone: editingEmployee.details.phone }));
+
+      const resp = await axios.put(
+        `${API_BASE_URL}/api/employee/updateDocument/${editingEmployee._id}/${docType}`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+
+      if (resp.status === 200) {
+        const updatedEmployee = resp.data.employee;
+        setEmployees((prev) =>
+          prev.map((emp) =>
+            emp._id === editingEmployee._id ? updatedEmployee : emp
+          )
+        );
+        setEditingEmployee(updatedEmployee);
+        setToastSuccessMessage(resp.data?.message || "Document uploaded successfully");
+        setToastSuccessVisible(true);
+        setTimeout(() => setToastSuccessVisible(false), 3000);
+      }
+    } catch (err) {
+      console.error(err);
+      setToastErrorMessage(err.response?.data?.message || "Failed to upload document");
+      setToastErrorVisible(true);
+      setTimeout(() => setToastErrorVisible(false), 3000);
+    }
+  };
+
   const handleCancelEdit = () => {
     setEditOpen(false);
     setEditingEmployee(null);
@@ -552,7 +617,7 @@ const EmployeeList = () => {
                   ))}
                 </select> */}
 
-                <div className="relative"> 
+                <div className="relative">
                   <Select
                     value={selectedDepartment}
                     onValueChange={(val) => setSelectedDepartment(val)}
@@ -562,7 +627,7 @@ const EmployeeList = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Departments</SelectItem>
-                      {[...new Set(allEmployees.map(e => e.details.department))].map(dep => (
+                      {[...new Set(allEmployees?.map(e => e.details?.department).filter(Boolean))].map(dep => (
                         <SelectItem key={dep} value={dep}>
                           {dep}
                         </SelectItem>
@@ -600,12 +665,12 @@ const EmployeeList = () => {
                           <td className="p-4">
                             <button
                               onClick={() =>
-                                toggleRow(employee.details.employeeDetailId)
+                                toggleRow(employee._id)
                               }
                               className="text-green-600 hover:text-green-800"
                             >
                               {expandedRows.has(
-                                employee.details.employeeDetailId
+                                employee._id
                               ) ? (
                                 <ChevronUp className="w-5 h-5" />
                               ) : (
@@ -620,20 +685,20 @@ const EmployeeList = () => {
                                 {employee.details?.name?.charAt(0) || "E"}
                               </div>
                               <div>
-                                <p className="font-medium">{employee.details.name}</p>
-                                <p className="text-sm text-gray-500">{employee.details.designation}</p>
+                                <p className="font-medium">{employee.details?.name}</p>
+                                <p className="text-sm text-gray-500">{employee.details?.designation}</p>
                               </div>
                             </div>
                           </td>
 
                           <td className="p-4"><div className="flex items-center gap-2">
                             <Building2 className="w-4 h-4 text-muted-foreground" />
-                            <span>{employee.details.department}</span>
+                            <span>{employee.details?.department}</span>
                           </div></td>
 
                           <td className="p-4 text-sm text-gray-600">
-                            <div>{employee.details.email}</div>
-                            <div>{employee.details.phone}</div>
+                            <div>{employee.details?.email}</div>
+                            <div>{employee.details?.phone}</div>
                           </td>
 
                           <td className="p-4 text-right">
@@ -654,7 +719,7 @@ const EmployeeList = () => {
                           </td>
                         </tr>
                         {employee?.details &&
-                          expandedRows.has(employee.details.employeeDetailId) && (
+                          expandedRows.has(employee._id) && (
                             <tr>
                               <td colSpan="7" className="bg-gray-50 px-6 py-6">
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -880,7 +945,7 @@ const EmployeeList = () => {
 
             {/* PERSONAL INFORMATION */}
             <section>
-              <h4 className="text-base font-semibold text-blue-600 mb-4">
+              <h4 className="text-base font-semibold text-primary mb-4">
                 Personal Information
               </h4>
 
@@ -907,7 +972,26 @@ const EmployeeList = () => {
 
                 <div>
                   <Label>Gender</Label>
-                  <select
+                  <div className="relative z-10">
+                    <Select
+                      value={form.gender}
+                      onValueChange={(value) => setForm({ ...form, gender: value })}
+                    >
+                      <SelectTrigger
+                        className="flex h-10 w-full px-3 pl-4 pr-8"
+                      >
+                        <SelectValue placeholder="Select Gender" />
+                      </SelectTrigger>
+
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Others">Others</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                  {/* <select
                     className="w-full border rounded-md px-3 py-2"
                     value={form.gender}
                     onChange={e => setForm({ ...form, gender: e.target.value })}
@@ -916,12 +1000,31 @@ const EmployeeList = () => {
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                     <option value="Other">Other</option>
-                  </select>
+                  </select> */}
                 </div>
 
                 <div>
                   <Label>Marital Status</Label>
-                  <select
+                  <div className="relative z-10">
+                    <Select
+                      value={form.maritalStatus}
+                      onValueChange={(value) => setForm({ ...form, maritalStatus: value })}
+                    >
+                      <SelectTrigger
+                        className="flex h-10 w-full px-3 pl-4 pr-8"
+                      >
+                        <SelectValue placeholder="Select Marital Status" />
+                      </SelectTrigger>
+
+                      <SelectContent>
+                        <SelectItem value="Single">Single</SelectItem>
+                        <SelectItem value="Married">Married</SelectItem>
+                        <SelectItem value="Divorced">Divorced</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                  {/* <select
                     className="w-full border rounded-md px-3 py-2"
                     value={form.maritalStatus}
                     onChange={e => setForm({ ...form, maritalStatus: e.target.value })}
@@ -930,7 +1033,7 @@ const EmployeeList = () => {
                     <option value="Single">Single</option>
                     <option value="Married">Married</option>
                     <option value="Divorced">Divorced</option>
-                  </select>
+                  </select> */}
                 </div>
 
                 <div className="sm:col-span-2">
@@ -942,7 +1045,7 @@ const EmployeeList = () => {
 
             {/* ADDRESS INFORMATION */}
             <section>
-              <h4 className="text-base font-semibold text-blue-600 mb-4">
+              <h4 className="text-base font-semibold text-primary mb-4">
                 Address Information
               </h4>
 
@@ -976,7 +1079,7 @@ const EmployeeList = () => {
 
             {/* EMPLOYMENT DETAILS */}
             <section>
-              <h4 className="text-base font-semibold text-blue-600 mb-4">
+              <h4 className="text-base font-semibold text-primary mb-4">
                 Employment Details
               </h4>
 
@@ -1005,7 +1108,7 @@ const EmployeeList = () => {
 
             {/* FINANCIAL INFORMATION */}
             <section>
-              <h4 className="text-base font-semibold text-blue-600 mb-4">
+              <h4 className="text-base font-semibold text-primary mb-4">
                 Financial Information
               </h4>
 
@@ -1049,7 +1152,7 @@ const EmployeeList = () => {
 
             {/* EMERGENCY CONTACT */}
             <section>
-              <h4 className="text-base font-semibold text-blue-600 mb-4">
+              <h4 className="text-base font-semibold text-primary mb-4">
                 Emergency Contact
               </h4>
 
@@ -1068,6 +1171,69 @@ const EmployeeList = () => {
                   <Label>Contact Phone</Label>
                   <Input value={form.emergencyContactPhone} onChange={e => setForm({ ...form, emergencyContactPhone: e.target.value })} />
                 </div>
+              </div>
+            </section>
+
+            {/* DOCUMENTS */}
+            <section>
+              <h4 className="text-base font-semibold text-primary mb-4">
+                Documents
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  { label: "PAN Card", key: "documentsPanCard" },
+                  { label: "Aadhar Card", key: "documentsAadhar" },
+                  { label: "Degree Certificate", key: "documentsDegree" },
+                  { label: "Experience Certificate", key: "documentsExperience" }
+                ].map((doc) => {
+                  const existingDoc = editingEmployee?.details?.[doc.key];
+                  return (
+                    <div key={doc.key} className="p-4 border rounded shadow-sm">
+                      <Label className="mb-2 block font-medium">{doc.label}</Label>
+                      {existingDoc && existingDoc.url ? (
+                        <div className="flex items-center justify-between mt-2 p-3 bg-gray-50 border rounded-md">
+                          <span className="text-sm text-gray-700 truncate min-w-0 pr-2" title={existingDoc.originalName}>
+                            {existingDoc.originalName || "Uploaded Document"}
+                          </span>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => window.open(existingDoc.url, "_blank")}
+                              className="p-2 text-primary hover:bg-primary/10 rounded-md transition-colors"
+                              title="Preview"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteDocument(doc.key)}
+                              className="p-2 text-red-600 hover:bg-red-100 rounded-md transition-colors disabled:opacity-50"
+                              title="Delete"
+                              disabled={deletingDocs[doc.key]}
+                            >
+                              {deletingDocs[doc.key] ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 mt-2">
+                          <Input
+                            type="file"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleUploadDocument(doc.key, file);
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </section>
 

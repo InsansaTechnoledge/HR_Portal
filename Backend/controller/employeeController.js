@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import Employee from "../models/Employee.js"
+import User from "../models/User.js"
 import stringTo6DigitNumber from "../utils/stringTo6digitNumber.js";
+import cloudinary from "../config/cloudinary.js";
 
 export const addEmployee = async (req, res) => {
     try {
@@ -9,8 +11,7 @@ export const addEmployee = async (req, res) => {
         const newEmp = new Employee({
             name: emp.name,
             email: emp.email,
-            department: emp.department,
-            dateOfJoining: emp.dateOfJoining // Added Date of Joining
+            department: emp.department
         });
         const exists = await Employee.findOne({ email: emp.email });
         if (exists) {
@@ -25,7 +26,7 @@ export const addEmployee = async (req, res) => {
     }
     catch (err) {
         console.log(err)
-        res.status(400).json({ message: err });
+        res.status(400).json({ message: err.message || "Failed to add employee" });
     }
 }
 
@@ -209,6 +210,7 @@ export const uploadDetails = async (req, res) => {
         }
 
         // Check if employee exists
+        // Check if employee exists
         const existingEmployee = await Employee.findOne({ email: email });
         if (existingEmployee && existingEmployee.details && Object.keys(existingEmployee.details).length > 0) {
             return res.status(401).json({ message: "Employee details already exists" });
@@ -348,6 +350,10 @@ export const updateEmployee = async (req, res) => {
         //Update ONLY allowed fields
         Object.entries(payload).forEach(([key, value]) => {
             employee.details[key] = value;
+            // Sync root fields if they exist in payload
+            if (key === 'department') {
+                employee.department = value;
+            }
         });
 
         await employee.save();
@@ -367,6 +373,81 @@ export const updateEmployee = async (req, res) => {
 
 
 
+export const updateEmployeeDocument = async (req, res) => {
+    try {
+        const { id, docType } = req.params;
+        const employee = await Employee.findById(id);
+
+        if (!employee) {
+            return res.status(404).json({ message: "Employee not found" });
+        }
+
+        // Check if there is an existing document to delete from Cloudinary
+        const existingDoc = employee.details?.[docType];
+        if (existingDoc && existingDoc.publicId) {
+            try {
+                await cloudinary.uploader.destroy(existingDoc.publicId);
+            } catch (cloudErr) {
+                console.error("Failed to delete old document from cloudinary", cloudErr);
+            }
+        }
+
+        if (!req.files || !req.files[docType] || !req.files[docType][0]) {
+            return res.status(400).json({ message: "No document provided" });
+        }
+
+        const file = req.files[docType][0];
+        const newDocDetails = {
+            url: file.path,
+            publicId: file.filename,
+            originalName: file.originalname,
+            format: file.mimetype ? file.mimetype.split('/')[1] : (file.originalname?.split('.').pop() || 'unknown')
+        };
+
+        const updatedEmp = await Employee.findByIdAndUpdate(
+            id,
+            { $set: { [`details.${docType}`]: newDocDetails } },
+            { new: true }
+        );
+
+        res.status(200).json({ message: "Document updated successfully", employee: updatedEmp });
+    } catch (err) {
+        console.error("updateEmployeeDocument error:", err);
+        res.status(500).json({ message: err.message || "Failed to update document" });
+    }
+};
+
+export const deleteEmployeeDocument = async (req, res) => {
+    try {
+        const { id, docType } = req.params;
+        const employee = await Employee.findById(id);
+
+        if (!employee) {
+            return res.status(404).json({ message: "Employee not found" });
+        }
+
+        const existingDoc = employee.details?.[docType];
+        if (existingDoc && existingDoc.publicId) {
+            try {
+                await cloudinary.uploader.destroy(existingDoc.publicId);
+            } catch (cloudErr) {
+                console.error("Failed to delete document from cloudinary", cloudErr);
+            }
+        }
+
+        const updatedEmp = await Employee.findByIdAndUpdate(
+            id,
+            { $unset: { [`details.${docType}`]: "" } },
+            { new: true }
+        );
+
+        res.status(200).json({ message: "Document deleted successfully", employee: updatedEmp });
+    } catch (err) {
+        console.error("deleteEmployeeDocument error:", err);
+        res.status(500).json({ message: err.message || "Failed to delete document" });
+    }
+};
+
 export const deleteEmployee = async (req, res) => {
     try {
         const { id } = req.params;
@@ -376,5 +457,40 @@ export const deleteEmployee = async (req, res) => {
     } catch (err) {
         console.log(err);
         return res.status(500).json({ message: err.message || err });
+    }
+}
+
+export const fetchEligibleEmails = async (req, res) => {
+    try {
+        // Fetch users using lightweight projection
+        const allUsers = await User.find({}, "userName userEmail").lean();
+        // Fetch employees using lightweight projection
+        const allEmployees = await Employee.find({}, "name email details").lean();
+
+        // 1. Employees without details
+        const employeesNoDetails = allEmployees
+            .filter(emp => !emp.details || Object.keys(emp.details).length === 0)
+            .map(emp => ({ userEmail: emp.email, userName: emp.name }));
+
+        // 2. Users generally not in employees schema
+        const usersNotInEmployees = allUsers
+            .filter(u => !allEmployees.some(emp => emp.email === u.userEmail))
+            .map(u => ({ userEmail: u.userEmail, userName: u.userName }));
+
+        // 3. Merge and deduplicate
+        const merged = [...employeesNoDetails, ...usersNotInEmployees];
+        const uniqueEmails = new Map();
+        
+        for (const item of merged) {
+            if (item.userEmail && !uniqueEmails.has(item.userEmail)) {
+                uniqueEmails.set(item.userEmail, item);
+            }
+        }
+        
+        const eligible = Array.from(uniqueEmails.values());
+        res.status(200).json({ message: "Fetched eligible emails", eligible });
+    } catch (err) {
+        console.error("Error fetching eligible emails:", err);
+        res.status(500).json({ message: "Server error fetching eligible emails" });
     }
 }

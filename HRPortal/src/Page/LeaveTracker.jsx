@@ -527,7 +527,7 @@ const LeaveTracker = () => {
     let resp;
     try {
       resp =
-        authUser.role === 'user' || authUser.role === 'admin' || authUser.role === 'superadmin' || authUser.role === 'accountant' ?
+        authUser.role === 'user' || authUser.role === 'admin' || authUser.role === 'superAdmin' || authUser.role === 'accountant' ?
           resp = await axios.post(`${API_BASE_URL}/api/user/addLeave/${targetId}`, newLeave)
           :
           resp = await axios.post(`${API_BASE_URL}/api/employee/addLeave/${targetId}`, newLeave);

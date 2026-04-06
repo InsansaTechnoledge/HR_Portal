@@ -9,12 +9,16 @@ import {
   updateSalary,
   uploadDetails,
   deleteEmployee,
+  deleteEmployeeDocument,
+  updateEmployeeDocument,
+  fetchEligibleEmails,
 } from "../controller/employeeController.js";
 import upload from "../middleware/upload.js";
 
 const router = express.Router();
 
 router.post("/add", addEmployee);
+router.get("/eligibleEmails", fetchEligibleEmails);
 router.get("/", fetchEmployee);
 router.get("/fetchEmployeeByEmail/:email", fetchEmployeeByEmail);
 router.get("/:id", fetchEmployeeById);
@@ -34,6 +38,18 @@ router.post(
 router.post("/updateSalary/:id", updateSalary);
 
 router.put("/updateEmployee/:id", updateEmployee);
+
+router.delete("/deleteDocument/:id/:docType", deleteEmployeeDocument);
+router.put(
+  "/updateDocument/:id/:docType",
+  upload.fields([
+    { name: "documentsPanCard", maxCount: 1 },
+    { name: "documentsAadhar", maxCount: 1 },
+    { name: "documentsDegree", maxCount: 1 },
+    { name: "documentsExperience", maxCount: 1 },
+  ]),
+  updateEmployeeDocument
+);
 
 router.delete("/:id", deleteEmployee);
 

@@ -538,7 +538,7 @@ const AddExpense = () => {
                           {expense.location === "International" ? (currencySymbols[expense.currency] || expense.currency) + " " + Number(expense.amount).toLocaleString() : "₹" + Number(expense.amount).toLocaleString("en-IN")}
                           {expense.expenseDate && (
                             <span className="italic text-muted-foreground ml-1">
-                              on {new Date(expense.expenseDate).toLocaleDateString()}
+                              on {new Date(expense.expenseDate).toLocaleDateString("en-GB")}
                             </span>
                           )}
                         </span>
