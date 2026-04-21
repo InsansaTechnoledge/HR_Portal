@@ -39,7 +39,7 @@ const EmployeeDetailSchema = new mongoose.Schema({
     },
     permanentAddress: {
         type: String,
-        required: true
+        required: false
     },
     city: {
         type: String,
@@ -91,7 +91,7 @@ const EmployeeDetailSchema = new mongoose.Schema({
     },
     uanNumber: {
         type: String,
-        required: true
+        required: false
     },
     salary: {
         type: String

@@ -473,11 +473,11 @@ function EmployeeDetailsForm(props) {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Permanent Address *</Label>
+                                        <Label>Permanent Address</Label>
                                         <div className="relative">
                                             <House className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                             <Input type="text" placeholder="Enter permanent address" className="pl-10" value={newEmployee.permanentAddress}
-                                                onChange={(e) => handleInputChange("permanentAddress", e.target.value)} required />
+                                                onChange={(e) => handleInputChange("permanentAddress", e.target.value)} />
                                         </div>
                                     </div>
                                 </div>
@@ -659,9 +659,9 @@ function EmployeeDetailsForm(props) {
                                 </div>
                                 <div className="grid sm:grid-cols-2 gap-5">
                                     <div className="space-y-2">
-                                        <Label>UAN Number *</Label>
+                                        <Label>UAN Number</Label>
                                         <Input type="text" placeholder="Enter UAN Number" value={newEmployee.uanNumber}
-                                            onChange={(e) => handleInputChange("uanNumber", e.target.value)} required />
+                                            onChange={(e) => handleInputChange("uanNumber", e.target.value)} />
                                     </div>
                                 </div>
                             </CardContent>
