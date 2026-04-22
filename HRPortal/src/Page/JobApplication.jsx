@@ -547,6 +547,65 @@ const JobApplication = () => {
     setFailedRows([]);
   };
 
+  const handleDownloadApplications = () => {
+    if (!filteredApplications || filteredApplications.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No Applications",
+        description: "There are no applications to download based on the current filters.",
+      });
+      return;
+    }
+
+    // Convert applications to flat structure for Excel
+    const excelData = filteredApplications.map((app) => ({
+      "Candidate Name": app.name,
+      "Email": app.email,
+      "Phone": Array.isArray(app.phone) ? app.phone.join(", ") : app.phone,
+      "Position": app.position || app.rawJobTitle,
+      "Skills": Array.isArray(app.skills) ? app.skills.join(", ") : app.skills,
+      "Total Experience": app.experience || "-",
+      "Relevant Experience": app.relevantExperience || "-",
+      "Location": app.location || "-",
+      "Notice Period": app.noticePeriod || "-",
+      "Status": app.status,
+      "LinkedIn": app.linkedIn || "-",
+      "GitHub": app.github || "-",
+    }));
+
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+    // Set column widths
+    worksheet["!cols"] = [
+      { wch: 25 },   // Candidate Name
+      { wch: 30 },   // Email
+      { wch: 20 },   // Phone
+      { wch: 25 },   // Position
+      { wch: 30 },   // Skills
+      { wch: 18 },   // Total Experience
+      { wch: 20 },   // Relevant Experience
+      { wch: 20 },   // Location
+      { wch: 15 },   // Notice Period
+      { wch: 15 },   // Status
+      { wch: 25 },   // LinkedIn
+      { wch: 25 },   // GitHub
+    ];
+
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "JobApplications");
+
+    // Download file
+    const fileName = `Job_Applications_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+
+    toast({
+      title: "Success",
+      description: "Candidate details downloaded successfully.",
+    });
+  };
+
   // const handleDownloadTemplate = () => {
   //   // Define Excel headers
   //   const worksheetData = [
@@ -966,9 +1025,20 @@ const JobApplication = () => {
         {/* Applications Table */}
         <Card className="border-0 shadow-card overflow-hidden">
           <CardHeader className="bg-muted/30 border-b border-border">
-            <CardTitle className="text-lg">
-              Applications ({filteredApplications.length})
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">
+                Applications ({filteredApplications.length})
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadApplications}
+                className="gap-2 text-primary border-primary/20 hover:bg-primary/10"
+              >
+                <Download className="w-4 h-4" />
+                Download Excel
+              </Button>
+            </div>
           </CardHeader>
 
           <CardContent className="p-0">
