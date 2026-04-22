@@ -685,7 +685,7 @@ const EmployeeList = () => {
                                 {employee.details?.name?.charAt(0) || "E"}
                               </div>
                               <div>
-                                <p className="font-medium">{employee.details?.name}</p>
+                                <p className="font-medium">{employee?.name}</p>
                                 <p className="text-sm text-gray-500">{employee.details?.designation}</p>
                               </div>
                             </div>
@@ -693,11 +693,11 @@ const EmployeeList = () => {
 
                           <td className="p-4"><div className="flex items-center gap-2">
                             <Building2 className="w-4 h-4 text-muted-foreground" />
-                            <span>{employee.details?.department}</span>
+                            <span>{employee?.department}</span>
                           </div></td>
 
                           <td className="p-4 text-sm text-gray-600">
-                            <div>{employee.details?.email}</div>
+                            <div>{employee?.email}</div>
                             <div>{employee.details?.phone}</div>
                           </td>
 
