@@ -2,6 +2,7 @@ import InvestmentDeclaration from '../models/InvestmentDeclaration.js';
 import Employee from '../models/Employee.js';
 import User from '../models/User.js';
 import InvestUpload from '../models/InvestUpload.js';
+import Notification from '../models/Notification.js';
 import mongoose from 'mongoose';
 import { getGridFSBucket } from '../utils/gridFs.js';
 import { Readable } from 'stream';
@@ -78,6 +79,31 @@ export const submitDeclaration = async (req, res) => {
         dec.status = 'Submitted';
         dec.submittedAt = new Date();
         await dec.save();
+
+        // Notify Admins and Accountants
+        try {
+            const admins = await User.find({
+                $or: [
+                    { role: { $in: ['superAdmin', 'accountant'] } },
+                    { _id: currentUser._id, role: 'admin' }
+                ]
+            });
+            const notificationPromises = admins.map(admin => {
+                const notification = new Notification({
+                    recipient: admin._id,
+                    recipientType: 'User',
+                    sender: currentUser._id,
+                    senderType: 'User',
+                    type: 'INVESTMENT_SUBMITTED',
+                    message: `Investment declaration submitted by ${dec.employeeName} for FY ${dec.financialYear}`,
+                    relatedId: dec._id
+                });
+                return notification.save();
+            });
+            await Promise.all(notificationPromises);
+        } catch (notifErr) {
+            console.error("Failed to create notifications:", notifErr);
+        }
 
         res.status(200).json({ message: 'Declaration submitted', declaration: dec });
     } catch (err) {
@@ -238,6 +264,25 @@ export const updateInvestmentDeclarationStatus = async (req, res) => {
         }
 
         await dec.save();
+
+        // Notify Employee
+        try {
+            const targetUser = await User.findOne({ userEmail: dec.employeeEmail });
+            if (targetUser) {
+                const notification = new Notification({
+                    recipient: targetUser._id,
+                    recipientType: 'User',
+                    sender: currentUser._id,
+                    senderType: 'User',
+                    type: 'INVESTMENT_STATUS_UPDATE',
+                    message: `Your investment declaration for FY ${dec.financialYear} has been ${status.toLowerCase()}.`,
+                    relatedId: dec._id
+                });
+                await notification.save();
+            }
+        } catch (notifErr) {
+            console.error("Failed to create notification:", notifErr);
+        }
 
         res.status(200).json({ message: `Declaration status updated to ${status}`, declaration: dec });
     } catch (err) {

@@ -2,7 +2,7 @@
 import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
-import { Calendar as CalendarIcon, Clock, Users, Plus, X, User2, User as UserIcon, Filter, User, Loader2, Check } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Users, Plus, X, User2, User as UserIcon, Filter, User, Loader2, Check, Pencil, Trash2 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
 import { userContext } from "../Context/userContext";
@@ -66,6 +66,8 @@ const LeaveTracker = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const [leaveViewMode, setLeaveViewMode] = useState("my");
+  const [editingLeaveId, setEditingLeaveId] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Status change confirmation dialog state
   const [statusConfirm, setStatusConfirm] = useState({
@@ -73,6 +75,14 @@ const LeaveTracker = () => {
     leaveId: null,
     newStatus: '',
     targetType: ''
+  });
+
+  const [viewingReason, setViewingReason] = useState(null);
+  const [showReasonModal, setShowReasonModal] = useState(false);
+
+  const [deleteConfirm, setDeleteConfirm] = useState({
+    isOpen: false,
+    leaveId: null
   });
 
   // My leaves (logged-in user)
@@ -481,12 +491,62 @@ const LeaveTracker = () => {
       setSelectedEmployeeId("");
       setSelectedUserId("");
     }
-    // setSelectedEmployeeId("");
-    // setSelectedUserId("");
-    // setSelectedMonth(null);
+    setEditingLeaveId(null);
+    setIsEditMode(false);
     setNewLeave(initialForm);
     setOneDayLeave(false);
     setShowAddLeaveModal(true);
+  };
+
+  const handleEditClick = (leave) => {
+    setEditingLeaveId(leave._id);
+    setIsEditMode(true);
+    setNewLeave({
+      type: leave.type,
+      startDate: leave.startDate.split('T')[0],
+      endDate: leave.endDate.split('T')[0],
+      reason: leave.reason || ""
+    });
+    setOneDayLeave(leave.startDate === leave.endDate);
+    setShowAddLeaveModal(true);
+  };
+
+  const handleDeleteLeave = async (leaveId) => {
+    // This is now called from the custom Dialog
+    setLoading(true);
+    try {
+      const targetType = authUser.role === 'employee' ? 'employee' : 'user';
+      const resp = await axios.delete(`${API_BASE_URL}/api/leave/${authUser._id}/${leaveId}`, {
+        params: { targetType },
+        withCredentials: true
+      });
+
+      if (resp.status === 200) {
+        toast({
+          variant: "success",
+          title: "Leave Deleted",
+          description: "Your leave request has been deleted.",
+        });
+
+        setCurrentPerson(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            leaveHistory: prev.leaveHistory.filter(l => l._id !== leaveId)
+          };
+        });
+      }
+    } catch (err) {
+      console.error("Error deleting leave:", err);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.response?.data?.message || "Failed to delete leave",
+      });
+    } finally {
+      setLoading(false);
+      setDeleteConfirm({ isOpen: false, leaveId: null });
+    }
   };
 
   // Save a leave: NOW ALWAYS TARGETS THE LOGGED-IN USER (user._id)
@@ -524,27 +584,41 @@ const LeaveTracker = () => {
     const targetId = authUser._id;
 
     // API DECISION BASED ON AUTH USER ROLE
+    const targetType = authUser.role === 'employee' ? 'employee' : 'user';
+
     let resp;
     try {
-      resp =
-        authUser.role === 'user' || authUser.role === 'admin' || authUser.role === 'superAdmin' || authUser.role === 'accountant' ?
-          resp = await axios.post(`${API_BASE_URL}/api/user/addLeave/${targetId}`, newLeave)
-          :
-          resp = await axios.post(`${API_BASE_URL}/api/employee/addLeave/${targetId}`, newLeave);
+      if (isEditMode) {
+        resp = await axios.put(`${API_BASE_URL}/api/leave/${targetId}/${editingLeaveId}`, {
+          ...newLeave,
+          targetType
+        }, { withCredentials: true });
+      } else {
+        resp =
+          authUser.role === 'user' || authUser.role === 'admin' || authUser.role === 'superAdmin' || authUser.role === 'accountant' ?
+            resp = await axios.post(`${API_BASE_URL}/api/user/addLeave/${targetId}`, newLeave)
+            :
+            resp = await axios.post(`${API_BASE_URL}/api/employee/addLeave/${targetId}`, newLeave);
+      }
 
       try {
         // const resp = await axios.post(apiEndpoint, newLeave);
         if (resp.status === 201 || resp.status === 200) {
           toast({
             variant: "success",
-            title: "Leave Added Successfully",
-            description: "Your leave has been added successfully.",
+            title: isEditMode ? "Leave Updated Successfully" : "Leave Added Successfully",
+            description: isEditMode ? "Your leave has been updated successfully." : "Your leave has been added successfully.",
           });
 
-          // Optimistically merge the new leave into current view so previous leaves stay visible
+          // Optimistically update current view
           setCurrentPerson((prev) => {
             if (!prev) return prev;
-            const merged = [...(prev.leaveHistory || []), { ...newLeave }];
+            let merged;
+            if (isEditMode) {
+              merged = prev.leaveHistory.map(l => l._id === editingLeaveId ? { ...l, ...newLeave } : l);
+            } else {
+              merged = [...(prev.leaveHistory || []), { ...newLeave }];
+            }
             return { ...prev, leaveHistory: merged };
           });
 
@@ -947,6 +1021,7 @@ const LeaveTracker = () => {
                           <th className="text-left p-4 text-sm font-medium text-muted-foreground">Days</th>
                           <th className="text-left p-4 text-sm font-medium text-muted-foreground">Status</th>
                           <th className="text-left p-4 text-sm font-medium text-muted-foreground hidden lg:table-cell">Reason</th>
+                          <th className="text-right p-4 text-sm font-medium text-muted-foreground">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1000,7 +1075,38 @@ const LeaveTracker = () => {
                                   )}
                               </div>
                             </td>
-                            <td className="p-4 text-muted-foreground hidden lg:table-cell">{request.reason || '-'}</td>
+                            <td 
+                              className="p-4 text-muted-foreground hidden lg:table-cell max-w-[200px] truncate cursor-pointer hover:text-primary transition-colors" 
+                              title="Click to view full reason"
+                              onClick={() => {
+                                setViewingReason(request.reason || '-');
+                                setShowReasonModal(true);
+                              }}
+                            >
+                              {request.reason || '-'}
+                            </td>
+                            <td className="p-4 text-right">
+                              {leaveViewMode === 'my' && (request.status === 'Pending' || !request.status) && (
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                                    onClick={() => handleEditClick(request)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => setDeleteConfirm({ isOpen: true, leaveId: request._id })}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              )}
+                            </td>
                           </tr>
                         ))}
                         {displayedLeaves.length === 0 && (
@@ -1028,8 +1134,8 @@ const LeaveTracker = () => {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Plus className="w-5 h-5" />
-                Request Leave
+                {isEditMode ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                {isEditMode ? "Edit Leave Request" : "Request Leave"}
               </DialogTitle>
             </DialogHeader>
 
@@ -1137,10 +1243,10 @@ const LeaveTracker = () => {
                 {loading ? (
                   <div className="flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Requesting...</span>
+                    <span>{isEditMode ? "Updating..." : "Requesting..."}</span>
                   </div>
                 ) : (
-                  "Request Leave"
+                  isEditMode ? "Update Leave" : "Request Leave"
                 )}
               </Button>
             </DialogFooter>
@@ -1173,6 +1279,53 @@ const LeaveTracker = () => {
                 className={statusConfirm.newStatus === 'Approved' ? 'bg-green-600 hover:bg-green-700 text-white' : ''}
               >
                 {loading ? "Updating..." : `Yes, ${statusConfirm.newStatus}`}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Reason Dialog */}
+        <Dialog open={showReasonModal} onOpenChange={setShowReasonModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Leave Reason</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-foreground whitespace-pre-wrap break-words bg-muted/30 p-4 rounded-lg border">
+                {viewingReason}
+              </p>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setShowReasonModal(false)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteConfirm.isOpen} onOpenChange={(open) => setDeleteConfirm(prev => ({ ...prev, isOpen: open }))}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Confirm Deletion</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to delete this leave request? This action cannot be undone.
+              </p>
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteConfirm({ isOpen: false, leaveId: null })}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => handleDeleteLeave(deleteConfirm.leaveId)}
+                disabled={loading}
+              >
+                {loading ? "Deleting..." : "Yes, Delete"}
               </Button>
             </DialogFooter>
           </DialogContent>

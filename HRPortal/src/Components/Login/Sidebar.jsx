@@ -29,7 +29,9 @@ import {
   FilePlus,
   FileSearch,
   ListTodo,
-  DollarSign
+  DollarSign,
+  User2,
+  UserCheck
 } from 'lucide-react';
 // import ErrorToast from '../Toaster/ErrorToaster';
 // import SuccessToast from '../Toaster/SuccessToaser';
@@ -78,6 +80,13 @@ const navItems = [
           { icon: Briefcase, label: 'Post Job Openings', path: '/post-job', roles: ['admin', 'superAdmin'] },
           { icon: ClipboardList, label: 'Job Applications', path: '/application', roles: ['admin', 'superAdmin'] },
         ]
+      },
+      {
+        icon: UserCheck,
+        label: 'User Management',
+        children: [
+          { icon: User2, label: 'Add User', path: '/user-upsert', roles: ['admin', 'superAdmin'] },
+        ]
       }
     ]
   },
@@ -91,7 +100,7 @@ const navItems = [
     ]
   },
   {
-    icon: Receipt,
+    icon: ReceiptIndianRupee,
     label: 'Payslip Management',
     roles: ['admin', 'superAdmin', 'accountant'],
     children: [
@@ -104,7 +113,8 @@ const navItems = [
     icon: ReceiptIndianRupee,
     label: 'Expense Management',
     children: [
-      { icon: FileText, label: 'Expense Tracker', path: '/expense-tracker', roles: ['accountant', 'superAdmin'] },
+      { icon: FilePlus, label: 'Add Expense', path: '/add-expense', roles: ['accountant', 'admin'] },
+      { icon: FileText, label: 'Expense Tracker', path: '/expense-tracker', roles: ['accountant', 'superAdmin', 'admin'] },
       { icon: FilePlus, label: 'Expense Generator', path: '/expense', roles: ['accountant', 'superAdmin'] },
     ]
   },
@@ -124,7 +134,7 @@ const navItems = [
   { icon: Calendar, label: 'Leave Tracker', path: '/leave-tracker', roles: ['accountant'] },
   { icon: Key, label: 'Change Password', path: '/change-password', roles: ['accountant'] },
   { icon: ListTodo, label: 'My Tasks', path: '/my-tasks', roles: ['accountant'] },
-  { icon: ReceiptIndianRupee, label: 'Add Expense', path: '/add-expense', roles: ['admin'] },
+  // { icon: ReceiptIndianRupee, label: 'Add Expense', path: '/add-expense', roles: ['admin'] },
   { icon: FilePlus, label: 'Investment Declaration', path: '/investment-declaration', roles: ['admin'] },
   { icon: FileText, label: 'Investment Tracker', path: '/investment-tracker', roles: ['admin'] },
   { icon: Shield, label: 'Authentication', path: '/auth', roles: ['admin', 'superAdmin'] },

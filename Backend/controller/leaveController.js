@@ -54,13 +54,16 @@ export const updateLeaveStatus = async (req, res) => {
 
         // Create notification for the applicant
         try {
+            const startDateStr = new Date(leave.startDate).toLocaleDateString();
+            const endDateStr = new Date(leave.endDate).toLocaleDateString();
+            const dateRangeMsg = startDateStr === endDateStr ? `on ${startDateStr}` : `from ${startDateStr} to ${endDateStr}`;
             const notification = new Notification({
                 recipient: person._id,
                 recipientType: targetType === 'employee' ? 'Employee' : 'User',
                 sender: currentUser._id,
                 senderType: 'User',
                 type: 'LEAVE_STATUS_UPDATE',
-                message: `Your leave request for ${leave.type} from ${new Date(leave.startDate).toLocaleDateString()} to ${new Date(leave.endDate).toLocaleDateString()} has been ${status.toLowerCase()}.`,
+                message: `Your leave request for ${leave.type} ${dateRangeMsg} has been ${status.toLowerCase()}.`,
                 relatedId: leave._id
             });
             await notification.save();
@@ -76,5 +79,86 @@ export const updateLeaveStatus = async (req, res) => {
     } catch (err) {
         console.error('updateLeaveStatus error:', err);
         res.status(500).json({ message: err.message || 'Failed to update leave status' });
+    }
+};
+
+export const updateLeave = async (req, res) => {
+    try {
+        const { personId, leaveId } = req.params;
+        const { type, startDate, endDate, reason, targetType } = req.body;
+        const currentUser = req.user;
+
+        // Ownership check
+        if (currentUser._id.toString() !== personId.toString()) {
+            return res.status(403).json({ message: 'You can only edit your own leaves' });
+        }
+
+        let Model = targetType === 'employee' ? Employee : User;
+        const person = await Model.findById(personId);
+
+        if (!person) {
+            return res.status(404).json({ message: 'User/Employee not found' });
+        }
+
+        const leave = person.leaveHistory.id(leaveId);
+        if (!leave) {
+            return res.status(404).json({ message: 'Leave record not found' });
+        }
+
+        // Status check - only Pending can be edited
+        if (leave.status !== 'Pending') {
+            return res.status(400).json({ message: 'Only pending leaves can be edited' });
+        }
+
+        // Update fields
+        if (type) leave.type = type;
+        if (startDate) leave.startDate = startDate;
+        if (endDate) leave.endDate = endDate;
+        if (reason) leave.reason = reason;
+
+        await person.save();
+
+        res.status(200).json({ message: 'Leave updated successfully', leave });
+    } catch (err) {
+        console.error('updateLeave error:', err);
+        res.status(500).json({ message: err.message || 'Failed to update leave' });
+    }
+};
+
+export const deleteLeave = async (req, res) => {
+    try {
+        const { personId, leaveId } = req.params;
+        const { targetType } = req.query;
+        const currentUser = req.user;
+
+        // Ownership check
+        if (currentUser._id.toString() !== personId.toString()) {
+            return res.status(403).json({ message: 'You can only delete your own leaves' });
+        }
+
+        let Model = targetType === 'employee' ? Employee : User;
+        const person = await Model.findById(personId);
+
+        if (!person) {
+            return res.status(404).json({ message: 'User/Employee not found' });
+        }
+
+        const leave = person.leaveHistory.id(leaveId);
+        if (!leave) {
+            return res.status(404).json({ message: 'Leave record not found' });
+        }
+
+        // Status check - only Pending can be deleted
+        if (leave.status !== 'Pending') {
+            return res.status(400).json({ message: 'Only pending leaves can be deleted' });
+        }
+
+        person.leaveHistory.pull(leaveId);
+        await person.save();
+
+        res.status(200).json({ message: 'Leave deleted successfully' });
+    } catch (err) {
+        console.error('deleteLeave error:', err);
+        res.status(500).json({ message: err.message || 'Failed to delete leave' });
     }
 };

@@ -113,6 +113,16 @@ const ExpenseSchema = new mongoose.Schema(
     paidAt: {
       type: Date,
     },
+
+    paymentMode: {
+      type: String,
+      enum: ["SEPARATE", "PAYSLIP"],
+    },
+
+    paidInPayslipId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Payslip",
+    },
   },
   {
     timestamps: true,

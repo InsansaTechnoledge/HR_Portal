@@ -1,5 +1,7 @@
 import Expenses from "../models/Expenses.js";
 import Employee from "../models/Employee.js";
+import User from "../models/User.js";
+import Notification from "../models/Notification.js";
 
 export const createExpense = async (req, res) => {
   try {
@@ -77,7 +79,7 @@ export const createExpense = async (req, res) => {
 
     const employee = await Employee.findOne({
       email: req.user.userEmail,
-    }).select("_id");
+    }).select("_id name");
 
     if (!employee) {
       return res.status(400).json({
@@ -102,6 +104,32 @@ export const createExpense = async (req, res) => {
     });
 
     await newExpense.save();
+
+    // Notify Admins and Accountants
+    try {
+      const admins = await User.find({
+        $or: [
+          { role: { $in: ['superAdmin', 'accountant'] } },
+          { _id: req.user._id, role: 'admin' }
+        ]
+      });
+      const notificationPromises = admins.map(admin => {
+        const notification = new Notification({
+          recipient: admin._id,
+          recipientType: 'User',
+          sender: req.user._id,
+          senderType: 'User',
+          type: 'EXPENSE_SUBMITTED',
+          message: `New expense submitted by ${employee.name} for ${reimbursementMonth}. Amount: ₹${totalAmount.toLocaleString('en-IN')}`,
+          relatedId: newExpense._id
+        });
+        return notification.save();
+      });
+      await Promise.all(notificationPromises);
+    } catch (notifErr) {
+      console.error("Failed to create notifications:", notifErr);
+    }
+
     res
       .status(201)
       .json({ message: "Expense created successfully", expense: newExpense });
@@ -150,7 +178,7 @@ export const getExpenses = async (req, res) => {
 
     const expenses = await Expenses.find(filter)
       .select(
-        "employeeId expenses amount expenseDate receipts reimbursementMonth status paymentMode createdAt approvedBy approvedAt"
+        "employeeId expenses amount expenseDate receipts reimbursementMonth status paymentMode createdAt approvedBy approvedAt description"
       )
       .populate({ path: "employeeId", select: "name email department" })
       .populate("approvedBy", "userName")
@@ -210,7 +238,7 @@ export const updateExpenseStatus = async (req, res) => {
       });
     }
 
-    const expense = await Expenses.findById(id);
+    const expense = await Expenses.findById(id).populate('employeeId', 'name email');
 
     if (!expense) {
       return res.status(404).json({ message: "Expense not found" });
@@ -235,6 +263,42 @@ export const updateExpenseStatus = async (req, res) => {
     }
 
     await expense.save();
+
+    // Notify Employee
+    try {
+      const targetUser = await User.findOne({ userEmail: expense.employeeId.email });
+      if (targetUser) {
+        const notification = new Notification({
+          recipient: targetUser._id,
+          recipientType: 'User',
+          sender: req.user._id,
+          senderType: 'User',
+          type: 'EXPENSE_STATUS_UPDATE',
+          message: `Your expense claim for ${expense.reimbursementMonth} has been ${normalizedStatus.toLowerCase()}.`,
+          relatedId: expense._id
+        });
+        await notification.save();
+      }
+
+      // If approved, also notify all accountants
+      if (normalizedStatus === "APPROVED") {
+        const accountants = await User.find({ role: 'accountant' });
+        const accountantNotifications = accountants.map(acc => {
+          return new Notification({
+            recipient: acc._id,
+            recipientType: 'User',
+            sender: req.user._id,
+            senderType: 'User',
+            type: 'EXPENSE_STATUS_UPDATE',
+            message: `Expense claim for ${expense.employeeId.name} (${expense.reimbursementMonth}) has been approved and is ready for processing.`,
+            relatedId: expense._id
+          }).save();
+        });
+        await Promise.all(accountantNotifications);
+      }
+    } catch (notifErr) {
+      console.error("Failed to create notification:", notifErr);
+    }
 
     return res.status(200).json({
       message: "Expense status updated successfully",
@@ -267,15 +331,41 @@ export const payExpenseSeparately = async (req, res) => {
       });
     }
 
-    expense.status = "PAID";
-    expense.paymentMode = "SEPARATE";
-    expense.paidInPayslipId = null;
-    expense.paidAt = new Date();
+    const updatedExpense = await Expenses.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          status: "PAID",
+          paymentMode: "SEPARATE",
+          paidInPayslipId: null,
+          paidAt: new Date(),
+        },
+      },
+      { new: true }
+    ).populate('employeeId', 'name email');
 
-    await expense.save();
+    // Notify Employee that it got paid
+    try {
+      const targetUser = await User.findOne({ userEmail: updatedExpense.employeeId.email });
+      if (targetUser) {
+        const notification = new Notification({
+          recipient: targetUser._id,
+          recipientType: 'User',
+          sender: req.user._id,
+          senderType: 'User',
+          type: 'EXPENSE_STATUS_UPDATE',
+          message: `Your expense claim for ${updatedExpense.reimbursementMonth} has been PAID.`,
+          relatedId: updatedExpense._id
+        });
+        await notification.save();
+      }
+    } catch (notifErr) {
+      console.error("Failed to create payment notification:", notifErr);
+    }
 
-    res.status(200).json({ message: "Expense paid separately", expense });
+    res.status(200).json({ message: "Expense paid separately", expense: updatedExpense });
   } catch (error) {
+    console.error("Error in payExpenseSeparately:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
@@ -283,7 +373,7 @@ export const payExpenseSeparately = async (req, res) => {
 export const updateExpense = async (req, res) => {
   try {
     const { id } = req.params;
-    const { expenses, amount } = req.body;
+    const { expenses, amount, reimbursementMonth, description } = req.body;
 
     if (!id) {
       return res.status(400).json({ message: "Expense ID is required" });
@@ -295,12 +385,68 @@ export const updateExpense = async (req, res) => {
       return res.status(404).json({ message: "Expense not found" });
     }
 
+    // Check ownership/permissions
+    const userRole = String(req.user?.role || "").toLowerCase();
+    const isAdmin = userRole === "superadmin" || userRole === "accountant";
+
+    const employee = await Employee.findOne({ email: req.user.userEmail }).select("_id");
+    const isOwner = employee && expense.employeeId.toString() === employee._id.toString();
+
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({ message: "You are not authorized to update this expense" });
+    }
+
+    // Regular users can only update PENDING expenses
+    if (!isAdmin && expense.status !== "PENDING") {
+      return res.status(400).json({ message: "Only PENDING expenses can be updated" });
+    }
+
     if (expenses) expense.expenses = expenses;
     if (amount !== undefined) expense.amount = amount;
+    if (reimbursementMonth) expense.reimbursementMonth = reimbursementMonth;
+    if (description !== undefined) expense.description = description;
 
     await expense.save();
 
     res.status(200).json({ message: "Expense updated successfully", expense });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+export const deleteExpense = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: "Expense ID is required" });
+    }
+
+    const expense = await Expenses.findById(id);
+
+    if (!expense) {
+      return res.status(404).json({ message: "Expense not found" });
+    }
+
+    // Check ownership/permissions
+    const userRole = String(req.user?.role || "").toLowerCase();
+    const isAdmin = userRole === "superadmin" || userRole === "admin";
+
+    const employee = await Employee.findOne({ email: req.user.userEmail }).select("_id");
+    const isOwner = employee && expense.employeeId.toString() === employee._id.toString();
+
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({ message: "You are not authorized to delete this expense" });
+    }
+
+    // Regular users can only delete PENDING expenses
+    if (!isAdmin && expense.status !== "PENDING") {
+      return res.status(400).json({ message: "Only PENDING expenses can be deleted" });
+    }
+
+    await Expenses.findByIdAndDelete(id);
+
+    res.status(200).json({ message: "Expense deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
   }

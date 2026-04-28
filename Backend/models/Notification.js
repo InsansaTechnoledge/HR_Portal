@@ -22,7 +22,15 @@ const NotificationSchema = new mongoose.Schema({
     type: {
         type: String,
         required: true,
-        enum: ['LEAVE_APPLIED', 'LEAVE_STATUS_UPDATE', 'GENERAL']
+        enum: [
+            'LEAVE_APPLIED', 
+            'LEAVE_STATUS_UPDATE', 
+            'EXPENSE_SUBMITTED', 
+            'EXPENSE_STATUS_UPDATE', 
+            'INVESTMENT_SUBMITTED', 
+            'INVESTMENT_STATUS_UPDATE',
+            'GENERAL'
+        ]
     },
     message: {
         type: String,

@@ -284,13 +284,16 @@ export const addLeaveToUser = async (req, res) => {
       const admins = await User.find({ role: { $in: ['admin', 'superAdmin'] } });
       const department = updatedUser.role || "User";
       const notificationPromises = admins.map(admin => {
-        const notification = new Notification({
+            const startDateStr = new Date(leaveHistory.startDate).toLocaleDateString();
+          const endDateStr = new Date(leaveHistory.endDate).toLocaleDateString();
+          const dateRangeMsg = startDateStr === endDateStr ? `on ${startDateStr}` : `from ${startDateStr} to ${endDateStr}`;
+          const notification = new Notification({
           recipient: admin._id,
           recipientType: 'User',
           sender: updatedUser._id,
           senderType: 'User',
           type: 'LEAVE_APPLIED',
-          message: `${updatedUser.userName} from ${department} has applied for ${leaveHistory.type} leave from ${new Date(leaveHistory.startDate).toLocaleDateString()} to ${new Date(leaveHistory.endDate).toLocaleDateString()}.`,
+          message: `${updatedUser.userName} from ${department} has applied for ${leaveHistory.type} leave ${dateRangeMsg}.`,
           relatedId: updatedUser._id // Using user ID as relatedId for now as leaves are sub-docs
         });
         return notification.save();

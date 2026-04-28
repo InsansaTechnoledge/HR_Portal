@@ -838,6 +838,12 @@ const ExpenseGenerator = () => {
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             {(() => {
+                              if (exp.status === "PAID") return (
+                                <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" /> Paid
+                                </Badge>
+                              );
+
                               const needsConv = needsConversion(exp);
                               return needsConv ? (
                                 <Button
@@ -994,6 +1000,12 @@ const ExpenseGenerator = () => {
                         </div>
                       )}
                       {(() => {
+                        if (exp.status === "PAID") return (
+                          <Badge variant="outline" className="bg-success/10 text-success border-success/20 ml-auto">
+                            <CheckCircle2 className="h-3 w-3 mr-1" /> Paid
+                          </Badge>
+                        );
+
                         const needsConv = needsConversion(exp);
                         // console.log(`[DEBUG] Mobile Card ${exp._id} render: needsConversion=${needsConv}`);
                         return needsConv ? (

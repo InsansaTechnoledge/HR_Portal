@@ -41,6 +41,15 @@ import {
   SelectContent,
   SelectItem,
 } from "../Components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "../Components/ui/dialog";
 import { currencies as allCurrencies, currencySymbols } from "../Constant/currencies";
 
 
@@ -80,6 +89,11 @@ const AddExpense = () => {
     location: "National",
     currency: "INR"
   });
+
+  // Confirmation state
+  const [itemToDeleteIdx, setItemToDeleteIdx] = useState(null);
+  const [itemConfirmOpen, setItemConfirmOpen] = useState(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
 
 
 
@@ -548,12 +562,10 @@ const AddExpense = () => {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        onClick={() =>
-                          setForm((prev) => ({
-                            ...prev,
-                            expenses: prev.expenses.filter((_, i) => i !== index),
-                          }))
-                        }
+                        onClick={() => {
+                          setItemToDeleteIdx(index);
+                          setItemConfirmOpen(true);
+                        }}
                       >
                         <X className="w-4 h-4" />
                       </Button>
@@ -668,10 +680,10 @@ const AddExpense = () => {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={clearReceipts}
+                        onClick={() => setClearConfirmOpen(true)}
                         className="text-destructive hover:text-destructive hover:bg-destructive/10"
                       >
-                        <Trash2 className="w-4 h-4 mr-1" />
+                        <Trash2 className="h-4 w-4 mr-1" />
                         Clear all
                       </Button>
                     </div>
@@ -751,6 +763,62 @@ const AddExpense = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Item Deletion Confirmation */}
+      <Dialog open={itemConfirmOpen} onOpenChange={setItemConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Expense Item</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove this item?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                setForm((prev) => ({
+                  ...prev,
+                  expenses: prev.expenses.filter((_, i) => i !== itemToDeleteIdx),
+                }));
+                setItemConfirmOpen(false);
+                setItemToDeleteIdx(null);
+              }}
+            >
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clear All Confirmation */}
+      <Dialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clear All Receipts</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove all uploaded receipts?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                clearReceipts();
+                setClearConfirmOpen(false);
+              }}
+            >
+              Clear All
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

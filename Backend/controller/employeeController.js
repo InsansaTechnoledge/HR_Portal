@@ -167,13 +167,16 @@ export const addLeave = async (req, res) => {
         try {
             const admins = await User.find({ role: { $in: ['admin', 'superAdmin'] } });
             const notificationPromises = admins.map(admin => {
+                const startDateStr = new Date(leaveHistory.startDate).toLocaleDateString();
+                const endDateStr = new Date(leaveHistory.endDate).toLocaleDateString();
+                const dateRangeMsg = startDateStr === endDateStr ? `on ${startDateStr}` : `from ${startDateStr} to ${endDateStr}`;
                 const notification = new Notification({
                     recipient: admin._id,
                     recipientType: 'User',
                     sender: updatedEmp._id,
                     senderType: 'Employee',
                     type: 'LEAVE_APPLIED',
-                    message: `${updatedEmp.name} from ${updatedEmp.department} has applied for ${leaveHistory.type} leave from ${new Date(leaveHistory.startDate).toLocaleDateString()} to ${new Date(leaveHistory.endDate).toLocaleDateString()}.`,
+                    message: `${updatedEmp.name} from ${updatedEmp.department} has applied for ${leaveHistory.type} leave ${dateRangeMsg}.`,
                     relatedId: updatedEmp._id
                 });
                 return notification.save();

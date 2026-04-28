@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Mail, Lock, Shield, Save, RefreshCw, Loader2, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Lock, Shield, Save, RefreshCw, Loader2, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 import API_BASE_URL from '../../config';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
@@ -79,7 +79,7 @@ const UserUpsertForm = () => {
                         <div className="mx-auto w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
                             <Shield className="w-8 h-8 text-primary" />
                         </div>
-                        <CardTitle className="text-2xl font-bold tracking-tight">Access Management</CardTitle>
+                        <CardTitle className="text-2xl font-bold tracking-tight">User Access Management</CardTitle>
                         <CardDescription>Register a new user or update existing credentials</CardDescription>
                     </CardHeader>
 
@@ -127,18 +127,22 @@ const UserUpsertForm = () => {
                                 {/* Role */}
                                 <div className="space-y-2">
                                     <Label className="text-sm font-medium">Assign Role</Label>
-                                    <Select value={formData.role} onValueChange={handleRoleChange}>
-                                        <SelectTrigger className="h-11 bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700">
-                                            <SelectValue placeholder="Select role" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {roles.map(role => (
-                                                <SelectItem key={role.value} value={role.value}>
-                                                    {role.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="relative">
+                                        <Select value={formData.role} onValueChange={handleRoleChange}>
+                                            <SelectTrigger className="h-11 bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700">
+                                                <SelectValue placeholder="Select role" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {roles.map(role => (
+                                                    <SelectItem key={role.value} value={role.value}>
+                                                        {role.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                    </div>
+                                    
                                 </div>
 
                                 {/* Password */}

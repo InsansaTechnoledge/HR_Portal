@@ -109,29 +109,29 @@ const EmployeeDetailSchema = new mongoose.Schema({
         required: true
     },
     documentsPanCard: {
-        url:String,
-        publicId:String,
-        originalName:String,
-        format:String,
-      
+        url: String,
+        publicId: String,
+        originalName: String,
+        format: String,
+
     },
     documentsAadhar: {
         url: String,
         publicId: String,
-        originalName:String,
-        format:String,
+        originalName: String,
+        format: String,
     },
     documentsDegree: {
-        url:String,
-        publicId:String,
-        originalName:String,
-        format:String,
+        url: String,
+        publicId: String,
+        originalName: String,
+        format: String,
     },
     documentsExperience: {
-        url:String,
-        publicId:String,
-        originalName:String,
-        format:String,
+        url: String,
+        publicId: String,
+        originalName: String,
+        format: String,
     }
 
 });
