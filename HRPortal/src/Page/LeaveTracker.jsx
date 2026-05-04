@@ -718,7 +718,7 @@ const LeaveTracker = () => {
               {/* Filter checkbox */}
               {(authUser.role === 'admin' || authUser.role === 'superAdmin') && (
                 <>
-                  <div className="flex items-center space-x-2 mb-4 p-3 rounded-lg bg-muted/50">
+                  <div className="flex items-center space-x-2 mb-4 p-3 rounded-lg bg-muted/50 hidden">
                     <Checkbox
                       id="activeLeave"
                       checked={activeFilterOnlyApplied}
